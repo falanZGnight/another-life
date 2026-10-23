@@ -609,12 +609,26 @@ function startGame(){
   saveGame();
 }
 
-let c=G.c;
-if(c.origin==="ตระกูลพ่อค้า")c.gold+=30;
-if(c.origin==="ตระกูลนักรบ"){c.atk+=1;c.def+=1;}
-if(c.origin==="ผู้ลี้ภัย"){c.survival+=2;c.gold=Math.max(0,c.gold-10);}
-if(c.origin==="เด็กกำพรา")c.survival+=1;
-if(c.origin==="ผู้ถูกอุปถัมภ์"){c.knowledge+=1;c.gold+=10;}
+
+function applyOrigin(){
+  let c = G.c;
+
+  if(c.origin === "ตระกูลพ่อค้า") c.gold += 30;
+  if(c.origin === "ตระกูลนักรบ"){
+    c.atk += 1;
+    c.def += 1;
+  }
+  if(c.origin === "ผู้ลี้ภัย"){
+    c.survival += 2;
+    c.gold = Math.max(0, c.gold - 10);
+  }
+  if(c.origin === "เด็กกำพร้า") c.survival += 1;
+  if(c.origin === "ผู้ถูกอุปถัมภ์"){
+    c.knowledge += 1;
+    c.gold += 10;
+  }
+}
+
 function log(type,text){
 if(!G)return;
 G.world.events.unshift({date:dateString(),type,text});
