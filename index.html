@@ -1192,12 +1192,6 @@ function refreshMerchant(silent = false) {
   render();
 }
 
-G.world.merchant=[];
-let count=rand(4,6);
-for(let i=0;i<count;i++){let p={...pick(pool),qty:rand(1,4)};G.world.merchant.push(p);}
-if(!silent)log("พ่อค้า","สินค้าในร้านเปลี่ยนใหม่แล้ว");
-render();
-}
 function visitMerchant(){ensureMerchant();log("พ่อค้า","พ่อค้าเดินทางมาตั้งร้าน มีสินค้าไม่เหมือนกันในแต่ละครั้ง");render();}
 function buyMerchantItem(){
 let name=$("merchantSelect").value,it=G.world.merchant.find(i=>i.name===name);
