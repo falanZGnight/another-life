@@ -1160,25 +1160,37 @@ const ITEM_CATALOG = (() => {
 })();
 /* ===== END ITEM DATABASE ===== */
 
-function refreshMerchant(silent=false){
-  let pool = ITEM_CATALOG.filter(item => item.type !== "quest");
+function refreshMerchant(silent = false) {
+  const pool = ITEM_CATALOG.filter(
+    item => item.type !== "quest"
+  );
 
-    let defaultItems = [
-    {name:"ขนมปัง",type:"food",value:3},
-    {name:"น้ำสะอาด",type:"drink",value:2},
-    {name:"ผ้าพันแผล",type:"heal",value:8},
-    {name:"สมุนไพรป่า",type:"material",value:5},
-    {name:"แร่ดิบ",type:"material",value:7},
-    {name:"ยาชุบชีวิต",type:"revive",value:180},
-    {name:"ยาฟื้นพลัง",type:"heal",value:18},
-    {name:"ชุดเครื่องมือ",type:"tool",value:14},
-    {name:"ผลึกเวท",type:"material",value:22},
-    {name:"หมวกผ้า",type:"gear",slot:"head",value:8},
-    {name:"เสื้อเกราะหนัง",type:"gear",slot:"body",value:25},
-    {name:"กางเกงเดินทาง",type:"gear",slot:"legs",value:12},
-    {name:"ดาบเหล็ก",type:"gear",slot:"weapon",value:35},
-    {name:"เสื้อคลุมเวท",type:"gear",slot:"body",value:40}
-  ];
+  if (!G || !G.world || pool.length === 0) {
+    console.error("ไม่พบฐานข้อมูลสินค้า หรือข้อมูลโลกยังไม่พร้อม");
+    return;
+  }
+
+  G.world.merchant = [];
+
+  const count = rand(4, 6);
+
+  for (let i = 0; i < count; i++) {
+    const item = pick(pool);
+
+    if (!item) continue;
+
+    G.world.merchant.push({
+      ...item,
+      qty: rand(1, 4)
+    });
+  }
+
+  if (!silent) {
+    log("พ่อค้า", "สินค้าในร้านเปลี่ยนใหม่แล้ว");
+  }
+
+  render();
+}
 
 G.world.merchant=[];
 let count=rand(4,6);
