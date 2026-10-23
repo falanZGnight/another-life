@@ -341,7 +341,7 @@ const JOBS={
 "ผู้ลาดตระเวน":"สำรวจพื้นที่ ติดตามร่องรอย และเฝ้าระวัง",
 "ผู้ช่วยชุมชน":"ช่วยเหลือผู้คน เพิ่มความไว้วางใจและชื่อเสียง"
 };
-let G=null, speed=1, timer=null, currentMonster=null, selectedNPC=null;
+let G=null, speed=1, timer=null, currentMonster=null, selectedNPC=null, autoSaveTimer=null;
 
 function freshWorld(){
 return {year:1,minute:8*60,day:1,month:0,events:[],history:[],politics:35,trade:50,war:15,discovery:0,kills:0,lifeCount:0,npcs:[],bestiary:[],visited:[],merchant:[],nextNPC:1};
@@ -366,7 +366,10 @@ applyOrigin();ensureMerchant();$("creation").style.display="none";$("game").styl
 log("ชีวิตใหม่เริ่มต้น","คุณเกิดใน"+G.location+" เมื่ออายุ 8 ปี อาชีพหลักคือ"+G.c.job+" เส้นทางในอนาคตยังเปิดกว้าง");
 log("โลก",""+LOCATIONS[G.location].desc);
 if(G.c.job!=="ผู้ฝึกหัด")log("อาชีพ","คุณเริ่มต้นเป็น"+G.c.job+" แต่ต้องพัฒนาทักษะเพื่อเลื่อนระดับ");
-render();saveGame();
+render();
+startAutoSave();
+setSpeed(speed);
+saveGame();
 }
 function applyOrigin(){
 let c=G.c;
@@ -411,9 +414,68 @@ render();
 }
 function addCondition(x){if(!G.c.condition.includes(x))G.c.condition.push(x);}
 function clearCondition(x){G.c.condition=G.c.condition.filter(v=>v!==x);}
- function setSpeed(n) {   speed = n;   if (timer) clearInterval(timer);    timer = setInterval(() => {     if (!G || G.c.dead) return;      // หนึ่งรอบจะขยับเวลาตามระดับความเร็ว     const minutes = speed * 5;     advance(minutes, true);      if (!G || G.c.dead) return;      // AI เลือกกิจกรรมทุก ๆ 60 นาทีในเกม     G.auto = G.auto || {       enabled: true, goal: "balanced", risk: "low", minutes: 0     };      if (G.auto.enabled) {       G.auto.minutes = (G.auto.minutes || 0) + minutes;        if (G.auto.minutes >= 60) {         G.auto.minutes -= 60;         runAIDecision(false);       }     }   }, 500);    $("speedText").textContent =     "เวลาเดิน " + n + "× (ทุกครึ่งวินาที)";    render(); }{speed=n;if(timer)clearInterval(timer);timer=setInterval(()=>{if(G&&!G.c.dead)advance(speed*5,true);},500);$("speedText").textContent="เวลาเดิน "+n+"× (ทุกครึ่งวินาที)";log("เวลา","ตั้งความเร็วเป็น "+n+"×");render();}
-function pauseTime(){if(timer)clearInterval(timer);timer=null;$("speedText").textContent="หยุดเวลา";log("เวลา","หยุดเวลาไว้แล้ว");}
-function waitTime(n){advance(n,true);log("เวลา","ผ่านไป "+n+" นาที");render();}
+ 
+ function setSpeed(n){
+  if(!G || G.c.dead) return;
+
+  speed=n;
+
+  if(timer) clearInterval(timer);
+
+  timer=setInterval(()=>{
+    if(!G || G.c.dead){
+      pauseTime();
+      return;
+    }
+
+    const minutes=speed*5;
+
+    advance(minutes,true);
+
+    // ถ้าตายระหว่างเวลาเดิน ห้าม AI ทำงานต่อ
+    if(!G || G.c.dead) return;
+
+    G.auto=G.auto||{
+      enabled:true,
+      goal:"balanced",
+      risk:"low",
+      minutes:0
+    };
+
+    // ให้ AI ตัดสินใจทุก 60 นาทีในเกม
+    if(G.auto.enabled){
+      G.auto.minutes=(G.auto.minutes||0)+minutes;
+
+      while(
+        G.auto.minutes>=60 &&
+        G &&
+        !G.c.dead &&
+        G.auto.enabled
+      ){
+        G.auto.minutes-=60;
+        runAIDecision(false);
+      }
+    }
+  },500);
+
+  $("speedText").textContent=
+    "เวลาเดิน "+n+"× (ทุกครึ่งวินาที)";
+
+  log("เวลา","ตั้งความเร็วเป็น "+n+"×");
+  render();
+}
+
+function pauseTime(){
+  if(timer){
+    clearInterval(timer);
+    timer=null;
+  }
+
+  $("speedText").textContent="หยุดเวลา";
+
+  // บันทึกสถานะทันทีเมื่อหยุด
+  if(G) silentAutoSave();
+}
 function spend(n){advance(n,true);}
 function actionTime(n){advance(n,true);return !!(G&&!G.c.dead);}
 function rest(){
@@ -728,25 +790,126 @@ it.qty--;cleanInventory();G.c.dead=false;G.c.hp=Math.max(1,Math.floor(G.c.maxHp*
 G.c.energy=Math.max(20,G.c.energy);clearCondition("ขาดน้ำ");clearCondition("หิวโหย");
 $("deathOverlay").style.display="none";
 log("ชุบชีวิต","พลังของยาชุบชีวิตดึงคุณกลับจากความตาย คุณฟื้นด้วยพลังชีวิตครึ่งหนึ่ง");
-render();saveGame();
+render();
+startAutoSave();
+setSpeed(speed);
+saveGame();
 }
+
 function newLife(){
-if(!G)return;
-let old=G.c;
-G.world.lifeCount++;
-G.world.history.push({name:old.name,age:old.age,race:old.race,job:old.job,fame:old.fame,kills:G.world.kills,death:G.deathReason,year:G.world.year});
-G.world.history=G.world.history.slice(-30);
-let name=prompt("ตั้งชื่อตัวละครชีวิตใหม่",old.name+" II")||old.name+" II";
-let race=pick(Object.keys(RACES));
-G.c=makeCharacter(name,race,pick(["นักเรียนรู้","ผู้เอาตัวรอด","ช่างสังเกต","ผู้มีเสน่ห์","พลังเวท","ร่างกายแข็งแกร่ง"]), "ไม่มี",pick(["สุขุม","กล้าหาญ","ช่างสงสัย","ใจดี","รักอิสระ"]),"ผู้สืบทอด",pick(["ชาวบ้าน","ตระกูลพ่อค้า","เด็กกำพร้า","ผู้ถูกอุปถัมภ์"]),pick(Object.keys(LOCATIONS)),"ผู้ฝึกหัด","อิสระ");
-G.location=G.c.spawn;G.c.lifeHistory=G.world.history.map(x=>x.name);
-G.c.gold+=Math.min(30,Math.floor(old.fame/2));
-G.c.lastAgeDay=(G.world.year-1)*360+G.world.month*30+G.world.day;
-G.deathReason="";G.c.dead=false;currentMonster=null;
-$("deathOverlay").style.display="none";$("creation").style.display="none";$("game").style.display="block";
-log("เกิดใหม่","ชีวิตใหม่เริ่มต้นขึ้นในโลกเดิม ประวัติศาสตร์ยังคงอยู่");
-render();saveGame();
+  if(!G) return;
+
+  // หยุดระบบเดิมก่อนสร้างชีวิตใหม่
+  if(timer){
+    clearInterval(timer);
+    timer=null;
+  }
+
+  const old=G.c;
+  const previousAuto=G.auto||{
+    enabled:true,
+    goal:"balanced",
+    risk:"low"
+  };
+
+  G.world.lifeCount++;
+
+  G.world.history.push({
+    name:old.name,
+    age:old.age,
+    race:old.race,
+    job:old.job,
+    fame:old.fame,
+    kills:G.world.kills,
+    death:G.deathReason,
+    year:G.world.year
+  });
+
+  G.world.history=G.world.history.slice(-30);
+
+  const name=prompt(
+    "ตั้งชื่อตัวละครชีวิตใหม่",
+    old.name+" II"
+  );
+
+  const newName=name&&name.trim()
+    ?name.trim()
+    :old.name+" II";
+
+  const race=pick(Object.keys(RACES));
+
+  G.c=makeCharacter(
+    newName,
+    race,
+    pick([
+      "นักเรียนรู้",
+      "ผู้เอาตัวรอด",
+      "ช่างสังเกต",
+      "ผู้มีเสน่ห์",
+      "พลังเวท",
+      "ร่างกายแข็งแกร่ง"
+    ]),
+    "ไม่มี",
+    pick(["สุขุม","กล้าหาญ","ช่างสงสัย","ใจดี","รักอิสระ"]),
+    pick(["ชาวบ้าน","ตระกูลพ่อค้า","เด็กกำพร้า","ผู้ถูกอุปถัมภ์"]),
+    pick(Object.keys(LOCATIONS)),
+    "ผู้ฝึกหัด",
+    "อิสระ"
+  );
+
+  G.location=G.c.spawn;
+  G.c.lifeHistory=G.world.history.map(x=>x.name);
+  G.c.gold+=Math.min(30,Math.floor(old.fame/2));
+  G.c.lastAgeDay=
+    (G.world.year-1)*360+
+    G.world.month*30+
+    G.world.day;
+
+  G.deathReason="";
+  G.c.dead=false;
+  G.eventPending=false;
+  currentMonster=null;
+
+  // เก็บเป้าหมายที่ผู้เล่นเลือกไว้
+  G.auto={
+    enabled:previousAuto.enabled!==false,
+    goal:previousAuto.goal||"balanced",
+    risk:previousAuto.risk||"low",
+    minutes:0,
+    last:"เริ่มต้นชีวิตใหม่"
+  };
+
+  $("deathOverlay").style.display="none";
+  $("creation").style.display="none";
+  $("game").style.display="block";
+
+  G.world.visited=G.world.visited||[];
+
+  if(!G.world.visited.includes(G.location)){
+    G.world.visited.push(G.location);
+  }
+
+  applyOrigin();
+  ensureMerchant();
+
+  log(
+    "เกิดใหม่",
+    "ชีวิตใหม่เริ่มต้นขึ้นใน "+G.location+
+    " ประวัติศาสตร์จากชีวิตก่อนยังคงอยู่"
+  );
+
+  render();
+  startAutoSave();
+
+  if(G.auto.enabled){
+    setSpeed(speed);
+  }else{
+    pauseTime();
+  }
+
+  saveGame();
 }
+
 function render(){
 if(!G)return;
 ageTick();
@@ -799,30 +962,265 @@ items.forEach(x=>{let o=document.createElement("option");o.value=x.value;o.textC
 if(items.some(x=>x.value===old))s.value=old;
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+
+function silentAutoSave(){
+  if(!G) return;
+
+  try{
+    localStorage.setItem(SAVEKEY,JSON.stringify({
+      G,
+      speed,
+      currentMonster,
+      savedAt:Date.now(),
+      running:!!timer&&!G.c.dead
+    }));
+  }catch(e){
+    // เซฟอัตโนมัติไม่สำเร็จ จะไม่ทำให้เกมหยุด
+  }
+}
+
+function startAutoSave(){
+  if(autoSaveTimer){
+    clearInterval(autoSaveTimer);
+  }
+
+  autoSaveTimer=setInterval(()=>{
+    silentAutoSave();
+  },30000);
+
+  silentAutoSave();
+}
+
 function saveGame(){
-if(!G){alert("ยังไม่มีเกมให้เซฟ");return;}
-try{localStorage.setItem(SAVEKEY,JSON.stringify({G,speed,currentMonster}));log("เซฟเกม","บันทึกข้อมูลในเบราว์เซอร์แล้ว");render();}
-catch(e){alert("บันทึกไม่สำเร็จ: "+e.message);}
+  if(!G){
+    alert("ยังไม่มีเกมให้เซฟ");
+    return;
+  }
+
+  try{
+    silentAutoSave();
+    log("เซฟเกม","บันทึกข้อมูลในเบราว์เซอร์แล้ว");
+    render();
+  }catch(e){
+    alert("บันทึกไม่สำเร็จ: "+e.message);
+  }
 }
+
+function applyOfflineProgress(elapsedMinutes){
+  if(!G||G.c.dead||elapsedMinutes<=0) return;
+
+  // ออฟไลน์ได้สูงสุด 8 ชั่วโมงจริง
+  const minutes=Math.min(
+    480,
+    Math.max(0,Math.floor(elapsedMinutes))
+  );
+
+  let simulated=0;
+
+  // จำลองทีละ 10 นาที เพื่อให้ AI ดูแลความต้องการได้ถี่ขึ้น
+  for(let passed=0;passed<minutes;passed+=10){
+    if(!G||G.c.dead) break;
+
+    const step=Math.min(10,minutes-passed);
+
+    advance(step,false);
+    simulated+=step;
+
+    if(!G||G.c.dead) break;
+
+    G.auto=G.auto||{
+      enabled:true,
+      goal:"balanced",
+      risk:"low",
+      minutes:0
+    };
+
+    if(G.auto.enabled){
+      G.auto.minutes=(G.auto.minutes||0)+step;
+
+      // ตัดสินใจเมื่อเวลาผ่านไปครบหนึ่งชั่วโมงในเกม
+      while(
+        G.auto.minutes>=60&&
+        G&&
+        !G.c.dead&&
+        G.auto.enabled
+      ){
+        G.auto.minutes-=60;
+        runAIDecision(false);
+      }
+    }
+
+    if(!G||G.c.dead) break;
+  }
+
+  if(G&&!G.c.dead&&simulated>0){
+    log(
+      "Idle",
+      "จำลองชีวิตออฟไลน์ "+
+      Math.floor(simulated/60)+" ชั่วโมง "+
+      (simulated%60)+" นาที"
+    );
+  }
+
+  render();
+}
+
 function loadGame(){
-try{
-let raw=localStorage.getItem(SAVEKEY);if(!raw){alert("ยังไม่มีเซฟ Another Life V2 ในเบราว์เซอร์นี้");return;}
-let d=JSON.parse(raw);G=d.G;speed=d.speed||1;currentMonster=d.currentMonster||null;
-$("creation").style.display="none";$("game").style.display="block";$("deathOverlay").style.display=G.c.dead?"flex":"none";
-if(G.c.dead)pauseTime();else setSpeed(speed);
-log("เซฟเกม","โหลดข้อมูลสำเร็จ");render();
-}catch(e){alert("โหลดเซฟไม่สำเร็จ: "+e.message);}
+  try{
+    const raw=localStorage.getItem(SAVEKEY);
+
+    if(!raw){
+      alert("ยังไม่มีเซฟเกมในเบราว์เซอร์นี้");
+      return;
+    }
+
+    const d=JSON.parse(raw);
+
+    if(!d.G||!d.G.c||!d.G.world){
+      throw new Error("รูปแบบเซฟไม่ถูกต้อง");
+    }
+
+    // ปิดตัวจับเวลาเก่าก่อนโหลดตัวละครใหม่
+    if(timer){
+      clearInterval(timer);
+      timer=null;
+    }
+
+    G=d.G;
+    speed=d.speed||1;
+    currentMonster=d.currentMonster||null;
+
+    const elapsedMinutes=d.savedAt
+      ?Math.max(
+        0,
+        Math.floor((Date.now()-d.savedAt)/60000)
+      )
+      :0;
+
+    $("creation").style.display="none";
+    $("game").style.display="block";
+
+    const wasRunning=d.running!==false;
+
+    if(!G.c.dead&&wasRunning){
+      applyOfflineProgress(elapsedMinutes);
+    }
+
+    if(G.c.dead){
+      pauseTime();
+      $("deathOverlay").style.display="flex";
+    }else if(wasRunning&&G.auto?.enabled!==false){
+      setSpeed(speed);
+    }else{
+      pauseTime();
+    }
+
+    startAutoSave();
+    log("เซฟเกม","โหลดข้อมูลสำเร็จ");
+    render();
+    silentAutoSave();
+
+  }catch(e){
+    alert("โหลดเซฟไม่สำเร็จ: "+e.message);
+  }
 }
+
 function exportSave(){
-if(!G){alert("ยังไม่มีเกมให้ส่งออก");return;}
-let blob=new Blob([JSON.stringify({G,speed,currentMonster},null,2)],{type:"application/json"});
-let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="another-life-v2-save.json";a.click();URL.revokeObjectURL(a.href);
+  if(!G){
+    alert("ยังไม่มีเกมให้ส่งออก");
+    return;
+  }
+
+  const data={
+    G,
+    speed,
+    currentMonster,
+    savedAt:Date.now(),
+    running:!!timer&&!G.c.dead
+  };
+
+  const blob=new Blob(
+    [JSON.stringify(data,null,2)],
+    {type:"application/json"}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+
+  a.href=url;
+  a.download="another-life-v2-save.json";
+  a.click();
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
 function importSave(){
-let f=$("importFile").files[0];if(!f){alert("เลือกไฟล์ JSON ก่อน");return;}
-let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.G||!d.G.c||!d.G.world)throw Error("รูปแบบเซฟไม่ถูกต้อง");G=d.G;speed=d.speed||1;currentMonster=d.currentMonster||null;localStorage.setItem(SAVEKEY,JSON.stringify(d));$("creation").style.display="none";$("game").style.display="block";if(G.c.dead)die(G.deathReason||"ชีวิตนี้สิ้นสุดลง");else setSpeed(speed);render();alert("นำเข้าเซฟสำเร็จ");}catch(e){alert("ไฟล์ไม่ถูกต้อง: "+e.message);}};r.readAsText(f);
+  const f=$("importFile").files[0];
+
+  if(!f){
+    alert("เลือกไฟล์ JSON ก่อน");
+    return;
+  }
+
+  const r=new FileReader();
+
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+
+      if(!d.G||!d.G.c||!d.G.world){
+        throw new Error("รูปแบบเซฟไม่ถูกต้อง");
+      }
+
+      if(timer){
+        clearInterval(timer);
+        timer=null;
+      }
+
+      G=d.G;
+      speed=d.speed||1;
+      currentMonster=d.currentMonster||null;
+
+      const elapsedMinutes=d.savedAt
+        ?Math.max(
+          0,
+          Math.floor((Date.now()-d.savedAt)/60000)
+        )
+        :0;
+
+      const wasRunning=d.running!==false;
+
+      $("creation").style.display="none";
+      $("game").style.display="block";
+
+      if(!G.c.dead&&wasRunning){
+        applyOfflineProgress(elapsedMinutes);
+      }
+
+      if(G.c.dead){
+        pauseTime();
+        $("deathOverlay").style.display="flex";
+      }else if(wasRunning&&G.auto?.enabled!==false){
+        setSpeed(speed);
+      }else{
+        pauseTime();
+      }
+
+      startAutoSave();
+      silentAutoSave();
+      render();
+
+      alert("นำเข้าเซฟสำเร็จ");
+
+    }catch(e){
+      alert("นำเข้าเซฟไม่สำเร็จ: "+e.message);
+    }
+  };
+
+  r.readAsText(f);
 }
-  
+
 function toggleAI() {
   if (!G) return;
   G.auto = G.auto || {
