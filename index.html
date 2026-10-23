@@ -3192,12 +3192,14 @@ function evtInit(){
           const save={year:w.year,month:w.month,day:w.day};
           const serial=(save.year-1)*360+(save.month||0)*30+save.day;
 
-          if(day<=serial){
-            evtProcessDay();}
+          if (day <= serial) {
+            evtProcessDay();
           }
         }
       }
-
+            evtRender();
+      return result;
+    };
       evtRender();
       return result;
     };
