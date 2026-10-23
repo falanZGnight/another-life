@@ -395,26 +395,106 @@ let m=G.world.minute, h=Math.floor(m/60)%24, mm=m%60;
 let part=h>=5&&h<11?"เช้า":h>=11&&h<15?"กลางวัน":h>=15&&h<19?"เย็น":"กลางคืน";
 return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")} น. (${part})`;
 }
-function advance(minutes,allowEncounter=true){
-if(!G||G.c.dead)return;
-let w=G.world,c=G.c,oldDay=w.day;
-let total=w.minute+minutes;
-while(total>=1440){total-=1440;w.day++;if(w.day>30){w.day=1;w.month++;if(w.month>11){w.month=0;w.year++;}}}
-w.minute=total;
-let elapsed=minutes/60;
-c.hunger=clamp(c.hunger+elapsed*1.1,0,100);
-c.thirst=clamp(c.thirst+elapsed*1.8,0,100);
-if(c.hunger>=100){c.hp-=Math.max(1,Math.ceil(elapsed/4));addCondition("หิวโหย");}
-if(c.thirst>=100){c.hp-=Math.max(1,Math.ceil(elapsed/2));addCondition("ขาดน้ำ");}
-if(c.energy<=0){c.hp-=Math.max(1,Math.ceil(elapsed/5));addCondition("อ่อนล้า");}
-if(c.hp<=0){die("ร่างกายทนต่อความหิว กระหาย หรือความเหนื่อยล้าไม่ไหว");return;}
-if(w.day!==oldDay && w.day%7===0){w.politics=clamp(w.politics+rand(-3,3),0,100);w.trade=clamp(w.trade+rand(-4,4),0,100);log("โลก","ข่าวประจำสัปดาห์: ตลาดและสถานการณ์ทางการเมืองเริ่มเปลี่ยนแปลง");}
-if(allowEncounter && Math.random()<Math.min(.24,minutes/600*.12*danger()))randomWorldEvent();
-render();
+
+function advance(minutes, allowEncounter = true) {
+  if (!G || G.c.dead || !Number.isFinite(minutes) || minutes <= 0) return;
+
+  const w = G.world;
+  const c = G.c;
+
+  const oldDay = evtDayNumber();
+  const oldPeriod = timeLabel();
+  const totalMinutes = Math.floor(minutes);
+
+  // คำนวณเวลาและวันใหม่ โดยใช้เวลาของโลกเดิม
+  let remaining = totalMinutes;
+  let crossedDays = 0;
+
+  while (remaining > 0) {
+    const untilMidnight = 1440 - w.minute;
+    const step = Math.min(remaining, untilMidnight);
+
+    w.minute += step;
+    remaining -= step;
+
+    if (w.minute >= 1440) {
+      w.minute = 0;
+      w.day++;
+
+      if (w.day > 30) {
+        w.day = 1;
+        w.month++;
+
+        if (w.month > 11) {
+          w.month = 0;
+          w.year++;
+        }
+      }
+
+      crossedDays++;
+    }
+  }
+
+  // ความต้องการพื้นฐานเปลี่ยนตามเวลาที่ผ่านไป
+  const elapsedHours = totalMinutes / 60;
+
+  c.hunger = clamp(c.hunger + elapsedHours * 1.1, 0, 100);
+  c.thirst = clamp(c.thirst + elapsedHours * 1.8, 0, 100);
+
+  if (c.hunger >= 100) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 4));
+    addCondition("หิวโหย");
+  }
+
+  if (c.thirst >= 100) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 2));
+    addCondition("ขาดน้ำ");
+  }
+
+  if (c.energy <= 0) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 5));
+    addCondition("อ่อนล้า");
+  }
+
+  if (c.hp <= 0) {
+    die("ร่างกายทนต่อความหิว กระหาย หรือความเหนื่อยล้าไม่ไหว");
+    return;
+  }
+
+  // ตรวจสอบการเปลี่ยนวันและเหตุการณ์ของโลก
+  const newDay = evtDayNumber();
+
+  if (typeof evtProcessDay === "function") {
+    const firstDay = oldDay + 1;
+
+    for (let day = firstDay; day <= newDay; day++) {
+      // แต่ละวันมีโอกาสเกิดเหตุการณ์เพียงรอบเดียว
+      evtProcessDay(day);
+    }
+  }
+
+  // เหตุการณ์สุ่มจากระบบเดิมของเกม
+  if (
+    allowEncounter &&
+    Math.random() < Math.min(0.24, totalMinutes / 600 * 0.12 * danger())
+  ) {
+    randomWorldEvent();
+  }
+
+
+  // อัปเดตหน้าจอหลังเวลาทั้งหมดเดินเสร็จ
+  evtRender();
+  render();
 }
-function addCondition(x){if(!G.c.condition.includes(x))G.c.condition.push(x);}
-function clearCondition(x){G.c.condition=G.c.condition.filter(v=>v!==x);}
- 
+
+function addCondition(x){
+  if(!G.c.condition.includes(x)) G.c.condition.push(x);
+}
+
+function clearCondition(x){
+  G.c.condition=G.c.condition.filter(v=>v!==x);
+}
+
  function setSpeed(n){
   if(!G || G.c.dead) return;
 
@@ -2720,7 +2800,32 @@ function evtNewspaper(){
   return true;
 }
 
-function evtProcessDay(){
+function evtProcessDay(dayOverride) {
+  if (!G || !G.c || G.c.dead) return;
+
+  const w = evtWorld();
+  const day = Number.isFinite(dayOverride)
+    ? dayOverride
+    : evtDayNumber();
+
+  if (w.processedDay === day) return;
+  w.processedDay = day;
+
+  evtFamily();
+  evtDailyLife();
+  evtWorldEvent();
+  evtFantasy();
+  evtNewspaper();
+
+  if (day % 7 === 0) {
+    if (w.flags.plague && Math.random() < 0.15) {
+      w.flags.plague = false;
+    }
+
+    if (w.danger > 0) w.danger = Math.max(0, w.danger - 1);
+    if (w.stability < 60 && !w.flags.war) w.stability++;
+  }
+}
   if(!G || !G.c || G.c.dead)return;
 
   const w=evtWorld();
@@ -2841,6 +2946,96 @@ function evtInit(){
 }
 
 /* ===== END EVENT ENGINE ===== */
+
+  
+function evtPeriodName(minute) {
+  const hour = Math.floor(minute / 60) % 24;
+
+  if (hour >= 6 && hour < 9) return "เช้า";
+  if (hour >= 9 && hour < 12) return "สาย";
+  if (hour >= 12 && hour < 14) return "เที่ยง";
+  if (hour >= 14 && hour < 17) return "บ่าย";
+  if (hour >= 17 && hour < 20) return "เย็น";
+  if (hour >= 20 && hour < 23) return "ดึก";
+  return "กลางคืน";
+}
+
+function evtProcessPeriod() {
+  if (!G || !G.c || G.c.dead) return;
+
+  const c = G.c;
+  const period = evtPeriodName(G.world.minute);
+  const chance = {
+    "เช้า": 8,
+    "สาย": 5,
+    "เที่ยง": 7,
+    "บ่าย": 6,
+    "เย็น": 12,
+    "ดึก": 10,
+    "กลางคืน": 8
+  }[period] || 5;
+
+  if (Math.random() * 100 >= chance) return;
+
+  const events = {
+    "เช้า": [
+      ["เสียงเรียกจากหน้าบ้าน", "มีคนมาเรียกสมาชิกในครอบครัวก่อนออกไปทำงาน"],
+      ["ประกาศจากกิลด์", "กิลด์ติดประกาศภารกิจใหม่สำหรับผู้สนใจ"],
+      ["พ่อค้าเริ่มตั้งร้าน", "ตลาดเริ่มคึกคักและมีสินค้าจากต่างถิ่น"]
+    ],
+    "สาย": [
+      ["ครูพเนจร", "ครูผู้เดินทางผ่านเมืองกำลังมองหาผู้เรียนที่สนใจ"],
+      ["คนแปลกหน้าขอความช่วยเหลือ", "นักเดินทางถามหาคนช่วยตามหาสิ่งของที่หายไป"],
+      ["ข่าวจากคนงาน", "คนงานพูดถึงปัญหาที่เกิดขึ้นตามเส้นทางการค้า"]
+    ],
+    "เที่ยง": [
+      ["ข่าวลือในโรงเตี๊ยม", "ผู้คนกำลังพูดถึงเหตุการณ์ที่เกิดขึ้นในเมืองอื่น"],
+      ["มื้ออาหารร่วมกัน", "คนในชุมชนชวนกันกินอาหารและแลกเปลี่ยนเรื่องราว"],
+      ["ผู้ส่งสารมาถึง", "ผู้ส่งสารนำจดหมายมาส่งให้คนในพื้นที่"]
+    ],
+    "บ่าย": [
+      ["ร่องรอยในป่า", "พบร่องรอยที่อาจเป็นของสัตว์เวทใกล้เส้นทาง"],
+      ["ช่างฝีมือกำลังหาผู้ช่วย", "ช่างท้องถิ่นประกาศรับคนช่วยงานชั่วคราว"],
+      ["ฝนตั้งเค้า", "เมฆดำเริ่มปกคลุมท้องฟ้า การเดินทางกลางแจ้งอาจลำบาก"]
+    ],
+    "เย็น": [
+      ["สมาชิกครอบครัวกลับบ้าน", "คนในครอบครัวกลับจากงานและเล่าเรื่องที่พบเจอ"],
+      ["ข่าวจากตลาด", "พ่อค้าแจ้งว่าราคาสินค้าบางชนิดเริ่มเปลี่ยน"],
+      ["นักเดินทางเข้าพัก", "นักเดินทางจากเมืองไกลนำข่าวสารมาด้วย"]
+    ],
+    "ดึก": [
+      ["เสียงทะเลาะในโรงเตี๊ยม", "ผู้คนมีความเห็นไม่ตรงกัน คุณอาจเข้าไปไกล่เกลี่ย"],
+      ["ข้อเสนอที่ไม่เปิดเผย", "บุคคลลึกลับเสนอค่าจ้างสำหรับงานที่ไม่ต้องการเปิดเผย"],
+      ["เสียงฝีเท้าบนถนน", "มีคนเดินผ่านตรอกมืดอย่างเร่งรีบ"]
+    ],
+    "กลางคืน": [
+      ["เสียงร้องจากป่า", "เสียงประหลาดดังมาจากนอกชุมชน"],
+      ["ความฝันประหลาด", "คุณฝันเห็นสถานที่ที่ไม่เคยไปมาก่อน"],
+      ["แสงเหนือหลังภูเขา", "แสงสีแปลกตาปรากฏเหนือขอบฟ้าเพียงชั่วครู่"]
+    ]
+  };
+
+  const entry = events[period][
+    Math.floor(Math.random() * events[period].length)
+  ];
+
+  // ผลกระทบเล็กน้อย มีโอกาสได้รับข้อมูลหรือเสียพลังงาน
+  if (period === "กลางคืน" && Math.random() < 0.25) {
+    c.energy = Math.max(0, c.energy - 2);
+  }
+
+  if (period === "เช้า" && Math.random() < 0.25) {
+    c.social = (c.social || 0) + 1;
+  }
+
+  evtFire(
+    "เหตุการณ์ช่วง" + period,
+    entry[0],
+    entry[1],
+    {},
+    false
+  );
+}
 
 
 function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
