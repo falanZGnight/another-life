@@ -7044,6 +7044,113 @@ function findFood() {
 
     root.append(journeyPage, petsPage, summonPage);
 
+/* ===== จัดกลุ่มระบบเกมตามหมวด ===== */
+function organizeLifeSections() {
+  if (!lifePage || lifePage.dataset.organized === "1") return;
+
+  const groups = [
+    {
+      id: "overview",
+      title: "🌍 ภาพรวมและเหตุการณ์",
+      names: ["โลกใบใหม่", "บันทึกเหตุการณ์"]
+    },
+    {
+      id: "daily",
+      title: "🏠 การใช้ชีวิตประจำวัน",
+      names: ["การใช้ชีวิต"]
+    },
+    {
+      id: "career",
+      title: "📚 อาชีพ ทักษะ และการเรียนรู้",
+      names: ["อาชีพและการเรียนรู้"]
+    },
+    {
+      id: "world",
+      title: "🗺️ โลก สถานที่ และการเมือง",
+      names: ["โลกและการเดินทาง", "สังคมและการเมือง"]
+    },
+    {
+      id: "items",
+      title: "🎒 กระเป๋า อุปกรณ์ และการค้า",
+      names: ["กระเป๋าและอุปกรณ์", "ตลาดและพ่อค้า"]
+    },
+    {
+      id: "combat",
+      title: "⚔️ มอนสเตอร์และการต่อสู้",
+      names: ["มอนสเตอร์และการต่อสู้", "บันทึกการค้นพบ"]
+    },
+    {
+      id: "social",
+      title: "💬 ผู้คนและความสัมพันธ์",
+      names: ["ผู้คนและความสัมพันธ์"]
+    },
+    {
+      id: "history",
+      title: "📖 ประวัติตัวละคร",
+      names: ["ประวัติชีวิต"]
+    }
+  ];
+
+  const wrappers = new Map();
+
+  groups.forEach(group => {
+    const details = document.createElement("details");
+    details.className = "alCategory";
+    details.dataset.category = group.id;
+
+    // เปิดหมวดหลักที่ใช้บ่อยไว้ก่อน
+    details.open = ["overview", "daily", "career"].includes(group.id);
+
+    const summary = document.createElement("summary");
+    summary.textContent = group.title;
+
+    const content = document.createElement("div");
+    content.className = "alCategoryContent";
+
+    details.append(summary, content);
+    wrappers.set(group.id, { details, content, names: group.names });
+  });
+
+  // เก็บแผงเดิมโดยอิงจากหัวข้อ ไม่อิงตำแหน่งบรรทัด
+  const panels = Array.from(
+    lifePage.querySelectorAll(":scope > .panel, :scope > .two > .panel")
+  );
+
+  panels.forEach(panel => {
+    const heading = panel.querySelector(":scope > h2");
+    if (!heading) return;
+
+    const title = heading.textContent.trim();
+
+    for (const group of groups) {
+      if (!group.names.includes(title)) continue;
+
+      wrappers.get(group.id).content.appendChild(panel);
+      break;
+    }
+  });
+
+  // เพิ่มหมวดใหม่ตามลำดับที่กำหนด
+  const fragment = document.createDocumentFragment();
+
+  groups.forEach(group => {
+    const wrapper = wrappers.get(group.id);
+    if (wrapper.content.children.length) {
+      fragment.appendChild(wrapper.details);
+    }
+  });
+
+  // ลบแถว .two ที่ว่างหลังย้ายแผงออกแล้ว
+  lifePage.querySelectorAll(":scope > .two").forEach(row => {
+    if (!row.querySelector(".panel")) row.remove();
+  });
+
+  lifePage.appendChild(fragment);
+  lifePage.dataset.organized = "1";
+}
+
+organizeLifeSections();
+
     nav.querySelectorAll("button").forEach(btn => {
       btn.addEventListener("click", () => showPage(btn.dataset.page));
     });
