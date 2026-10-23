@@ -1,1 +1,602 @@
 
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Another Life — โลกแฟนตาซีต่างชีวิต</title>
+<style>
+:root{--bg:#10151d;--panel:#1b2430;--panel2:#222e3b;--line:#38495b;--text:#e7edf5;--muted:#9cabbc;--gold:#e7bf76;--green:#8ed6aa;--red:#ed8d91;--blue:#8dc9f0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 system-ui,"Tahoma",sans-serif}
+header{padding:20px max(16px,calc((100% - 1200px)/2));background:#17212c;border-bottom:1px solid var(--line)}
+h1,h2,h3,p{margin-top:0}h1{font-size:25px;color:var(--gold);margin-bottom:3px}h2{font-size:19px}h3{font-size:16px;color:var(--gold)}
+small,.muted{color:var(--muted)}main{max-width:1200px;margin:auto;padding:16px}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:14px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--panel2);padding:9px;border-radius:8px}
+.stat b{display:block;font-size:18px;color:var(--gold)}
+button,select,input,textarea{font:inherit;color:var(--text);background:#263545;border:1px solid #465b70;border-radius:7px;padding:9px}
+button{cursor:pointer}button:hover{border-color:var(--gold);background:#344659}
+button:disabled{opacity:.4;cursor:not-allowed}.primary{background:#66502c;border-color:#a78343}.danger{color:var(--red)}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}
+.actions button{flex:1 1 115px}
+input,select,textarea{width:100%;margin:3px 0 10px}
+label{display:block;color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{white-space:nowrap}
+.log{height:270px;overflow:auto;background:#111923;border-radius:8px;padding:10px;font-size:13px}
+.log p{margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid #26313d}
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;background:#304153;color:var(--blue);font-size:12px;margin:2px}
+.good{color:var(--green)}.bad{color:var(--red)}.gold{color:var(--gold)}
+.bar{height:7px;background:#34414e;border-radius:10px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--green)}
+hr{border:0;border-top:1px solid var(--line);margin:13px 0}
+#creation{max-width:800px;margin:20px auto;padding:18px}
+#game{display:none}.notice{padding:10px;background:#28394a;border-radius:8px;margin-bottom:10px}
+.item{border-bottom:1px solid var(--line);padding:8px 0}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}main{padding:10px}.log{height:220px}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>Another Life</h1>
+<div class="muted">บันทึกชีวิตในโลกที่ไม่หยุดหมุน — สำรวจ เติบโต สร้างความสัมพันธ์ และค้นพบสิ่งที่ไม่เคยมีใครพบ</div>
+</header>
+
+<main>
+<section id="creation" class="panel">
+<h2>เริ่มต้นชีวิตใหม่</h2>
+<p class="muted">โลกนี้ไม่มีเส้นทางที่ถูกกำหนดไว้ ทุกการตัดสินใจอาจเปลี่ยนอนาคตของคุณ</p>
+<div class="two">
+<div><label>ชื่อตัวละคร</label><input id="cName" value="เรน"></div>
+<div><label>เผ่าพันธุ์</label><select id="cRace">
+<option value="มนุษย์">มนุษย์ — เรียนรู้เร็วและปรับตัวเก่ง</option>
+<option value="เอลฟ์">เอลฟ์ — ประสาทสัมผัสและเวทมนตร์</option>
+<option value="คนแคระ">คนแคระ — แข็งแกร่งและชำนาญงานช่าง</option>
+<option value="เผ่ามาร">เผ่ามาร — พลังเวทและการฟื้นตัว</option>
+<option value="เผ่าสัตว์">เผ่าสัตว์ — ประสาทสัมผัสและความคล่องตัว</option>
+<option value="ลูกครึ่งมังกร">ลูกครึ่งมังกร — อึดทนและมีพลังธาตุ</option>
+<option value="ภูตป่า">ภูตป่า — เชื่อมโยงกับธรรมชาติ</option>
+</select></div>
+<div><label>ภูมิหลัง</label><select id="cOrigin">
+<option>เด็กกำพร้าจากหมู่บ้านชายแดน</option><option>ลูกพ่อค้าเร่</option><option>ผู้รอดชีวิตจากหมู่บ้านที่ถูกโจมตี</option><option>บุตรช่างฝีมือ</option><option>เด็กที่เติบโตในป่าลึก</option><option>ผู้มีความทรงจำจากอีกโลก</option><option>ทายาทตระกูลที่ล่มสลาย</option>
+</select></div>
+<div><label>บุคลิกหลัก</label><select id="cPersonality">
+<option>ช่างสงสัย</option><option>ใจเย็น</option><option>ตรงไปตรงมา</option><option>ระแวดระวัง</option><option>เห็นอกเห็นใจ</option><option>ทะเยอทะยาน</option><option>รักอิสระ</option><option>เจ้าเล่ห์</option>
+</select></div>
+<div><label>พรติดตัว</label><select id="cPerk">
+<option>ผู้สังเกตการณ์ — ตรวจพบสิ่งผิดปกติได้ง่าย</option><option>พรแห่งการเรียนรู้ — ได้ประสบการณ์เพิ่ม</option><option>หัวใจผู้พิทักษ์ — ช่วยเหลือผู้อื่นได้ดี</option><option>นักเจรจา — ต่อรองราคาเก่งขึ้น</option><option>สัญชาตญาณนักล่า — ได้เปรียบในการสำรวจ</option><option>พรแห่งการฟื้นตัว — ฟื้นพลังได้ดี</option>
+</select></div>
+<div><label>อาชีพรองเริ่มต้น</label><select id="cJob">
+<option>นักเก็บสมุนไพร</option><option>พ่อค้า</option><option>ช่างตีเหล็ก</option><option>นักล่า</option><option>นักปรุงยา</option><option>พ่อครัว</option><option>นักสำรวจ</option><option>นักเจรจา</option>
+</select></div>
+</div>
+<button class="primary" onclick="startGame()">เริ่มชีวิต (อายุ 8 ปี)</button>
+<button onclick="loadGame()">โหลดเกมที่บันทึกไว้</button>
+</section>
+
+<section id="game">
+<div class="layout">
+<aside>
+<div class="panel">
+<h2 id="charTitle">ตัวละคร</h2>
+<div id="charInfo" class="muted"></div><hr>
+<div id="status"></div>
+<div class="stats" id="stats"></div>
+<div class="actions">
+<button onclick="rest()">พักผ่อน</button><button onclick="eat()">กินอาหาร</button>
+<button onclick="drink()">ดื่มน้ำ</button><button onclick="saveGame()">บันทึกเกม</button>
+</div>
+<div class="muted" id="worldClock"></div>
+</div>
+<div class="panel">
+<h3>ปาร์ตี้</h3><div id="party"></div>
+<div class="actions"><button onclick="leaveParty()">ออกจากปาร์ตี้</button></div>
+</div>
+<div class="panel">
+<h3>การเดินทาง</h3><div id="locationInfo"></div>
+<label>เลือกจุดหมาย</label><select id="destination"></select>
+<div class="actions"><button class="primary" onclick="travel()">ออกเดินทาง</button></div>
+<div id="travelInfo" class="muted"></div>
+</div>
+</aside>
+
+<div>
+<div class="panel">
+<div class="tabs">
+<button onclick="tab('adventure')">ผจญภัย</button><button onclick="tab('people')">ผู้คน</button>
+<button onclick="tab('trade')">การค้า</button><button onclick="tab('inventory')">กระเป๋า</button>
+<button onclick="tab('journal')">บันทึก</button><button onclick="tab('world')">ฐานข้อมูลโลก</button>
+</div>
+<div id="view"></div>
+</div>
+<div class="panel">
+<h3>บันทึกเหตุการณ์ล่าสุด</h3><div id="log" class="log"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const races={
+"มนุษย์":{hp:2,mp:0,str:1,dex:1,int:1},
+"เอลฟ์":{hp:0,mp:3,str:0,dex:2,int:2},
+"คนแคระ":{hp:4,mp:0,str:3,dex:0,int:1},
+"เผ่ามาร":{hp:1,mp:4,str:1,dex:1,int:2},
+"เผ่าสัตว์":{hp:2,mp:0,str:1,dex:3,int:1},
+"ลูกครึ่งมังกร":{hp:5,mp:2,str:3,dex:0,int:1},
+"ภูตป่า":{hp:0,mp:3,str:0,dex:2,int:3}
+};
+const places=[
+{name:"หมู่บ้านอรุณ",terrain:"ทุ่งหญ้า",danger:1,desc:"หมู่บ้านเล็กที่ผู้คนยังพอไว้ใจกัน",resource:"สมุนไพร"},
+{name:"ป่าหมอกเงิน",terrain:"ป่า",danger:2,desc:"หมอกสีเงินปกคลุมรากไม้เก่า",resource:"ไม้หอม"},
+{name:"หนองบึงมรกต",terrain:"หนองบึง",danger:3,desc:"น้ำสีเขียวซ่อนทั้งยาและพิษ",resource:"เห็ด"},
+{name:"เทือกเขาฟันหิน",terrain:"ภูเขา",danger:4,desc:"ลมแรงและเส้นทางแคบ",resource:"แร่เหล็ก"},
+{name:"ทะเลทรายแก้ว",terrain:"ทะเลทราย",danger:4,desc:"ผืนทรายสะท้อนแสงจนมองทางยาก",resource:"ผลึก"},
+{name:"ถ้ำเสียงสะท้อน",terrain:"ถ้ำ",danger:5,desc:"เสียงจากส่วนลึกไม่เหมือนเสียงของมนุษย์",resource:"แร่เวท"},
+{name:"ที่ราบหิมะคราม",terrain:"หิมะ",danger:4,desc:"ความหนาวกัดกินทั้งแรงกายและเสบียง",resource:"น้ำแข็งเวท"},
+{name:"นครร้างอีเธอร์",terrain:"ซากเมือง",danger:5,desc:"อาคารโบราณเต็มไปด้วยร่องรอยสงคราม",resource:"เศษโบราณวัตถุ"},
+{name:"หุบเขาราชัน",terrain:"หุบเขา",danger:6,desc:"ดินแดนที่สิ่งมีชีวิตระดับสูงใช้เป็นอาณาเขต",resource:"แก่นมอนสเตอร์"},
+{name:"ประตูเหวลึก",terrain:"ดันเจี้ยน",danger:7,desc:"ทางลงสู่ซากอารยธรรมที่ไม่มีในแผนที่",resource:"แก่นมืด"}
+];
+const monsterSeed=[
+["หมาป่าหมอก",1,"ธรรมชาติ",12,4,"เขี้ยวหมอก"],
+["สไลม์หยดฝน",1,"น้ำ",10,3,"เมือกใส"],
+["กอบลินจอมขโมย",1,"กายภาพ",14,4,"เศษเหรียญ"],
+["ค้างคาวเลือด",1,"มืด",11,5,"ปีกค้างคาว"],
+["เห็ดเดินได้",1,"ธรรมชาติ",13,3,"เห็ดเรืองแสง"],
+["งูทราย",2,"ดิน",18,5,"เกล็ดทราย"],
+["หมูป่าเขี้ยวเหล็ก",2,"กายภาพ",22,6,"เขี้ยวแข็ง"],
+["ผีเสื้อพิษ",2,"พิษ",15,7,"ผงปีกพิษ"],
+["โครงกระดูกลาดตระเวน",2,"มืด",20,6,"เศษกระดูก"],
+["แมงมุมคริสตัล",3,"ผลึก",27,8,"ใยผลึก"],
+["กวางเขามรกต",3,"ธรรมชาติ",25,7,"เขามรกต"],
+["ฮาร์ปีลมกรด",3,"ลม",24,9,"ขนฮาร์ปี"],
+["โทรลล์หนองน้ำ",3,"น้ำ",35,8,"เนื้อโทรลล์"],
+["สุนัขอสูรเพลิง",3,"ไฟ",28,10,"เขี้ยวเพลิง"],
+["โกเลมหิน",4,"ดิน",45,10,"แกนหิน"],
+["ออร์คศึก",4,"กายภาพ",40,11,"เหรียญออร์ค"],
+["แมงป่องสุริยะ",4,"พิษ",34,12,"หางพิษ"],
+["วิญญาณน้ำแข็ง",4,"น้ำแข็ง",31,13,"แกนน้ำแข็ง"],
+["มังกรผา",5,"มังกร",65,15,"เกล็ดมังกร"],
+["อัศวินไร้หัว",5,"มืด",58,14,"ตราอัศวิน"],
+["สิงโตสายฟ้า",5,"สายฟ้า",54,17,"แกนสายฟ้า"],
+["พฤกษากลืนกิน",5,"ธรรมชาติ",70,12,"เมล็ดกลืนกิน"],
+["อสูรทรายแก้ว",6,"ผลึก",80,17,"หัวใจผลึก"],
+["ยักษ์หิมะ",6,"น้ำแข็ง",90,16,"แกนน้ำแข็ง"],
+["ไวเวิร์นพิษ",6,"พิษ",72,20,"ถุงพิษ"],
+["ปีศาจเงา",7,"มืด",95,22,"เศษเงา"],
+["คิเมร่าเพลิง",7,"ไฟ",110,24,"แกนเพลิง"],
+["มังกรโบราณ",8,"มังกร",160,30,"เกล็ดโบราณ"],
+["ราชินีรังแมลง",8,"พิษ",140,27,"ไข่ราชินี"],
+["ผู้เฝ้าประตูเหว",9,"มืด",200,36,"แก่นเหว"]
+];
+const monsters=monsterSeed.map((m,i)=>({id:"m"+i,name:m[0],tier:m[1],element:m[2],hp:m[3],atk:m[4],drop:m[5]}));
+const hybrids=[
+{name:"สไลม์เพลิง",a:"สไลม์หยดฝน",b:"สุนัขอสูรเพลิง",element:"น้ำ+ไฟ",tier:3},
+{name:"หมาป่าคริสตัล",a:"หมาป่าหมอก",b:"แมงมุมคริสตัล",element:"ธรรมชาติ+ผลึก",tier:3},
+{name:"ฮาร์ปีน้ำแข็ง",a:"ฮาร์ปีลมกรด",b:"วิญญาณน้ำแข็ง",element:"ลม+น้ำแข็ง",tier:5},
+{name:"โกเลมพิษ",a:"โกเลมหิน",b:"แมงป่องสุริยะ",element:"ดิน+พิษ",tier:5},
+{name:"ไวเวิร์นสายฟ้า",a:"ไวเวิร์นพิษ",b:"สิงโตสายฟ้า",element:"พิษ+สายฟ้า",tier:7},
+{name:"มังกรเงา",a:"มังกรโบราณ",b:"ปีศาจเงา",element:"มังกร+มืด",tier:9},
+{name:"คิเมร่าหิมะ",a:"คิเมร่าเพลิง",b:"ยักษ์หิมะ",element:"ไฟ+น้ำแข็ง",tier:7},
+{name:"ราชันป่ามรกต",a:"กวางเขามรกต",b:"พฤกษากลืนกิน",element:"ธรรมชาติ",tier:6}
+];
+const names=["ลิอา","คีรัน","มาริน","โซล","ไอริส","เทน","โนอา","เซร่า","รินน์","อีวาน","เฟย์","คาล","มิโอะ","ดาริน","เวส"];
+const traits=["ใจดี","ระแวดระวัง","ทะเยอทะยาน","ขี้ระแวง","ซื่อสัตย์","ชอบเสี่ยง","รักอิสระ","เจ้าเล่ห์","ใจเย็น","ขี้อาย"];
+let state=null,activeTab="adventure",pending=null,clockTimer=null;
+
+function log(msg){if(!state)return;state.log.unshift({day:state.day,month:state.month,year:state.year,hour:state.hour,msg});state.log=state.log.slice(0,120);renderLog();}
+function worldLog(msg){state.history.unshift("ปี "+state.year+" เดือน "+state.month+" วันที่ "+state.day+": "+msg);state.history=state.history.slice(0,100);}
+function startGame(){
+ const race=$("cRace").value;
+ state={
+  name:$("cName").value.trim()||"ผู้เดินทาง",race,origin:$("cOrigin").value,
+  personality:$("cPersonality").value,perk:$("cPerk").value,job:$("cJob").value,
+  age:8,hp:30,mp:20,stamina:30,hunger:10,thirst:10,gold:45,xp:0,level:1,
+  stats:{str:5,dex:5,int:5,cha:5,vit:5},skill:{},day:1,month:1,year:412,hour:8,
+  location:0,inventory:{"ขนมปัง":4,"น้ำสะอาด":4,"สมุนไพร":2,"ยาพื้นฐาน":1,"ไม้":2},
+  party:[],npcs:[],knownMonsters:[],knownHybrids:[],history:[],log:[],
+  explored:[],quests:[],travelCount:0,worldMinutes:0,lastEvent:"",alive:true
+ };
+ const r=races[race];state.stats.str+=r.str;state.stats.dex+=r.dex;state.stats.int+=r.int;
+ state.hp+=r.hp;state.mp+=r.mp;
+ for(let i=0;i<6;i++)makeNPC(true);
+ $("creation").style.display="none";$("game").style.display="block";
+ log("คุณลืมตาขึ้นในโลกใหม่ ตอนอายุ 8 ปี — "+state.origin+" เผ่าพันธุ์ "+race);
+ worldLog("ชีวิตของ "+state.name+" เริ่มต้นขึ้นที่หมู่บ้านอรุณ");
+ discover("สถานที่","หมู่บ้านอรุณ","หมู่บ้านเริ่มต้นของการเดินทาง");
+ render();startClock();eventRoll(true);
+}
+function makeNPC(friend=false){
+ const n={id:Math.random().toString(36).slice(2,10),name:pick(names),race:pick(Object.keys(races)),age:rand(12,45),
+ personality:pick(traits),origin:pick(["อดีตนักเดินทาง","ครอบครัวช่างฝีมือ","เด็กกำพร้า","นักล่าจากชายแดน","พ่อค้าเร่","ผู้หลบหนีจากสงคราม"]),
+ likes:pick(["ความซื่อสัตย์","ความกล้า","ของขวัญ","การช่วยเหลือ","ความรู้","การค้า"]),
+ dislikes:pick(["การโกหก","ความโลภ","การดูถูก","การทรยศ","การข่มขู่","การผิดสัญญา"]),
+ affinity:friend?rand(4,15):0,trust:friend?rand(0,10):0,fear:0,respect:0,intimacy:0,
+ memory:[],job:pick(["นักผจญภัย","พ่อค้า","นักล่า","นักปรุงยา","ช่างตีเหล็ก","นักสำรวจ"]),
+ alive:true,party:false,opinion:"ยังไม่รู้จักกัน",lastMet:0};
+ state.npcs.push(n);return n;
+}
+function rel(n,kind,delta,why){
+ if(!n||!n.alive)return;
+ const cap=v=>clamp(v,-100,100);
+ n[kind]=cap((n[kind]||0)+delta);
+ n.memory.unshift({why,day:state.day,month:state.month,year:state.year,delta});
+ n.memory=n.memory.slice(0,15);
+ n.opinion=n.affinity>=50&&n.trust>=30?"ชื่นชอบและไว้ใจ":
+ n.affinity<=-40?"เกลียดหรือไม่พอใจ":n.trust< -20?"ระแวงคุณ":n.respect>=40?"ให้ความเคารพ":"กำลังประเมินคุณ";
+ log("ความสัมพันธ์กับ "+n.name+" เปลี่ยน: "+kind+" "+(delta>0?"+":"")+delta+" ("+why+")");
+}
+function relationship(n){
+ return `<div class="item"><b>${esc(n.name)}</b> <span class="tag">${esc(n.race)}</span><span class="tag">${esc(n.job)}</span><br><small>${esc(n.origin)} · นิสัย ${esc(n.personality)}</small>
+ <div class="stats">
+ <div class="stat">ชอบ / เกลียด <b>${n.affinity}</b></div>
+ <div class="stat">ไว้ใจ <b>${n.trust}</b></div>
+ <div class="stat">กลัว <b>${n.fear}</b></div>
+ <div class="stat">เคารพ <b>${n.respect}</b></div>
+ </div><small>ความสนิทใจ ${n.intimacy} · ${esc(n.opinion)}<br>ชอบ: ${esc(n.likes)} · ไม่ชอบ: ${esc(n.dislikes)}</small>
+ <div class="actions"><button onclick="talk('${n.id}')">พูดคุย</button><button onclick="gift('${n.id}')">ให้ของขวัญ</button><button onclick="invite('${n.id}')">ชวนเข้าปาร์ตี้</button></div></div>`;
+}
+function npc(id){return state.npcs.find(n=>n.id===id);}
+function talk(id){
+ const n=npc(id);if(!n)return;
+ const choices=[
+ ["คุยอย่างเป็นมิตร",()=>{rel(n,"affinity",3,"พูดคุยอย่างเป็นมิตร");rel(n,"trust",2,"เปิดใจพูดคุย");rel(n,"intimacy",2,"ใช้เวลาร่วมกัน");}],
+ ["ถามถึงอดีต",()=>{if(Math.random()<.7){rel(n,"trust",4,"รับฟังเรื่องราวส่วนตัว");rel(n,"intimacy",3,"แบ่งปันความทรงจำ");n.memory.unshift({why:"เล่าอดีตให้ฟัง",day:state.day});log(n.name+" เล่าว่า: "+n.origin+" และความฝันคือการมีชีวิตที่ดีกว่าเดิม");}else{rel(n,"affinity",-2,"ถามเรื่องส่วนตัวเร็วเกินไป");}}],
+ ["ถามเรื่องที่ไม่ชอบ",()=>{rel(n,"trust",1,"พยายามเข้าใจขอบเขต");log(n.name+" ไม่ชอบ "+n.dislikes);}],
+ ["ล้อเลียน",()=>{rel(n,"affinity",-8,"ถูกล้อเลียน");rel(n,"trust",-6,"รู้สึกว่าไม่ปลอดภัย");}]
+ ];
+ choose("พูดคุยกับ "+n.name,"คุณจะปฏิบัติต่ออีกฝ่ายอย่างไร?",choices);
+}
+function gift(id){
+ const n=npc(id);if(!n)return;
+ const item=Object.keys(state.inventory).find(i=>state.inventory[i]>0);
+ if(!item){log("คุณไม่มีของสำหรับมอบให้");return}
+ state.inventory[item]--;
+ const liked=["ขนมปัง","สมุนไพร","ยาพื้นฐาน","ผลึก","ดอกไม้"].includes(item);
+ rel(n,"affinity",liked?6:2,"ได้รับของขวัญ: "+item);
+ rel(n,"trust",liked?3:1,"คุณมอบของให้");
+ log("มอบ "+item+" ให้ "+n.name);
+ advance(30);render();
+}
+function invite(id){
+ const n=npc(id);if(!n||state.party.includes(id)){log("ตัวละครนี้อยู่ในปาร์ตี้แล้ว");return}
+ const chance=clamp(35+n.affinity*.5+n.trust*.45+n.respect*.2-(n.fear*.3),5,95);
+ choose("ชวน "+n.name+" เข้าปาร์ตี้","โอกาสตอบรับโดยประมาณ "+Math.round(chance)+"% — คำตอบขึ้นกับความสัมพันธ์และสถานการณ์",[
+ ["ชวนอย่างจริงใจ",()=>{if(Math.random()*100<chance){state.party.push(id);n.party=true;rel(n,"trust",4,"ได้รับคำชวนอย่างจริงใจ");rel(n,"affinity",3,"ตอบรับร่วมทาง");log(n.name+" เข้าร่วมปาร์ตี้แล้ว");}else{rel(n,"affinity",-2,"ปฏิเสธคำชวน");log(n.name+" ปฏิเสธคำชวนในครั้งนี้");}}],
+ ["เสนอแบ่งรางวัล",()=>{if(state.gold<10){log("เงินไม่พอสำหรับข้อเสนอ");return}state.gold-=10;const c=chance+15;if(Math.random()*100<c){state.party.push(id);n.party=true;rel(n,"trust",1,"เห็นข้อเสนอที่เป็นธรรม");log(n.name+" ตอบรับเพราะเห็นว่าผลประโยชน์เหมาะสม");}else{rel(n,"affinity",-1,"ข้อเสนอไม่ดึงดูดใจ");log(n.name+" ยังไม่อยากร่วมทาง");}}],
+ ["ยกเลิก",()=>{}]
+ ]);
+}
+function leaveParty(){
+ if(!state.party.length){log("ตอนนี้ไม่มีสมาชิกปาร์ตี้");return}
+ choose("ออกจากปาร์ตี้","คุณจะเดินทางต่อคนเดียวหรือคุยกับสมาชิกก่อน?",[
+ ["แยกทางกับทุกคน",()=>{for(const id of [...state.party]){const n=npc(id);if(n){n.party=false;rel(n,"affinity",-2,"แยกทางจากปาร์ตี้");}}state.party=[];log("ปาร์ตี้ถูกยุบแล้ว");}],
+ ["พูดคุยก่อน",()=>{const n=npc(state.party[0]);if(n){rel(n,"trust",2,"คุยเรื่องการแยกทาง");log("คุณตกลงแยกทางกันอย่างสงบ");n.party=false;state.party.shift();}}]
+ ]);
+}
+function choose(title,desc,options){
+ if(pending)return;
+ pending={title,desc,options};renderChoice();
+}
+function renderChoice(){
+ if(!pending)return;
+ $("view").innerHTML=`<div class="notice"><h3>${esc(pending.title)}</h3>${esc(pending.desc)}</div><div class="actions">${pending.options.map((o,i)=>`<button onclick="resolveChoice(${i})">${esc(o[0])}</button>`).join("")}</div>`;
+}
+function resolveChoice(i){
+ if(!pending)return;
+ const p=pending;pending=null;
+ try{p.options[i][1]()}catch(e){console.error(e);log("เกิดข้อผิดพลาดในการประมวลผลตัวเลือก")}
+ render();
+}
+function tab(t){activeTab=t;renderView();}
+function renderView(){
+ if(!state)return;
+ if(pending){renderChoice();return}
+ const loc=places[state.location];
+ if(activeTab==="adventure"){
+  $("view").innerHTML=`<h2>การผจญภัย</h2><div class="notice"><b>${esc(loc.name)}</b> · ${esc(loc.terrain)}<br>${esc(loc.desc)}<br>ระดับอันตราย ${loc.danger}/9</div>
+  <div class="actions"><button class="primary" onclick="explore()">สำรวจพื้นที่</button><button onclick="hunt()">ตามล่ามอนสเตอร์</button><button onclick="gather()">เก็บทรัพยากร</button><button onclick="meetEvent()">เหตุการณ์สุ่ม</button></div>
+  <h3>สถานที่ใกล้เคียง</h3>${places.map((p,i)=>`<div class="item">${esc(p.name)} <span class="tag">${esc(p.terrain)}</span><small> อันตราย ${p.danger}/9</small> ${i===state.location?"<span class='good'> (อยู่ที่นี่)</span>":""}</div>`).join("")}
+  <p class="muted">เวลาเดินต่อเองเมื่อไม่มีหน้าต่างตัดสินใจ การเดินทางและการกระทำใช้เวลาในโลกเกม</p>`;
+ }else if(activeTab==="people"){
+  $("view").innerHTML=`<h2>ผู้คนและความสัมพันธ์</h2><p class="muted">ค่าความสัมพันธ์มีผลต่อการรับคำชวน การช่วยเหลือ การต่อรอง และโอกาสที่ NPC จะร่วมทางหรือแยกตัว</p><div class="actions"><button onclick="newVisitor()">พบคนใหม่</button><button onclick="socialEvent()">เหตุการณ์ความสัมพันธ์</button></div>${state.npcs.filter(n=>n.alive).map(relationship).join("")}`;
+ }else if(activeTab==="trade"){
+  $("view").innerHTML=`<h2>ตลาดและการค้า</h2><p>เงิน: <b class="gold">${state.gold} เหรียญ</b></p><div class="notice">ราคาขึ้นลงตามความเสี่ยงของพื้นที่และทักษะนักเจรจา</div>
+  ${Object.keys(state.inventory).map(item=>`<div class="item"><b>${esc(item)}</b> × ${state.inventory[item]} <small>ราคาซื้อ ${price(item)} · ขาย ${Math.max(1,Math.floor(price(item)*.55))}</small><div class="actions"><button onclick="buy('${item}')">ซื้อ 1</button><button onclick="sell('${item}')">ขาย 1</button><button onclick="haggle('${item}')">ต่อรองซื้อ</button></div></div>`).join("")}
+  <h3>ฝึกอาชีพ: ${esc(state.job)}</h3><button onclick="workJob()">ทำงานหาเงินและประสบการณ์</button>`;
+ }else if(activeTab==="inventory"){
+  $("view").innerHTML=`<h2>กระเป๋าและอุปกรณ์</h2><p>เงิน ${state.gold} เหรียญ</p>${Object.entries(state.inventory).map(([k,v])=>`<div class="item">${esc(k)} × ${v} ${v>0?`<button onclick="useItem('${k}')">ใช้</button>`:""}</div>`).join("")}<hr><h3>สร้างไอเทม</h3><button onclick="craft('ยาพื้นฐาน')">ปรุงยาพื้นฐาน (สมุนไพร ×2)</button> <button onclick="craft('อาวุธไม้')">ทำอาวุธไม้ (ไม้ ×3)</button>`;
+ }else if(activeTab==="journal"){
+  $("view").innerHTML=`<h2>สมุดบันทึกชีวิต</h2><h3>เรื่องราวของตัวละคร</h3><p>คุณคือ ${esc(state.name)} เผ่า${esc(state.race)} ผู้มีภูมิหลังว่า ${esc(state.origin)} บุคลิก ${esc(state.personality)} และพร ${esc(state.perk)}</p><h3>ประวัติของโลก</h3>${state.history.map(x=>`<div class="item">${esc(x)}</div>`).join("")}<h3>ประวัติความทรงจำ NPC</h3>${state.npcs.filter(n=>n.memory.length).map(n=>`<div class="item"><b>${esc(n.name)}</b>: ${n.memory.map(m=>esc(m.why)).join(" · ")}</div>`).join("")}`;
+ }else{
+  $("view").innerHTML=`<h2>ฐานข้อมูลสิ่งมีชีวิตและโลก</h2><h3>มอนสเตอร์ที่พบทั้งหมด ${state.knownMonsters.length}/${monsters.length}</h3>${monsters.map(m=>`<div class="item"><b>${state.knownMonsters.includes(m.id)?esc(m.name):"ไม่ทราบชื่อ — ยังไม่ค้นพบ"}</b> <span class="tag">ระดับ ${m.tier}</span><small>${state.knownMonsters.includes(m.id)?`ธาตุ ${esc(m.element)} · พลังชีวิต ${m.hp} · โจมตี ${m.atk} · ดรอป ${esc(m.drop)}`:"พบตัวจริงเพื่อปลดล็อกข้อมูล"}</small></div>`).join("")}
+  <h3>มอนสเตอร์ลูกผสม</h3>${hybrids.map((h,i)=>`<div class="item"><b>${state.knownHybrids.includes(i)?esc(h.name):"??? — สายพันธุ์ลึกลับ"}</b> <small>${state.knownHybrids.includes(i)?`พ่อแม่: ${esc(h.a)} × ${esc(h.b)} · ธาตุ ${esc(h.element)} · ระดับ ${h.tier}`:"ค้นพบมอนสเตอร์ที่เกี่ยวข้องเพื่อปลดล็อกข้อมูล"}</small></div>`).join("")}
+  <h3>สถานที่ที่ค้นพบ</h3>${places.map((p,i)=>`<div class="item">${state.explored.includes(i)?esc(p.name):"สถานที่ที่ยังไม่สำรวจ"} <span class="tag">${state.explored.includes(i)?esc(p.terrain):"???"}</span></div>`).join("")}`;
+ }
+}
+function render(){
+ if(!state)return;
+ $("charTitle").textContent=state.name+" · Lv."+state.level;
+ $("charInfo").innerHTML=`อายุ ${state.age} ปี<br>เผ่า ${esc(state.race)}<br>ภูมิหลัง ${esc(state.origin)}<br>บุคลิก ${esc(state.personality)}<br>อาชีพ ${esc(state.job)}`;
+ $("status").innerHTML=`<div>HP ${state.hp}/${maxHP()}<div class="bar"><i style="width:${state.hp/maxHP()*100}%"></i></div></div><div>MP ${state.mp}/${maxMP()}<div class="bar"><i style="width:${state.mp/maxMP()*100}%"></i></div></div><div>พลังงาน ${state.stamina}/30<div class="bar"><i style="width:${state.stamina/30*100}%"></i></div></div><div>ความหิว ${state.hunger}/100 · กระหาย ${state.thirst}/100</div><div>EXP ${state.xp}/${state.level*30}</div>`;
+ $("stats").innerHTML=Object.entries({STR:state.stats.str,DEX:state.stats.dex,INT:state.stats.int,CHA:state.stats.cha,VIT:state.stats.vit}).map(([k,v])=>`<div class="stat">${k}<b>${v}</b></div>`).join("");
+ $("worldClock").textContent=`ปี ${state.year} · เดือน ${state.month} · วันที่ ${state.day} · ${String(state.hour).padStart(2,"0")}:00`;
+ $("party").innerHTML=state.party.length?state.party.map(id=>{const n=npc(id);return n?`<div class="item">${esc(n.name)}<small>ชอบ ${n.affinity} · ไว้ใจ ${n.trust}</small></div>`:""}).join(""):"ยังไม่มีสมาชิก";
+ $("locationInfo").innerHTML=`<b>${esc(places[state.location].name)}</b><br><small>${esc(places[state.location].terrain)} · อันตราย ${places[state.location].danger}/9</small>`;
+ $("destination").innerHTML=places.map((p,i)=>`<option value="${i}" ${i===state.location?"selected":""}>${esc(p.name)} (${p.terrain})</option>`).join("");
+ renderView();renderLog();
+}
+function renderLog(){$("log").innerHTML=state?state.log.map(l=>`<p><span class="gold">ปี ${l.year}/${l.month}/${l.day} ${String(l.hour).padStart(2,"0")}:00</span><br>${esc(l.msg)}</p>`).join(""):""}
+function maxHP(){return 30+state.stats.vit*3+state.level*4+races[state.race].hp}
+function maxMP(){return 20+state.stats.int*3+state.level*3+races[state.race].mp}
+function advance(minutes){
+ state.worldMinutes+=minutes;
+ let oldDay=state.day,oldAge=state.age;
+ for(let i=0;i<minutes;i+=60){
+  state.hour++;
+  if(state.hour>=24){state.hour=0;state.day++;state.hunger=clamp(state.hunger+5,0,100);state.thirst=clamp(state.thirst+7,0,100);state.stamina=clamp(state.stamina-1,0,30);}
+  if(state.day>30){state.day=1;state.month++;if(state.month>12){state.month=1;state.year++;state.age++;worldLog(state.name+" มีอายุเพิ่มขึ้นเป็น "+state.age+" ปี");}}
+ }
+ if(state.hunger>=85){state.hp=Math.max(1,state.hp-2);log("คุณหิวมาก ร่างกายเริ่มอ่อนแรง")}
+ if(state.thirst>=85){state.hp=Math.max(1,state.hp-3);log("คุณกระหายน้ำอย่างรุนแรง")}
+ if(state.stamina<=0)log("พลังงานหมด ควรพักก่อนทำกิจกรรมหนัก");
+ if(state.hp<=0){death();}
+}
+function startClock(){
+ if(clockTimer)clearInterval(clockTimer);
+ clockTimer=setInterval(()=>{if(state&&!pending&&state.alive){advance(60);render();if(Math.random()<.025)eventRoll(false);}},5000);
+}
+function rest(){
+ if(state.stamina<5&&state.hunger>80){log("คุณหิวเกินไป พักแล้วฟื้นตัวได้น้อย");}
+ advance(360);state.stamina=30;state.hp=clamp(state.hp+Math.floor(maxHP()*.35),0,maxHP());state.mp=clamp(state.mp+Math.floor(maxMP()*.5),0,maxMP());
+ state.hunger=clamp(state.hunger+12,0,100);state.thirst=clamp(state.thirst+15,0,100);
+ log("คุณพักผ่อนเป็นเวลา 6 ชั่วโมง");render();
+}
+function eat(){
+ if(!state.inventory["ขนมปัง"]){log("ไม่มีอาหาร");return}
+ state.inventory["ขนมปัง"]--;state.hunger=clamp(state.hunger-30,0,100);state.stamina=clamp(state.stamina+5,0,30);advance(15);log("กินขนมปังแล้ว");render();
+}
+function drink(){
+ if(!state.inventory["น้ำสะอาด"]){log("ไม่มีน้ำสะอาด");return}
+ state.inventory["น้ำสะอาด"]--;state.thirst=clamp(state.thirst-40,0,100);advance(5);log("ดื่มน้ำแล้ว");render();
+}
+function travel(){
+ const dest=Number($("destination").value);if(dest===state.location)return;
+ const from=places[state.location],to=places[dest];
+ const hours=2+Math.abs(dest-state.location)*2+to.danger;
+ const cost=Math.ceil(hours/3);
+ if(state.stamina<cost){log("พลังงานไม่พอสำหรับการเดินทาง ควรพักก่อน");return}
+ choose("ออกเดินทางไป "+to.name,`เส้นทางจาก ${from.name} ไป ${to.name} ใช้เวลาประมาณ ${hours} ชั่วโมง เสี่ยงระดับ ${to.danger}/9`,[
+ ["เดินทางอย่างระมัดระวัง",()=>{state.stamina-=cost;advance(hours*60);state.location=dest;state.travelCount++;discover("สถานที่",to.name,to.desc);log("เดินทางถึง "+to.name);
+ if(Math.random()<.25+to.danger*.06)meetEvent();
+ if(Math.random()<.15+to.danger*.05)encounter();
+ render();}],
+ ["เร่งเดินทาง",()=>{state.stamina-=cost+3;advance(Math.max(60,hours*45));state.location=dest;state.travelCount++;log("เร่งเดินทางถึง "+to.name);if(Math.random()<.25+to.danger*.09)encounter();render();}],
+ ["ยกเลิก",()=>{}]
+ ]);
+}
+function discover(type,name,desc){
+ if(type==="สถานที่"){const i=places.findIndex(p=>p.name===name);if(i>=0&&!state.explored.includes(i))state.explored.push(i);}
+ worldLog("ค้นพบ"+type+": "+name+" — "+desc);
+}
+function explore(){
+ const loc=places[state.location];if(state.stamina<4){log("เหนื่อยเกินไปที่จะสำรวจ");return}
+ advance(120);state.stamina-=4;state.explored.includes(state.location)||state.explored.push(state.location);
+ const r=Math.random();
+ if(r<.4){const loot=loc.resource;state.inventory[loot]=(state.inventory[loot]||0)+rand(1,3);log("สำรวจพบทรัพยากร: "+loot);}
+ else if(r<.72)encounter();
+ else if(r<.9)meetEvent();
+ else{state.xp+=8;log("คุณค้นพบเส้นทางลับ ได้ EXP 8");}
+ render();
+}
+function gather(){
+ if(state.stamina<2){log("พลังงานไม่พอ");return}
+ advance(60);state.stamina-=2;const item=places[state.location].resource;
+ state.inventory[item]=(state.inventory[item]||0)+rand(1,2);log("เก็บ "+item+" ได้");render();
+}
+function hunt(){
+ if(state.stamina<4){log("พลังงานไม่พอสำหรับการล่า");return}
+ state.stamina-=4;advance(60);encounter();render();
+}
+function encounter(){
+ const danger=places[state.location].danger;
+ const pool=monsters.filter(m=>m.tier<=danger+1&&m.tier>=Math.max(1,danger-2));
+ const m=pick(pool.length?pool:monsters.slice(0,5));
+ state.knownMonsters.includes(m.id)||state.knownMonsters.push(m.id);
+ const hybridIndex=hybrids.findIndex(h=>h.a===m.name||h.b===m.name);
+ let enemy={...m,hp:m.hp+Math.max(0,danger-m.tier)*5};
+ if(Math.random()<.12&&hybrids.length){
+  const h=pick(hybrids);state.knownHybrids.push(hybrids.indexOf(h));
+  enemy={...m,name:h.name,element:h.element,tier:h.tier,hp:m.hp+25,atk:m.atk+5,drop:"แก่นลูกผสม"};
+  log("พบสายพันธุ์ลูกผสมที่ไม่เคยมีบันทึก: "+h.name);
+ }
+ choose("เผชิญหน้ากับ "+enemy.name,`ระดับ ${enemy.tier} · ธาตุ ${enemy.element} · HP ${enemy.hp} · โจมตี ${enemy.atk} · ของดรอป ${enemy.drop}`,[
+ ["ต่อสู้",()=>combat(enemy)],
+ ["พยายามหนี",()=>{if(Math.random()<.65+state.stats.dex*.015){advance(30);log("หนีจากการต่อสู้ได้สำเร็จ")}else{state.hp-=Math.ceil(enemy.atk*.7);log("หนีไม่สำเร็จ ได้รับความเสียหาย");if(state.hp<=0)death();}}],
+ ["ลองเจรจา",()=>{if(Math.random()<.25+state.stats.cha*.025){log("สิ่งมีชีวิตยอมถอย");state.xp+=5;}else{log("เจรจาไม่สำเร็จ มอนสเตอร์โจมตี");state.hp-=enemy.atk;if(state.hp<=0)death();}}]
+ ]);
+}
+function combat(m){
+ let ehp=m.hp,round=0;
+ while(ehp>0&&state.hp>0&&round<12){
+  round++;
+  let dmg=Math.max(1,state.stats.str+rand(1,6)+state.level*2);
+  if(state.inventory["อาวุธไม้"]>0)dmg+=4;
+  if(Math.random()<state.stats.dex*.015)dmg=Math.floor(dmg*1.6);
+  ehp-=dmg;log("คุณโจมตี "+m.name+" สร้างความเสียหาย "+dmg);
+  if(ehp<=0)break;
+  let edmg=Math.max(1,m.atk+rand(-2,3)-Math.floor(state.stats.vit*.3));
+  if(state.party.length)edmg=Math.max(1,edmg-2);
+  state.hp-=edmg;log(m.name+" โจมตีกลับ "+edmg+" หน่วย");
+ }
+ advance(round*5);
+ if(state.hp<=0){death();return}
+ if(ehp<=0){
+  const reward=m.tier*8+rand(2,10);state.gold+=reward;state.xp+=m.tier*10;
+  state.inventory[m.drop]=(state.inventory[m.drop]||0)+1;
+  log("ชนะ "+m.name+" ได้ "+reward+" เหรียญและ "+m.drop);
+  for(const id of state.party){const n=npc(id);if(n){rel(n,"trust",2,"ร่วมต่อสู้ด้วยกัน");rel(n,"respect",2,"เห็นความสามารถในการต่อสู้");}}
+  levelCheck();
+ }else log("การต่อสู้ยืดเยื้อ คุณต้องถอยออกมา");
+ render();
+}
+function levelCheck(){
+ while(state.xp>=state.level*30){
+  state.xp-=state.level*30;state.level++;state.stats.vit++;state.stats.str++;
+  state.hp=clamp(state.hp+8,0,maxHP());state.mp=clamp(state.mp+4,0,maxMP());
+  log("เลเวลเพิ่มเป็น "+state.level+" — STR และ VIT เพิ่มขึ้น");
+ }
+}
+function death(){
+ if(!state.alive)return;
+ state.alive=false;if(clockTimer)clearInterval(clockTimer);
+ log("ชีวิตของคุณสิ้นสุดลง โลกยังคงดำเนินต่อไป");
+ choose("ชีวิตนี้จบลงแล้ว","ความทรงจำของคุณจะถูกบันทึกไว้ คุณจะเริ่มชีวิตใหม่หรือสืบทอดเรื่องราวผ่านคนรุ่นถัดไป?",[
+ ["เกิดใหม่",()=>{const old=state.history.slice();const name=state.name;startNewLife(old,name);}],
+ ["ให้ทายาทสืบทอด",()=>{const old=state.history.slice();const name=state.name+" ผู้สืบทอด";startNewLife(old,name);}],
+ ["กลับหน้าเริ่มเกม",()=>{state=null;$("game").style.display="none";$("creation").style.display="block";}]
+ ]);
+ renderChoice();
+}
+function startNewLife(history,oldName){
+ const savedHistory=history;
+ startGame();
+ state.history=[...savedHistory,"ชีวิตของ "+oldName+" สิ้นสุดลง โลกเริ่มเรื่องราวบทใหม่"];
+ state.year+=1;state.log=[];log("เริ่มต้นชีวิตใหม่ เรื่องราวในอดีตยังคงอยู่ในประวัติศาสตร์");
+ render();
+}
+function eventRoll(first=false){
+ if(!state||pending||!state.alive)return;
+ const r=Math.random();
+ if(first){log("ผู้ใหญ่ในหมู่บ้านเริ่มสอนคุณเรื่องโลกและการเอาตัวรอด");return}
+ if(r<.25)meetEvent();
+ else if(r<.42)newVisitor();
+ else if(r<.52)encounter();
+}
+function meetEvent(){
+ const events=[
+ {title:"พ่อค้าเกวียนคว่ำ",desc:"พ่อค้าบาดเจ็บข้างถนน สินค้ากระจัดกระจาย",opts:[
+ ["ช่วยเก็บสินค้า",()=>{state.stamina-=2;advance(30);state.gold+=8;state.xp+=5;log("พ่อค้าขอบคุณและมอบเงิน 8 เหรียญ");partyRel(3,2,"ช่วยเหลือผู้ประสบภัย");}],
+ ["หยิบของแล้วจากไป",()=>{state.gold+=15;partyRel(-6,-8,"เอาเปรียบคนที่กำลังลำบาก");log("ได้เงิน 15 เหรียญ แต่มีคนเห็นเหตุการณ์");}],
+ ["ถามอาการและเรียกคนช่วย",()=>{state.inventory["ยาพื้นฐาน"]=(state.inventory["ยาพื้นฐาน"]||0)+1;partyRel(5,3,"ช่วยเหลือผู้บาดเจ็บ");log("ได้ยาพื้นฐานเป็นของตอบแทน");}]
+ ]},
+ {title:"เสียงร้องในป่า",desc:"เสียงร้องดังจากพุ่มไม้ คุณไม่รู้ว่าเป็นกับดักหรือคนขอความช่วยเหลือ",opts:[
+ ["เข้าไปตรวจสอบ",()=>{if(Math.random()<.65){state.xp+=8;state.inventory["สมุนไพร"]=(state.inventory["สมุนไพร"]||0)+2;log("พบคนเก็บสมุนไพรที่หลงทางและช่วยพากลับ");partyRel(3,4,"ช่วยคนแปลกหน้า");}else{state.hp-=5;log("ถูกสัตว์เล็กซุ่มโจมตี HP -5");}}],
+ ["สังเกตจากระยะไกล",()=>{state.xp+=4;log("คุณเห็นรอยเท้ามอนสเตอร์และจดจำเส้นทางไว้");}],
+ ["เดินผ่านไป",()=>{log("คุณเลือกไม่เสี่ยงกับสิ่งที่ไม่รู้จัก");}]
+ ]},
+ {title:"ตลาดลับยามค่ำ",desc:"พ่อค้าสวมหน้ากากเสนอขายสิ่งของที่หาไม่ได้ในตลาดทั่วไป",opts:[
+ ["จ่าย 12 เหรียญซื้อแก่นลึกลับ",()=>{if(state.gold>=12){state.gold-=12;state.inventory["แก่นลึกลับ"]=(state.inventory["แก่นลึกลับ"]||0)+1;log("ได้แก่นลึกลับ ไม่ทราบคุณสมบัติทั้งหมด");}else log("เงินไม่พอ");}],
+ ["ถามที่มาของสินค้า",()=>{state.xp+=3;log("พ่อค้าบอกใบ้ถึงซากนครอีเธอร์");discover("เบาะแส","นครร้างอีเธอร์","ข่าวจากพ่อค้าลึกลับ");}],
+ ["ปฏิเสธ",()=>{log("คุณไม่ไว้ใจสินค้าที่ไม่ทราบที่มา");}]
+ ]},
+ {title:"ข้อพิพาทที่โรงเตี๊ยม",desc:"นักเดินทางสองคนทะเลาะกันเรื่องของหาย",opts:[
+ ["ฟังทั้งสองฝ่าย",()=>{state.xp+=5;state.stats.cha+=1;log("คุณช่วยคลี่คลายความเข้าใจผิด");partyRel(2,3,"แก้ปัญหาอย่างยุติธรรม");}],
+ ["เข้าข้างคนที่ดูแข็งแกร่ง",()=>{state.gold+=4;partyRel(-3,-2,"ตัดสินโดยไม่ฟังเหตุผล");log("ได้รับเงินเล็กน้อย แต่คนหนึ่งไม่พอใจ");}],
+ ["เดินหนี",()=>log("คุณไม่เข้าไปยุ่งกับเรื่องของคนอื่น")]
+ ]}
+ ];
+ const e=pick(events);choose(e.title,e.desc,e.opts);
+}
+function partyRel(a,t,why){for(const id of state.party){const n=npc(id);if(n){rel(n,"affinity",a,why);rel(n,"trust",t,why)}}}
+function newVisitor(){
+ const n=makeNPC();log("พบ "+n.name+" — "+n.origin+" อาชีพ "+n.job);
+ choose("พบคนแปลกหน้า: "+n.name,`อีกฝ่ายเป็น${n.race} อายุ ${n.age} ปี นิสัย ${n.personality} คุณจะเริ่มต้นอย่างไร?`,[
+ ["ทักทายอย่างสุภาพ",()=>{rel(n,"affinity",3,"ได้รับการทักทายอย่างสุภาพ");rel(n,"trust",2,"เริ่มรู้จักกัน");}],
+ ["ถามเรื่องอาชีพ",()=>{rel(n,"respect",1,"สนใจทักษะของอีกฝ่าย");log(n.name+" ทำงานเป็น"+n.job);}],
+ ["เมินเฉย",()=>{log("คุณเดินผ่านไปโดยไม่สนทนา");}]
+ ]);
+}
+function socialEvent(){
+ const candidates=state.npcs.filter(n=>n.alive);if(!candidates.length)return;
+ const n=pick(candidates);
+ choose("เหตุการณ์ความสัมพันธ์: "+n.name,"คุณได้ยินข่าวลือว่า "+n.name+" กำลังมีปัญหา",[
+ ["เสนอความช่วยเหลือ",()=>{if(Math.random()<.7){rel(n,"trust",6,"ช่วยในช่วงเวลาลำบาก");rel(n,"affinity",4,"แสดงความห่วงใย");state.xp+=5;}else{rel(n,"trust",1,"รับฟังปัญหา");log("คุณช่วยได้เพียงเล็กน้อย");}}],
+ ["ให้พื้นที่ส่วนตัว",()=>{rel(n,"respect",3,"เคารพขอบเขตส่วนตัว");log("คุณไม่กดดันให้อีกฝ่ายเล่าปัญหา");}],
+ ["ซักถามต่อหน้าคนอื่น",()=>{rel(n,"affinity",-6,"ถูกซักถามต่อหน้าคนอื่น");rel(n,"trust",-7,"ความเป็นส่วนตัวถูกละเมิด");}]
+ ]);
+}
+function price(item){
+ const base={"ขนมปัง":4,"น้ำสะอาด":3,"สมุนไพร":7,"ยาพื้นฐาน":15,"ไม้":5,"แร่เหล็ก":12,"ผลึก":18,"เห็ด":6,"ไม้หอม":9,"น้ำแข็งเวท":16,"แก่นมอนสเตอร์":22,"แก่นลึกลับ":25,"อาวุธไม้":20,"เศษโบราณวัตถุ":20,"เขี้ยวหมอก":7,"เกล็ดมังกร":55};
+ let p=base[item]||10;
+ p=Math.floor(p*(1+places[state.location].danger*.035));
+ if(state.perk.startsWith("นักเจรจา"))p=Math.floor(p*.9);
+ return Math.max(1,p);
+}
+function buy(item){
+ const p=price(item);if(state.gold<p){log("เงินไม่พอซื้อ "+item);return}
+ state.gold-=p;state.inventory[item]=(state.inventory[item]||0)+1;
+ const merchant=state.npcs.find(n=>n.job==="พ่อค้า");if(merchant){rel(merchant,"trust",1,"ซื้อขายอย่างสุจริต");rel(merchant,"affinity",1,"เป็นลูกค้า");}
+ log("ซื้อ "+item+" ราคา "+p+" เหรียญ");advance(10);render();
+}
+function sell(item){
+ if(!state.inventory[item]){log("ไม่มี "+item+" ให้ขาย");return}
+ const p=Math.max(1,Math.floor(price(item)*.55));state.inventory[item]--;state.gold+=p;
+ log("ขาย "+item+" ได้ "+p+" เหรียญ");advance(10);render();
+}
+function haggle(item){
+ const p=price(item);const bonus=state.stats.cha+(state.perk.startsWith("นักเจรจา")?5:0);
+ const discount=Math.random()<.4+bonus*.025;
+ const final=discount?Math.max(1,Math.floor(p*.75)):p;
+ choose("ต่อรองราคา "+item,discount?`พ่อค้ายอมลดราคาเหลือ ${final} เหรียญ`:`พ่อค้าไม่ยอมลดราคา ยังคง ${p} เหรียญ`,[
+ ["ซื้อในราคานี้",()=>{if(state.gold<final){log("เงินไม่พอ");return}state.gold-=final;state.inventory[item]=(state.inventory[item]||0)+1;log("ซื้อ "+item+" ราคา "+final);advance(10);}],
+ ["ขอผ่านก่อน",()=>log("คุณยุติการต่อรองอย่างสุภาพ")]
+ ]);
+}
+function workJob(){
+ const cost=2;if(state.stamina<cost){log("เหนื่อยเกินไป");return}
+ advance(120);state.stamina-=cost;
+ let gain=12+state.level*2;
+ if(state.job==="พ่อค้า"||state.job==="นักเจรจา")gain+=5;
+ state.gold+=gain;state.xp+=5;log("ทำงานอาชีพ "+state.job+" ได้ "+gain+" เหรียญและ EXP 5");levelCheck();render();
+}
+function useItem(item){
+ if(!state.inventory[item])return;
+ if(item==="ขนมปัง"){eat();return}
+ if(item==="น้ำสะอาด"){drink();return}
+ if(item==="ยาพื้นฐาน"){state.inventory[item]--;state.hp=clamp(state.hp+20,0,maxHP());log("ใช้ยาพื้นฐาน ฟื้น HP 20");}
+ else if(item==="สมุนไพร"){state.inventory[item]--;state.hp=clamp(state.hp+5,0,maxHP());log("ใช้สมุนไพร ฟื้น HP 5");}
+ else if(item==="แก่นลึกลับ"){state.inventory[item]--;state.mp=clamp(state.mp+12,0,maxMP());state.xp+=4;log("แก่นลึกลับฟื้น MP และให้ความเข้าใจเวทมนตร์");}
+ else {log("ยังไม่มีวิธีใช้ "+item+" โดยตรง");return}
+ render();
+}
+function craft(item){
+ if(item==="ยาพื้นฐาน"){
+  if((state.inventory["สมุนไพร"]||0)<2){log("สมุนไพรไม่พอ");return}
+  state.inventory["สมุนไพร"]-=2;state.inventory["ยาพื้นฐาน"]=(state.inventory["ยาพื้นฐาน"]||0)+1;
+ }else{
+  if((state.inventory["ไม้"]||0)<3){log("ไม้ไม่พอ");return}
+  state.inventory["ไม้"]-=3;state.inventory["อาวุธไม้"]=(state.inventory["อาวุธไม้"]||0)+1;
+ }
+ advance(30);state.xp+=3;log("สร้าง "+item+" สำเร็จ");render();
+}
+function loadGame(){
+ try{
+  const raw=localStorage.getItem("anotherLifeSave");
+  if(!raw){alert("ยังไม่มีไฟล์บันทึกในเบราว์เซอร์นี้");return}
+  state=JSON.parse(raw);
+  if(!state||!state.name||!state.stats)throw Error("ข้อมูลไม่ครบ");
+  $("creation").style.display="none";$("game").style.display="block";
+  pending=null;state.alive=true;render();startClock();log("โหลดเกมสำเร็จ");
+ }catch(e){alert("โหลดเกมไม่ได้: "+e.message)}
+}
+function saveGame(){
+ try{localStorage.setItem("anotherLifeSave",JSON.stringify(state));log("บันทึกเกมลงในเบราว์เซอร์แล้ว");render();}
+ catch(e){alert("บันทึกไม่ได้: "+e.message)}
+}
+window.addEventListener("beforeunload",()=>{if(state&&state.alive){try{localStorage.setItem("anotherLifeSave",JSON.stringify(state))}catch(e){}}});
+</script>
+</body>
+</html>
+
