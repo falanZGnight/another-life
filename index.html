@@ -3235,6 +3235,7 @@ function evtRender(){
     `${flags.portal?"🌀 พบประตูมิติ ":""}`+
     `${!flags.war&&!flags.famine&&!flags.plague&&!flags.portal?"สงบ ไม่มีวิกฤตใหญ่":""}</p>`;
 
+
   const list=w.news.slice(0,6);
   document.getElementById("evtLatest").innerHTML=list.length
     ?list.map(n=>
@@ -3243,11 +3244,14 @@ function evtRender(){
       `<span>${n.text}</span></article>`
     ).join("")
     :"<p>ยังไม่มีข่าวสำคัญ ข่าวจะปรากฏเมื่อเวลาในเกมเดินหน้า</p>";
+}
 
 function evtInit(){
+
   if(!G)return;
 
   evtPanelInit();
+  
 
   // เชื่อมระบบอีเวนต์เข้ากับเวลาเดิมของเกม
   if(!window.__evtAdvanceHook && typeof advance==="function"){
