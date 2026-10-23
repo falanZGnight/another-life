@@ -4708,6 +4708,1844 @@ escInit();
   });
 })();
 
+/* ===== ANOTHER LIFE: FAMILY, DYNASTY & STATUS ===== */
+(function installFamilySystem() {
+  "use strict";
+
+  const raceGrowth = {
+    "มนุษย์": 1,
+    "เอลฟ์": 0.35,
+    "คนแคระ": 0.7,
+    "เผ่าสัตว์": 1.1,
+    "เผ่ามังกรสายเลือดเจือจาง": 0.25,
+    "เผ่าวิญญาณ": 0.4
+  };
+
+  const baseGrowth = 2.5;
+
+  function ready() {
+    return !!(window.G && G.c && G.world);
+  }
+
+  function initFamily() {
+    if (!ready()) return false;
+
+    G.world.family ||= {
+      surname: "ผู้บุกเบิก",
+      founded: G.world.year || 1,
+      head: G.c.name,
+      spouseId: null,
+      children: [],
+      members: [],
+      prestige: 0,
+      title: "สามัญชน"
+    };
+
+    const f = G.world.family;
+    f.children ||= [];
+    f.members ||= [];
+    f.prestige ||= 0;
+    f.surname ||= "ผู้บุกเบิก";
+    f.head ||= G.c.name;
+
+    G.c.familySurname ||= f.surname;
+    G.c.ageFraction ||= 0;
+    G.c.lastAgeDay ??= currentDay();
+
+    return true;
+  }
+
+  function currentDay() {
+    return (G.world.year - 1) * 360 +
+      (G.world.month || 0) * 30 +
+      (G.world.day || 1);
+  }
+
+  function getSpouse() {
+    if (!initFamily()) return null;
+    const id = G.world.family.spouseId;
+    return G.world.npcs.find(n => n.id === id) || null;
+  }
+
+  function statusTitle() {
+    const c = G.c;
+    const f = G.world.family;
+    const wealth = Math.max(0, Number(c.gold) || 0);
+    const score = Math.max(0, Number(c.fame) || 0) +
+      Math.max(0, Number(c.trust) || 0) * 2 +
+      Math.max(0, Number(f.prestige) || 0) +
+      Math.floor(wealth / 50);
+
+    if (score >= 250 || wealth >= 10000) return "ขุนนางชั้นสูง";
+    if (score >= 150 || wealth >= 5000) return "ชนชั้นสูง";
+    if (score >= 80 || wealth >= 1500) return "ผู้มีฐานะ";
+    if (score >= 30 || wealth >= 400) return "สามัญชนผู้มีชื่อเสียง";
+    return "สามัญชน";
+  }
+
+  function ensureUI() {
+    if (document.getElementById("alFamilyPanel")) return;
+
+    const panel = document.createElement("section");
+    panel.id = "alFamilyPanel";
+    panel.className = "panel";
+    panel.innerHTML = `
+      <h2>🏰 เกียรติยศ ฐานะ และตระกูล</h2>
+      <div id="alFamilyStatus"></div>
+      <div class="actions" style="margin:8px 0">
+        <button id="alRenameFamily">ตั้งชื่อตระกูล</button>
+        <button id="alFamilyCeremony">จัดงานตระกูล</button>
+        <button id="alFamilyHelp">ช่วยเหลือชุมชน</button>
+      </div>
+      <hr style="border-color:var(--line)">
+      <h3>💍 คู่สมรส</h3>
+      <div id="alSpouseInfo"></div>
+      <div class="actions">
+        <button id="alMarriage">ขอแต่งงานกับ NPC ที่เลือก</button>
+      </div>
+      <h3>👶 ทายาทและลูกหลาน</h3>
+      <div id="alChildrenInfo"></div>
+      <div class="actions">
+        <button id="alHaveChild">มีบุตร</button>
+      </div>
+      <p class="muted">
+        ชื่อเสียง ฐานะ และความสัมพันธ์เปลี่ยนแปลงตามการกระทำ
+        การแต่งงานและการมีบุตรต้องผ่านเงื่อนไขวัยของเผ่า
+      </p>`;
+
+    const game = document.getElementById("game");
+    if (game) game.appendChild(panel);
+
+    document.getElementById("alRenameFamily").onclick = renameFamily;
+    document.getElementById("alFamilyCeremony").onclick = familyCeremony;
+    document.getElementById("alFamilyHelp").onclick = helpCommunity;
+    document.getElementById("alMarriage").onclick = marrySelectedNPC;
+    document.getElementById("alHaveChild").onclick = haveChild;
+  }
+
+  function renameFamily() {
+    if (!initFamily()) return;
+
+    const name = prompt("ตั้งชื่อตระกูล", G.world.family.surname);
+    if (!name || !name.trim()) return;
+
+    G.world.family.surname = name.trim().slice(0, 40);
+    G.c.familySurname = G.world.family.surname;
+
+    log("ตระกูล", "ตระกูล " + G.world.family.surname +
+      " ได้รับการบันทึกในประวัติศาสตร์");
+    renderFamily();
+    if (typeof saveGame === "function") saveGame();
+  }
+
+  function marrySelectedNPC() {
+    if (!initFamily()) return;
+
+    const c = G.c;
+    const f = G.world.family;
+    const select = document.getElementById("npcSelect");
+    const id = select ? Number(select.value) : 0;
+    const n = G.world.npcs.find(x => x.id === id);
+
+    if (!n) {
+      log("ครอบครัว", "ต้องพบ NPC ก่อนจึงจะขอแต่งงานได้");
+      return;
+    }
+    if (f.spouseId) {
+      log("ครอบครัว", "คุณมีคู่สมรสอยู่แล้วในระบบนี้");
+      return;
+    }
+    if (n.id === c.id || n.dead) {
+      log("ครอบครัว", "ไม่สามารถเลือกบุคคลนี้เป็นคู่สมรสได้");
+      return;
+    }
+    if (!isAdult(c) || Number(n.age) < raceRules(n.race).adultAge) {
+      log("ครอบครัว", "ทั้งสองฝ่ายต้องเป็นผู้ใหญ่ตามเกณฑ์ของเผ่าตนเอง");
+      return;
+    }
+    if ((n.intimacy || 0) < 5 || (n.trust || 0) < 3 ||
+        (n.like || 0) < 5) {
+      log("ความสัมพันธ์", "ความสัมพันธ์ยังไม่แน่นแฟ้นพอ ควรพูดคุยและสร้างความไว้ใจก่อน");
+      return;
+    }
+
+    if (!confirm("ขอแต่งงานกับ " + n.name + " และสร้างครอบครัวร่วมกันหรือไม่?")) {
+      return;
+    }
+
+    f.spouseId = n.id;
+    f.prestige += 5;
+    n.marriedTo = c.name;
+    n.friend = true;
+    f.members.push({
+      name: n.name,
+      race: n.race,
+      role: "คู่สมรส",
+      since: G.world.year
+    });
+
+    log("แต่งงาน", c.name + " และ " + n.name +
+      " แต่งงานกัน ตระกูล " + f.surname + " เริ่มขยายครอบครัว");
+    renderFamily();
+    render();
+    if (typeof saveGame === "function") saveGame();
+  }
+
+  function haveChild() {
+    if (!initFamily()) return;
+
+    const c = G.c;
+    const f = G.world.family;
+    const spouse = getSpouse();
+
+    if (!spouse) {
+      log("ครอบครัว", "ต้องมีคู่สมรสก่อนจึงจะมีบุตรได้");
+      return;
+    }
+    if (!isAdult(c) ||
+        Number(spouse.age) < raceRules(spouse.race).adultAge) {
+      log("ครอบครัว", "ทั้งสองฝ่ายต้องถึงวัยผู้ใหญ่ตามเผ่าของตน");
+      return;
+    }
+    if (f.children.length >= 10) {
+      log("ครอบครัว", "ระบบรองรับบันทึกบุตรได้สูงสุด 10 คนต่อตระกูลในเวอร์ชันนี้");
+      return;
+    }
+
+    const childName = prompt("ตั้งชื่อลูก");
+    if (!childName || !childName.trim()) return;
+
+    const child = {
+      id: "child-" + Date.now() + "-" + rand(100, 999),
+      name: childName.trim().slice(0, 40),
+      surname: f.surname,
+      race: spouse.race === c.race
+        ? c.race
+        : (Math.random() < 0.5 ? c.race : spouse.race),
+      age: 0,
+      ageFraction: 0,
+      fatherOrMother: c.name,
+      otherParent: spouse.name,
+      bornYear: G.world.year,
+      status: "ทายาท"
+    };
+
+    f.children.push(child);
+    f.prestige += 10;
+
+    log("กำเนิดทายาท", "สมาชิกใหม่ " + child.name +
+      " " + child.surname + " (" + child.race +
+      ") ถือกำเนิดในปีที่ " + G.world.year);
+
+    renderFamily();
+    render();
+    if (typeof saveGame === "function") saveGame();
+  }
+
+  function familyCeremony() {
+    if (!initFamily()) return;
+    const c = G.c;
+    const f = G.world.family;
+    const cost = 30 + f.children.length * 10;
+
+    if (c.gold < cost) {
+      log("ตระกูล", "เงินไม่พอจัดงาน ต้องใช้ " + cost + " เหรียญ");
+      return;
+    }
+
+    c.gold -= cost;
+    c.fame = (c.fame || 0) + 3;
+    f.prestige += 4;
+
+    log("ตระกูล", "จัดงานของตระกูล " + f.surname +
+      " สำเร็จ เกียรติยศเพิ่มขึ้น");
+    render();
+    if (typeof saveGame === "function") saveGame();
+  }
+
+  function helpCommunity() {
+    if (!initFamily()) return;
+
+    if (G.c.energy < 10) {
+      log("เกียรติยศ", "พลังงานไม่พอสำหรับช่วยเหลือชุมชน");
+      return;
+    }
+
+    G.c.energy -= 10;
+    G.c.fame = (G.c.fame || 0) + 2;
+    G.c.trust = (G.c.trust || 0) + 1;
+    G.world.family.prestige += 2;
+
+    if (typeof advance === "function") advance(30, false);
+
+    log("เกียรติยศ", "คุณช่วยเหลือชุมชน ชื่อเสียงและเกียรติยศของตระกูลเพิ่มขึ้น");
+    render();
+    if (typeof saveGame === "function") saveGame();
+  }
+
+  function renderFamily() {
+    if (!initFamily()) return;
+    ensureUI();
+
+    const f = G.world.family;
+    const spouse = getSpouse();
+    f.title = statusTitle();
+
+    document.getElementById("alFamilyStatus").innerHTML =
+      "<div class='stat'><span>ตระกูล</span><b>" + esc(f.surname) + "</b></div>" +
+      "<div class='stat'><span>ฐานะปัจจุบัน</span><b>" + esc(f.title) + "</b></div>" +
+      "<div class='stat'><span>ชื่อเสียง</span><b>" + (G.c.fame || 0) + "</b></div>" +
+      "<div class='stat'><span>เกียรติยศตระกูล</span><b>" + f.prestige + "</b></div>" +
+      "<div class='stat'><span>ทรัพย์สินส่วนตัว</span><b>" + (G.c.gold || 0) + " เหรียญ</b></div>" +
+      "<div class='stat'><span>จำนวนทายาท</span><b>" + f.children.length + "</b></div>";
+
+    document.getElementById("alSpouseInfo").textContent = spouse
+      ? spouse.name + " · " + spouse.race + " · อายุ " + spouse.age +
+        " ปี · คู่สมรสตั้งแต่ปีที่ " + (f.members.find(m => m.name === spouse.name)?.since || f.founded)
+      : "ยังไม่มีคู่สมรส";
+
+    document.getElementById("alChildrenInfo").innerHTML =
+      f.children.length
+        ? f.children.map(ch =>
+            "<div class='card'><b>" + esc(ch.name) + " " +
+            esc(ch.surname) + "</b><br>" +
+            esc(ch.race) + " · อายุ " + ch.age + " ปี<br>" +
+            "<span class='muted'>บุตรของ " + esc(ch.fatherOrMother) +
+            " และ " + esc(ch.otherParent) + " · เกิดปีที่ " +
+            ch.bornYear + "</span></div>"
+          ).join("")
+        : "ยังไม่มีบุตร";
+  }
+
+  // อายุเพิ่มตามเวลาของโลก และตัวคูณการเติบโตของแต่ละเผ่า
+  // 360 วันในโลกเกมเป็นหนึ่งปีของเวลาโลก
+  const previousAgeTick = window.ageTick;
+  window.ageTick = function () {
+    if (!ready()) return;
+
+    const c = G.c;
+    const day = currentDay();
+    if (!Number.isFinite(Number(c.age))) c.age = 8;
+
+    if (!Number.isFinite(Number(c.lastAgeDay))) {
+      c.lastAgeDay = day;
+      c.ageFraction ||= 0;
+      return;
+    }
+
+    const elapsed = Math.max(0, day - c.lastAgeDay);
+    if (!elapsed) return;
+
+    c.lastAgeDay = day;
+    c.ageFraction = (Number(c.ageFraction) || 0) +
+      elapsed / 360 * baseGrowth *
+      (raceGrowth[c.race] || 1);
+
+    const years = Math.floor(c.ageFraction);
+    if (years > 0) {
+      const oldAge = c.age;
+      c.age += years;
+      c.ageFraction -= years;
+
+      if (typeof log === "function") {
+        log("เติบโต", c.name + " มีอายุ " + c.age +
+          " ปีแล้ว (อัตราการเติบโตตามเผ่า)");
+      }
+
+      if (oldAge < raceRules(c.race).adultAge &&
+          c.age >= raceRules(c.race).adultAge &&
+          typeof log === "function") {
+        log("เติบโต", c.name +
+          " ถึงวัยผู้ใหญ่ตามเกณฑ์ของเผ่า " + c.race);
+      }
+    }
+
+    // เพิ่มอายุของลูกหลานตามเผ่าเช่นกัน
+    const f = G.world.family;
+    if (f && Array.isArray(f.children)) {
+      for (const child of f.children) {
+        child.lastAgeDay ??= day;
+        const childDays = Math.max(0, day - child.lastAgeDay);
+        child.lastAgeDay = day;
+        child.ageFraction = (Number(child.ageFraction) || 0) +
+          childDays / 360 * baseGrowth *
+          (raceGrowth[child.race] || 1);
+
+        const childYears = Math.floor(child.ageFraction);
+        if (childYears > 0) {
+          child.age += childYears;
+          child.ageFraction -= childYears;
+        }
+      }
+    }
+  };
+
+  // เชื่อมการแสดงผลกับ render เดิมโดยไม่แทนที่ UI หลัก
+  const previousRender = window.render;
+  if (typeof previousRender === "function") {
+    window.render = function () {
+      previousRender.apply(this, arguments);
+      try {
+        if (ready()) renderFamily();
+      } catch (error) {
+        console.error("Family system:", error);
+      }
+    };
+  }
+
+  window.addEventListener("load", () => {
+    try {
+      if (ready()) renderFamily();
+    } catch (error) {
+      console.error("Family initialization:", error);
+    }
+  });
+})();
+
+/* ==========================================================
+   ANOTHER LIFE — CLASS EVOLUTION SYSTEM
+   คลาสหลัก / คลาสแตกแขนง / อาชีพเสริม / การเติบโต / พรสวรรค์
+   วางก่อน </script> ใน index.html
+   ========================================================== */
+(function () {
+  "use strict";
+
+  const CLASS_TREE = {
+    "นักดาบ": [
+      ["นักดาบหนัก", 80, "atk", 8, "ฝึกดาบ", 4, "atk", 2],
+      ["นักดาบคู่", 120, "ฝึกดาบ", 5, "dex", 5, "atk", 2],
+      ["นักดาบเวท", 180, "magic", 5, "ฝึกดาบ", 5, "magic", 2],
+      ["จอมดาบ", 300, "atk", 14, "ฝึกดาบ", 12, "atk", 4]
+    ],
+    "นักธนู": [
+      ["พลซุ่มยิง", 100, "ฝึกธนู", 5, "aim", 5, "atk", 2],
+      ["นักล่าอสูร", 160, "ฝึกล่า", 6, "survival", 7, "survival", 3],
+      ["ธนูเวท", 200, "magic", 6, "ฝึกธนู", 6, "magic", 2]
+    ],
+    "นักเวท": [
+      ["จอมเวทธาตุ", 100, "magic", 7, "ฝึกเวท", 5, "magic", 3],
+      ["นักเวทสนับสนุน", 140, "ฝึกเวท", 4, "ฝึกช่วยเหลือ", 3, "knowledge", 3],
+      ["นักเวทมิติ", 320, "magic", 14, "knowledge", 8, "magic", 5],
+      ["นักเวทต้องห้าม", 400, "ความถนัดซ่อนเร้น", "แก่นเวทแฝง", "magic", 12, "magic", 6]
+    ],
+    "ผู้พิทักษ์": [
+      ["อัศวินโล่", 90, "def", 5, "ฝึกป้องกัน", 4, "def", 2],
+      ["ผู้พิทักษ์ศักดิ์สิทธิ์", 200, "fame", 5, "ฝึกช่วยเหลือ", 4, "def", 3]
+    ],
+    "นักล่า": [
+      ["พรานป่า", 80, "survival", 5, "ฝึกล่า", 4, "survival", 3],
+      ["นักล่าอสูร", 180, "atk", 9, "ฝึกล่า", 8, "atk", 3],
+      ["ผู้เชี่ยวชาญสัตว์วิเศษ", 280, "knowledge", 8, "ฝึกสำรวจ", 7, "knowledge", 3]
+    ],
+    "นักลอบเร้น": [
+      ["โจรเงา", 100, "ฝึกสำรวจ", 4, "dex", 5, "survival", 2],
+      ["นักฆ่า", 220, "atk", 12, "ฝึกดาบ", 6, "atk", 4]
+    ],
+    "ผู้รักษา": [
+      ["แพทย์สนาม", 80, "knowledge", 4, "ฝึกช่วยเหลือ", 3, "knowledge", 3],
+      ["นักบวช", 160, "magic", 6, "fame", 4, "magic", 2],
+      ["ผู้รักษาวิญญาณ", 280, "magic", 12, "ฝึกช่วยเหลือ", 8, "magic", 4]
+    ],
+    "นักผจญภัย": [
+      ["นักสำรวจ", 80, "ฝึกสำรวจ", 5, "knowledge", 4, "survival", 2],
+      ["นักกลยุทธ์", 150, "knowledge", 8, "ฝึกช่วยเหลือ", 3, "knowledge", 3],
+      ["วีรชน", 350, "fame", 15, "totalXP", 300, "atk", 4]
+    ],
+    "นักอัญเชิญ": [
+      ["ผู้เรียกสัตว์วิญญาณ", 130, "magic", 7, "ฝึกเวท", 5, "knowledge", 2],
+      ["ผู้ทำพันธสัญญา", 250, "magic", 12, "knowledge", 7, "magic", 3]
+    ],
+    "นักต่อสู้มือเปล่า": [
+      ["นักหมัดเหล็ก", 100, "atk", 8, "ฝึกต่อสู้", 5, "atk", 2],
+      ["ปรมาจารย์กายา", 260, "atk", 13, "ฝึกป้องกัน", 5, "def", 3]
+    ]
+  };
+
+  const PROFESSIONS = {
+    "ช่างตีเหล็ก": "ฝึกผลิตและซ่อมอาวุธกับเกราะ",
+    "นักปรุงยา": "ฝึกทำยาและสารสกัด",
+    "พ่อครัว": "ฝึกทำอาหารและเสบียง",
+    "นักเก็บสมุนไพร": "ฝึกค้นหาพืชและวัตถุดิบ",
+    "พ่อค้า": "ฝึกต่อรองราคาและค้าขาย",
+    "ช่างฝีมือ": "ฝึกผลิตเครื่องมือ",
+    "เกษตรกร": "ฝึกปลูกพืชและจัดการทรัพยากร",
+    "นักตกปลา": "ฝึกหาอาหารจากแหล่งน้ำ",
+    "นักเจรจา": "ฝึกเจรจาและไกล่เกลี่ย",
+    "นักสำรวจ": "ฝึกทำแผนที่และค้นพบพื้นที่"
+  };
+
+  const ACTIONS = {
+    sword:   ["ฝึกดาบ", "str", "atk", 18, 30],
+    bow:     ["ฝึกธนู", "aim", "survival", 18, 30],
+    magic:   ["ฝึกเวท", "mind", "magic", 20, 35],
+    guard:   ["ฝึกป้องกัน", "will", "def", 17, 30],
+    hunt:    ["ฝึกล่า", "dex", "survival", 18, 40],
+    explore: ["ฝึกสำรวจ", "luck", "knowledge", 17, 40],
+    support: ["ฝึกช่วยเหลือ", "will", "knowledge", 16, 30],
+    craft:   ["ฝึกงานฝีมือ", "mind", "craft", 18, 35],
+    fight:   ["ฝึกต่อสู้", "str", "atk", 18, 30]
+  };
+
+  const STATS = {
+    str: "พละกำลัง",
+    dex: "ความคล่องแคล่ว",
+    mind: "การเรียนรู้",
+    will: "จิตใจ",
+    aim: "ความแม่นยำ",
+    luck: "โชค"
+  };
+
+  const TALENTS = [
+    ["fast", "ผู้เรียนรู้ไว", "ได้รับ XP จากการฝึกเพิ่มขึ้น"],
+    ["iron", "กายาเหล็ก", "เติบโตด้านร่างกายได้ดี"],
+    ["mana", "แก่นเวทแฝง", "มีโอกาสเพิ่มเวทมนตร์เมื่อฝึก"],
+    ["beast", "สัมผัสแห่งสัตว์", "มีโอกาสพัฒนาการเอาตัวรอดเมื่อล่า"],
+    ["voice", "วาจาโน้มน้าว", "มีโอกาสเพิ่มสังคมเมื่อช่วยเหลือ"],
+    ["craft", "จิตวิญญาณช่าง", "มีโอกาสพัฒนางานฝีมือเพิ่ม"],
+    ["late", "พรสวรรค์ตื่นช้า", "อาจค้นพบพรสวรรค์หลังฝึกต่อเนื่อง"],
+    ["danger", "สัญชาตญาณอันตราย", "อาจเปิดเผยความถนัดหลังสำรวจ"]
+  ];
+
+  function init() {
+    if (!G || !G.c) return null;
+
+    const c = G.c;
+
+    if (!c.classData) {
+      const growth = {};
+      const stats = {};
+
+      Object.keys(STATS).forEach(k => {
+        growth[k] = Number((0.75 + Math.random() * 0.60).toFixed(2));
+        stats[k] = 2 + Math.floor(Math.random() * 5);
+      });
+
+      stats.luck = 1 + Math.floor(Math.random() * 5);
+
+      c.classData = {
+        primary: "",
+        subclass: "",
+        profession: "",
+        level: 1,
+        xp: 0,
+        totalXP: 0,
+        professionXP: 0,
+        training: {},
+        growth,
+        stats,
+        talents: TALENTS
+          .filter(() => Math.random() < 0.09)
+          .map(t => t[0]),
+        revealed: [],
+        unlocks: [],
+        claimedBranches: [],
+        history: [],
+        innate: {
+          trainable: Math.random() < 0.8,
+          potential: 1 + Math.floor(Math.random() * 5)
+        }
+      };
+
+      record(
+        "ศักยภาพกำเนิด",
+        "สุ่มอัตราเติบโตและศักยภาพเฉพาะตัวแล้ว"
+      );
+    }
+
+    return c.classData;
+  }
+
+  function record(type, message) {
+    const d = G && G.c && G.c.classData;
+    if (!d) return;
+
+    const date = typeof dateString === "function" ? dateString() : "";
+    d.history.unshift({ type, message, date });
+    d.history = d.history.slice(0, 80);
+
+    if (typeof log === "function") log(type, message);
+  }
+
+  function needXP(level) {
+    return Math.round(50 * Math.pow(level, 1.55));
+  }
+
+  function chooseClass() {
+    const d = init();
+    if (!d) return;
+
+    const names = Object.keys(CLASS_TREE);
+    const answer = prompt(
+      "เลือกคลาสหลัก\n" +
+      names.map((n, i) => `${i + 1}. ${n}`).join("\n") +
+      "\nพิมพ์หมายเลขหรือชื่อคลาส"
+    );
+
+    if (answer === null) return;
+
+    const selected = names.find(
+      (n, i) => String(i + 1) === answer.trim() || n === answer.trim()
+    );
+
+    if (!selected) {
+      alert("ไม่พบคลาสนี้");
+      return;
+    }
+
+    if (d.primary === selected) {
+      alert("คุณอยู่ในคลาสนี้แล้ว");
+      return;
+    }
+
+    if (d.primary && !confirm(
+      `เปลี่ยนคลาสจาก ${d.primary} เป็น ${selected} หรือไม่?`
+    )) return;
+
+    const previous = d.primary;
+    d.primary = selected;
+    d.subclass = "";
+
+    record(
+      "คลาสหลัก",
+      `${previous || "เริ่มต้น"} → ${selected} | ${CLASS_TREE[selected].length} เส้นทางแตกแขนง`
+    );
+
+    render();
+    silentAutoSave();
+  }
+
+  function chooseProfession() {
+    const d = init();
+    if (!d) return;
+
+    const names = Object.keys(PROFESSIONS);
+    const answer = prompt(
+      "เลือกอาชีพเสริม\n" +
+      names.map((n, i) => `${i + 1}. ${n} — ${PROFESSIONS[n]}`).join("\n") +
+      "\nพิมพ์หมายเลขหรือชื่ออาชีพ"
+    );
+
+    if (answer === null) return;
+
+    const selected = names.find(
+      (n, i) => String(i + 1) === answer.trim() || n === answer.trim()
+    );
+
+    if (!selected) {
+      alert("ไม่พบอาชีพนี้");
+      return;
+    }
+
+    d.profession = selected;
+    record("อาชีพเสริม", `เลือก ${selected}: ${PROFESSIONS[selected]}`);
+    render();
+    silentAutoSave();
+  }
+
+  function train(kind) {
+    const d = init();
+    const c = G && G.c;
+    const action = ACTIONS[kind];
+
+    if (!d || !c || c.dead || !action) return;
+
+    if (!d.primary) {
+      alert("เลือกคลาสหลักก่อนฝึก");
+      chooseClass();
+      return;
+    }
+
+    if (c.energy < 10) {
+      alert("พลังงานไม่พอ ควรพักก่อน");
+      return;
+    }
+
+    d.training[kind] = (d.training[kind] || 0) + 1;
+
+    const growth = d.growth[action[1]] || 1;
+    const fast = d.talents.includes("fast") ? 1.25 : 1;
+    const xp = Math.round(action[3] * growth * fast);
+
+    d.xp += xp;
+    d.totalXP += xp;
+
+    if (d.profession) {
+      d.professionXP += Math.round(xp * 0.5);
+    }
+
+    c[action[2]] = (c[action[2]] || 0) + 1;
+    c.energy = Math.max(0, c.energy - 8);
+    c.stamina = Math.max(0, c.stamina - 3);
+
+    const increase = Number((growth * 0.25).toFixed(2));
+    d.stats[action[1]] = Number(
+      (d.stats[action[1]] + increase).toFixed(2)
+    );
+
+    if (d.talents.includes("iron") &&
+        (kind === "fight" || kind === "guard")) {
+      d.stats.str = Number((d.stats.str + 0.08).toFixed(2));
+    }
+
+    if (d.talents.includes("mana") && kind === "magic" &&
+        Math.random() < 0.18) c.magic++;
+
+    if (d.talents.includes("beast") && kind === "hunt" &&
+        Math.random() < 0.25) c.survival++;
+
+    if (d.talents.includes("voice") && kind === "support" &&
+        Math.random() < 0.25) c.social++;
+
+    if (d.talents.includes("craft") && kind === "craft" &&
+        Math.random() < 0.25) c.craft++;
+
+    if (typeof advance === "function") advance(action[4], false);
+
+    record(
+      "ฝึกฝน",
+      `${action[0]} +${xp} XP | ${STATS[action[1]]} +${increase} | เติบโต ×${growth}`
+    );
+
+    while (d.xp >= needXP(d.level)) {
+      d.xp -= needXP(d.level);
+      d.level++;
+      d.stats.will = Number((d.stats.will + 0.25).toFixed(2));
+
+      record(
+        "เลื่อนระดับคลาส",
+        `คลาสเลเวล ${d.level} | จิตใจ +0.25`
+      );
+    }
+
+    checkBranches();
+    revealTalents();
+
+    render();
+    silentAutoSave();
+  }
+
+  function checkBranches() {
+    const d = init();
+    const c = G && G.c;
+    if (!d || !c || !d.primary) return;
+
+    (CLASS_TREE[d.primary] || []).forEach(b => {
+      const [name, xp, req1, val1, req2, val2] = b;
+
+      if (d.unlocks.includes(name)) return;
+      if (d.totalXP < xp) return;
+      if (!meets(req1, val1, c, d)) return;
+      if (!meets(req2, val2, c, d)) return;
+
+      d.unlocks.push(name);
+
+      record(
+        "ปลดล็อกคลาสแตกแขนง",
+        `${name} พร้อมเลือกแล้ว | XP ${xp} | เงื่อนไข: ${req1} ${val1}, ${req2} ${val2} | รางวัล: +${b[7]} ${b[6]}`
+      );
+    });
+  }
+
+  function meets(key, value, c, d) {
+    if (key === "ความถนัดซ่อนเร้น") {
+      return d.revealed.some(id => {
+        const t = TALENTS.find(x => x[0] === id);
+        return t && t[1] === value;
+      });
+    }
+
+    if (key === "totalXP") return d.totalXP >= value;
+    if (key.startsWith("ฝึก")) {
+      const map = {
+        "ฝึกดาบ": "sword",
+        "ฝึกธนู": "bow",
+        "ฝึกเวท": "magic",
+        "ฝึกป้องกัน": "guard",
+        "ฝึกล่า": "hunt",
+        "ฝึกสำรวจ": "explore",
+        "ฝึกช่วยเหลือ": "support",
+        "ฝึกงานฝีมือ": "craft",
+        "ฝึกต่อสู้": "fight"
+      };
+      return (d.training[map[key]] || 0) >= value;
+    }
+
+    if (key === "dex" || key === "aim") {
+      return d.stats[key] >= value;
+    }
+
+    return (c[key] || 0) >= value;
+  }
+
+  function chooseBranch(name) {
+    const d = init();
+    const c = G && G.c;
+    if (!d || !c || !d.unlocks.includes(name)) return;
+
+    const branch = (CLASS_TREE[d.primary] || []).find(b => b[0] === name);
+    if (!branch) return;
+
+    if (d.claimedBranches.includes(name)) {
+      alert("รับรางวัลของคลาสนี้ไปแล้ว");
+      return;
+    }
+
+    const message =
+      `เลือก ${name}\n` +
+      `XP ที่กำหนด: ${branch[1]}\n` +
+      `รางวัล: +${branch[7]} ${branch[6]}\n` +
+      `ยืนยันการเลือกหรือไม่?`;
+
+    if (!confirm(message)) return;
+
+    d.subclass = name;
+    d.claimedBranches.push(name);
+    c[branch[6]] = (c[branch[6]] || 0) + branch[7];
+
+    record(
+      "เลือกคลาสแตกแขนง",
+      `${name} | ได้รับ ${branch[7]} ${branch[6]}`
+    );
+
+    render();
+    silentAutoSave();
+  }
+
+  function revealTalents() {
+    const d = init();
+    if (!d) return;
+
+    const trainingCount = Object.values(d.training)
+      .reduce((sum, n) => sum + n, 0);
+
+    d.talents.forEach(id => {
+      if (d.revealed.includes(id)) return;
+
+      const threshold = id === "late" ? 10 : 6;
+      if (trainingCount < threshold || Math.random() >= 0.35) return;
+
+      d.revealed.push(id);
+
+      const talent = TALENTS.find(t => t[0] === id);
+      if (talent) {
+        record(
+          "ค้นพบความถนัดซ่อนเร้น",
+          `${talent[1]} — ${talent[2]}`
+        );
+      }
+    });
+  }
+
+  function renderPanel() {
+    const d = init();
+    if (!d) return;
+
+    let panel = document.getElementById("alClassEvolution");
+
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "alClassEvolution";
+      panel.className = "card";
+      panel.style.cssText =
+        "margin:12px 0;padding:14px;border:1px solid #8877bb;border-radius:12px";
+
+      const game = document.getElementById("game");
+      if (!game) return;
+      game.appendChild(panel);
+    }
+
+    const branches = d.primary
+      ? (CLASS_TREE[d.primary] || []).map(b => {
+          const unlocked = d.unlocks.includes(b[0]);
+          return `<div style="padding:8px;border-bottom:1px solid #8885">
+            <b>${esc(b[0])}</b><br>
+            ต้องใช้ XP รวม ${b[1]}<br>
+            เงื่อนไข: ${esc(b[2])} ${esc(String(b[3]))},
+            ${esc(b[4])} ${esc(String(b[5]))}<br>
+            รางวัล: +${b[7]} ${esc(b[6])}<br>
+            ${unlocked
+              ? `<button type="button" data-al-branch="${esc(b[0])}">เลือกสายนี้</button>`
+              : "<small>ยังไม่ปลดล็อก</small>"}
+          </div>`;
+        }).join("")
+      : "เลือกคลาสหลักเพื่อดูเส้นทางแตกแขนง";
+
+    const buttons = Object.keys(ACTIONS).map(k =>
+      `<button type="button" data-al-train="${k}" style="margin:3px">
+        ${ACTIONS[k][0]}
+      </button>`
+    ).join("");
+
+    const growth = Object.keys(STATS).map(k => {
+      const v = d.growth[k];
+      const label = v >= 1.2 ? "โตไว" : v <= 0.88 ? "โตช้า" : "ปกติ";
+      return `${STATS[k]} ×${v.toFixed(2)} (${label})`;
+    }).join("<br>");
+
+    const talents = d.revealed.map(id => {
+      const t = TALENTS.find(x => x[0] === id);
+      return t ? `<li><b>${esc(t[1])}</b> — ${esc(t[2])}</li>` : "";
+    }).join("") || "<li>ยังไม่มีพรสวรรค์ที่เปิดเผย</li>";
+
+    const history = d.history.map(h =>
+      `<p><small>${esc(h.date)} · ${esc(h.type)}</small><br>${esc(h.message)}</p>`
+    ).join("") || "ยังไม่มีประวัติ";
+
+    panel.innerHTML = `
+      <h3>คลาสและการเติบโต</h3>
+      <p><b>คลาสหลัก:</b> ${esc(d.primary || "ยังไม่เลือก")}
+      | <b>คลาสขั้นสูง:</b> ${esc(d.subclass || "ยังไม่มี")}</p>
+      <p><b>ระดับ:</b> ${d.level}
+      | <b>XP:</b> ${d.xp}/${needXP(d.level)}
+      | <b>XP รวม:</b> ${d.totalXP}</p>
+      <p><b>อาชีพเสริม:</b> ${esc(d.profession || "ยังไม่เลือก")}
+      | <b>XP อาชีพ:</b> ${d.professionXP}</p>
+      <button type="button" id="alChooseClass">เลือกคลาสหลัก (*)</button>
+      <button type="button" id="alChooseProfession">เลือกอาชีพเสริม</button>
+      <details><summary>อัตราการเติบโตและศักยภาพ</summary>
+        <p>${growth}</p>
+        <p>ศักยภาพกำเนิด: ${d.innate.potential}/5</p>
+        <p>${d.innate.trainable
+          ? "พรสวรรค์ส่วนใหญ่ฝึกพัฒนาได้"
+          : "ตัวละครนี้มีข้อจำกัดติดตัวบางอย่างที่ฝึกธรรมดาไม่ได้"}</p>
+        <p>${Object.keys(STATS).map(k =>
+          `${STATS[k]} ${d.stats[k].toFixed(2)}`
+        ).join(" | ")}</p>
+      </details>
+      <h4>ฝึกทักษะ</h4>
+      <p>การฝึกใช้เวลาและพลังงาน รับ XP ตามอัตราการเติบโตเฉพาะตัว</p>
+      ${buttons}
+      <h4>คลาสแตกแขนง</h4>
+      ${branches}
+      <h4>ความถนัดซ่อนเร้นที่ค้นพบ</h4>
+      <ul>${talents}</ul>
+      <details><summary>Log การฝึกและการเลือก (${d.history.length})</summary>
+        ${history}
+      </details>
+    `;
+
+    panel.querySelector("#alChooseClass").onclick = chooseClass;
+    panel.querySelector("#alChooseProfession").onclick = chooseProfession;
+
+    panel.querySelectorAll("[data-al-train]").forEach(button => {
+      button.onclick = () => train(button.dataset.alTrain);
+    });
+
+    panel.querySelectorAll("[data-al-branch]").forEach(button => {
+      button.onclick = () => chooseBranch(button.dataset.alBranch);
+    });
+  }
+
+  /* ครอบ render เดิม โดยไม่ลบระบบ UI เก่า */
+  const originalRender = render;
+
+  render = function () {
+    originalRender.apply(this, arguments);
+    try {
+      renderPanel();
+    } catch (error) {
+      console.error("Class Evolution System:", error);
+    }
+  };
+
+  /* กด * เพื่อเลือกคลาสหลัก */
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "*" &&
+        !(event.shiftKey && event.code === "Digit8")) return;
+
+    const target = event.target;
+    if (target &&
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+
+    if (!G || !G.c || G.c.dead) return;
+
+    event.preventDefault();
+    chooseClass();
+  });
+
+  /* เปิดให้เรียกจากส่วนอื่นของเกมได้ */
+  window.choosePrimaryClass = chooseClass;
+  window.chooseSecondaryProfession = chooseProfession;
+  window.trainClassSkill = train;
+})();
+
+/* =====================================================
+   ANOTHER LIFE — CONDITIONAL SECRET EVENTS + GENDER
+   ===================================================== */
+(function installConditionalSecrets() {
+  "use strict";
+
+  const getData = () => {
+    if (!window.G || !G.c || !G.world) return null;
+    G.world.secretEvolution ||= {};
+    const d = G.world.secretEvolution;
+    d.discoveredEvents ||= [];
+    d.eventFlags ||= {};
+    return d;
+  };
+
+  const alive = () => !!(getData() && !G.c.dead);
+
+  function hour() {
+    return Math.floor((Number(G.world.minute) || 0) / 60) % 24;
+  }
+
+  function isNight() {
+    return hour() >= 19 || hour() < 5;
+  }
+
+  function eventDone(id) {
+    const d = getData();
+    return !d || d.discoveredEvents.includes(id);
+  }
+
+  function hasItem(name) {
+    const d = getData();
+    const extraItems = d && d.items || [];
+    const inv = G.c.inventory || [];
+    return extraItems.includes(name) ||
+      inv.some(i => i && i.name === name && Number(i.qty) > 0);
+  }
+
+  function rollChance(base, bonus = 0) {
+    return Math.random() < Math.min(0.75, base + bonus);
+  }
+
+  function trySecretEvent(action) {
+    if (!alive() || G.eventPending) return;
+
+    const d = getData();
+    const danger = Number(
+      typeof window.danger === "function" ? danger() : 1
+    ) || 1;
+
+    const kills = Number(G.world.kills) || 0;
+    const knowledge = Number(G.c.knowledge) || 0;
+    const location = String(G.location || "");
+    const explored = Number(G.world.discovery) || 0;
+
+    const candidates = [];
+
+    // ไข่มังกร: พื้นที่อันตราย + มีประสบการณ์ต่อสู้หรือความรู้
+    if (
+      !eventDone("dragon_egg") &&
+      danger >= 2 &&
+      (kills >= 1 || knowledge >= 3)
+    ) {
+      candidates.push({
+        id: "dragon_egg",
+        chance: 0.045 + (danger - 2) * 0.025 +
+          Math.min(kills, 5) * 0.01,
+        reason: "ร่องรอยมังกรโบราณ"
+      });
+    }
+
+    // ต้นไม้แห่งวิญญาณ: เหมาะกับป่า/ชุมชนเอลฟ์และช่วงกลางคืน
+    if (
+      !eventDone("spirit_tree") &&
+      (
+        location.includes("เอลฟ์") ||
+        location.includes("ป่า") ||
+        (action === "explore" && explored >= 2 && knowledge >= 2)
+      )
+    ) {
+      candidates.push({
+        id: "spirit_tree",
+        chance: 0.06 + (isNight() ? 0.07 : 0) +
+          Math.min(knowledge, 8) * 0.008,
+        reason: "เสียงกระซิบจากธรรมชาติ"
+      });
+    }
+
+    // แท่นบูชา: พื้นที่อันตรายและกลางคืนเพิ่มโอกาส
+    if (
+      !eventDone("dark_altar") &&
+      danger >= 3 &&
+      (isNight() || kills >= 3 || knowledge >= 6)
+    ) {
+      candidates.push({
+        id: "dark_altar",
+        chance: 0.035 + (isNight() ? 0.07 : 0) +
+          Math.min(kills, 5) * 0.012,
+        reason: "พลังลี้ลับในพื้นที่อันตราย"
+      });
+    }
+
+    // ไม่พบเหตุการณ์ทุกครั้ง แม้เงื่อนไขครบ
+    for (const event of candidates) {
+      if (rollChance(event.chance)) {
+        if (window.secretEvolution &&
+            typeof window.secretEvolution.triggerEvent === "function") {
+          if (typeof window.log === "function") {
+            log("เบาะแส", "คุณสัมผัสได้ถึง" + event.reason);
+          }
+          window.secretEvolution.triggerEvent(event.id);
+        }
+        return;
+      }
+    }
+  }
+
+  // ผูกโอกาสพบเหตุการณ์เข้ากับการกระทำในเกม
+  function wrapAction(name, actionName) {
+    const original = window[name];
+    if (typeof original !== "function") return;
+
+    window[name] = function (...args) {
+      const result = original.apply(this, args);
+
+      // ไม่สุ่มต่อหลังตายหรือระหว่างหน้าต่างเหตุการณ์
+      if (alive() && !G.eventPending) {
+        trySecretEvent(actionName);
+      }
+      return result;
+    };
+  }
+
+  wrapAction("explore", "explore");
+  wrapAction("hunt", "hunt");
+  wrapAction("travel", "travel");
+
+  // ลบปุ่มทดสอบที่ให้เรียกเหตุการณ์ลับตรง ๆ
+  function removeManualEventButtons() {
+    const panel = document.getElementById("secretEvolutionPanel");
+    if (!panel) return;
+
+    for (const button of panel.querySelectorAll("button")) {
+      const text = button.textContent.trim();
+      if (
+        text === "ค้นหาไข่มังกร" ||
+        text === "ค้นหาต้นไม้แห่งวิญญาณ" ||
+        text === "ค้นหาแท่นบูชา"
+      ) {
+        button.remove();
+      }
+    }
+
+    if (!panel.querySelector("#secretChanceHint")) {
+      const note = document.createElement("p");
+      note.id = "secretChanceHint";
+      note.className = "muted";
+      note.textContent =
+        "เหตุการณ์ลับจะสุ่มเกิดระหว่างสำรวจ ล่า หรือเดินทาง " +
+        "เมื่อสถานที่ เวลา และประสบการณ์เหมาะสม";
+      panel.appendChild(note);
+    }
+  }
+
+  // อัปเดตแผงคลาสหลังระบบเดิมวาดเสร็จ
+  if (window.secretEvolution &&
+      typeof window.secretEvolution.renderPanel === "function") {
+    const oldRenderPanel = window.secretEvolution.renderPanel;
+    window.secretEvolution.renderPanel = function (...args) {
+      const result = oldRenderPanel.apply(this, args);
+      removeManualEventButtons();
+      return result;
+    };
+  }
+
+  // เพิ่มเพศให้มอนสเตอร์ โดยคงข้อมูลอื่นจากระบบเดิม
+  if (typeof window.generateMonster === "function") {
+    const originalGenerateMonster = window.generateMonster;
+
+    window.generateMonster = function (...args) {
+      const monster = originalGenerateMonster.apply(this, args);
+      if (!monster) return monster;
+
+      // เพศขึ้นอยู่กับประเภทสิ่งมีชีวิต
+      const name = String(monster.name || "");
+      if (/เห็ด|โกเล็ม|แมลง|ผู้เฝ้าซาก/.test(name)) {
+        monster.gender = "ไร้เพศ";
+      } else if (/วิญญาณ|ตัวกินฝัน/.test(name)) {
+        monster.gender = Math.random() < 0.5 ? "ชาย" : "หญิง";
+      } else {
+        monster.gender = Math.random() < 0.49 ? "ชาย" :
+          Math.random() < 0.96 ? "หญิง" : "ไม่ระบุ";
+      }
+
+      return monster;
+    };
+  }
+
+  // แสดงเพศมอนสเตอร์ในรายละเอียด
+  if (typeof window.monsterDescription === "function") {
+    const originalDescription = window.monsterDescription;
+
+    window.monsterDescription = function (...args) {
+      const text = originalDescription.apply(this, args);
+      if (!window.currentMonster) return text;
+
+      // currentMonster เป็นตัวแปรภายในเกมเดิม
+      return text + " | เพศ: " +
+        (window.currentMonster.gender || "ไม่ระบุ");
+    };
+  }
+
+  // NPC มี gender อยู่แล้วในระบบเดิม ให้แสดงในรายการและบันทึก
+  if (typeof window.ensureNPCSelect === "function") {
+    const originalNPCSelect = window.ensureNPCSelect;
+
+    window.ensureNPCSelect = function (...args) {
+      const result = originalNPCSelect.apply(this, args);
+
+      const select = document.getElementById("npcSelect");
+      if (select && window.G && G.world) {
+        for (const option of select.options) {
+          const npc = G.world.npcs.find(
+            n => String(n.id) === String(option.value)
+          );
+          if (npc) {
+            option.textContent =
+              npc.name + " — " + (npc.gender || "ไม่ระบุ") +
+              " / " + npc.role + " (" + npc.location + ")";
+          }
+        }
+      }
+      return result;
+    };
+  }
+
+  if (typeof window.meetNPC === "function") {
+    const originalMeetNPC = window.meetNPC;
+
+    window.meetNPC = function (...args) {
+      const result = originalMeetNPC.apply(this, args);
+
+      if (window.G && G.world && typeof window.log === "function") {
+        const npc = G.world.npcs.find(
+          n => n.id === window.selectedNPC
+        );
+        // selectedNPC เป็นตัวแปรภายในเกมเดิม จึงใช้ log เฉพาะเมื่อหา NPC ได้
+        if (npc) {
+          log("ข้อมูลบุคคล",
+            npc.name + " · เพศ " + (npc.gender || "ไม่ระบุ") +
+            " · เผ่า " + npc.race);
+        }
+      }
+      return result;
+    };
+  }
+
+  console.info("Conditional secret events installed.");
+})();
+
+/* =========================================================
+   ANOTHER LIFE — SECRET CLASS / RACE EVOLUTION
+   วางก่อน </script> หลังโค้ดระบบเดิมทั้งหมด
+   ========================================================= */
+(function installSecretEvolution() {
+  "use strict";
+
+  const KEY = "secretEvolution";
+
+  const PATHS = {
+    "นักดาบ": {
+      skill: "ดาบ", next: ["นักดาบคู่", "อัศวิน"],
+      locks: ["นักเวทสายลึก"]
+    },
+    "นักเวท": {
+      skill: "เวทมนตร์", next: ["จอมเวท", "นักเวทมิติ"],
+      locks: ["ผู้ต่อต้านเวท"]
+    },
+    "นักลอบเร้น": {
+      skill: "ลอบเร้น", next: ["นักฆ่า", "ผู้ใช้พิษ"],
+      locks: ["อัศวินศักดิ์สิทธิ์"]
+    },
+    "ผู้รักษา": {
+      skill: "รักษา", next: ["นักบวช", "ผู้ใช้เวทชีวิต"],
+      locks: ["นักเวททำลายล้าง"]
+    },
+    "นักผจญภัย": {
+      skill: "สำรวจ", next: ["นักสำรวจโบราณ", "ผู้พิชิตดันเจี้ยน"],
+      locks: []
+    },
+    "ช่างฝีมือ": {
+      skill: "ประดิษฐ์", next: ["ช่างอาคม", "ช่างสร้างวัตถุโบราณ"],
+      locks: []
+    }
+  };
+
+  const SPECIAL_CLASSES = {
+    "ผู้สืบทอดมังกร": {
+      item: "เกล็ดมังกรโบราณ",
+      race: "เผ่ามังกรสายเลือดเจือจาง",
+      requirements: { knowledge: 5 },
+      description: "ได้รับพลังจากการปกป้องไข่มังกร"
+    },
+    "นักเวทมิติ": {
+      item: "เศษแก่นมิติ",
+      requirements: { knowledge: 8 },
+      description: "เปิดเส้นทางระหว่างพื้นที่ที่ไม่ควรเชื่อมถึงกัน"
+    },
+    "ผู้คืนชีพ": {
+      item: "แก่นวิญญาณนิรันดร์",
+      requirements: { knowledge: 7 },
+      description: "ผู้ที่ยอมแลกบางสิ่งเพื่อเข้าใจความตาย"
+    },
+    "ผู้กลืนกินความมืด": {
+      item: "หัวใจเงาต้องสาป",
+      requirements: { knowledge: 4 },
+      description: "ใช้พลังต้องห้าม แลกกับข้อจำกัดด้านการรักษา"
+    }
+  };
+
+  const RACE_RECIPES = {
+    "ผู้มีสายเลือดมังกร": {
+      item: "สารสกัดสายเลือดมังกร",
+      race: "เผ่ามังกรสายเลือดเจือจาง",
+      requirements: { knowledge: 4 },
+      warning: "การเปลี่ยนแปลงร่างกายอาจย้อนกลับไม่ได้"
+    },
+    "ผู้สัมผัสวิญญาณ": {
+      item: "เมล็ดวิญญาณ",
+      race: "เผ่าวิญญาณ",
+      requirements: { knowledge: 6 },
+      warning: "ร่างกายจะเปลี่ยนไปและอาจมีผลต่อการใช้ชีวิต"
+    }
+  };
+
+  function gameReady() {
+    return !!(window.G && G.c && G.world);
+  }
+
+  function data() {
+    if (!gameReady()) return null;
+
+    G.world[KEY] ||= {
+      primary: "",
+      unlocked: [],
+      skills: {},
+      actions: {},
+      items: [],
+      flags: {},
+      history: [],
+      forbidden: [],
+      discoveredEvents: []
+    };
+
+    const d = G.world[KEY];
+    d.unlocked ||= [];
+    d.skills ||= {};
+    d.actions ||= {};
+    d.items ||= [];
+    d.flags ||= {};
+    d.history ||= [];
+    d.forbidden ||= [];
+    d.discoveredEvents ||= [];
+    return d;
+  }
+
+  function log(text) {
+    const d = data();
+    if (!d) return;
+
+    d.history.unshift({
+      date: typeof dateString === "function" ? dateString() : "",
+      text
+    });
+    d.history = d.history.slice(0, 80);
+
+    if (typeof window.log === "function") {
+      window.log("เส้นทางชีวิต", text);
+    }
+  }
+
+  function stat(name) {
+    return Number(G.c[name]) || 0;
+  }
+
+  function hasItem(name) {
+    const d = data();
+    if (!d) return false;
+
+    if (d.items.includes(name)) return true;
+
+    const inventory = G.c.inventory;
+    if (Array.isArray(inventory)) {
+      return inventory.some(x =>
+        x && (x.name === name || x.item === name) &&
+        (x.qty == null || x.qty > 0)
+      );
+    }
+
+    return false;
+  }
+
+  function grantItem(name) {
+    const d = data();
+    if (!d || hasItem(name)) return false;
+
+    d.items.push(name);
+
+    // พยายามเพิ่มเข้ากระเป๋าเกมเดิมด้วย
+    if (typeof window.addItem === "function") {
+      try {
+        window.addItem(name, 1, "material", 0);
+      } catch (e) {
+        console.warn("ไม่สามารถเพิ่มไอเทมเข้ากระเป๋าเดิม:", e);
+      }
+    }
+
+    log("ได้รับวัตถุดิบพิเศษ: " + name);
+    return true;
+  }
+
+  function removeItem(name) {
+    const d = data();
+    if (!d) return false;
+
+    const index = d.items.indexOf(name);
+    if (index >= 0) {
+      d.items.splice(index, 1);
+      return true;
+    }
+
+    const inv = G.c.inventory;
+    if (Array.isArray(inv)) {
+      const item = inv.find(x =>
+        x && (x.name === name || x.item === name) &&
+        (x.qty == null || x.qty > 0)
+      );
+      if (item && typeof item.qty === "number") {
+        item.qty--;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function requirementsMet(req) {
+    return Object.entries(req || {}).every(([key, value]) =>
+      stat(key) >= value
+    );
+  }
+
+  function modal(title, description, choices) {
+    if (!gameReady() || G.eventPending) return;
+
+    let layer = document.getElementById("secretEvolutionModal");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "secretEvolutionModal";
+      layer.style.cssText =
+        "position:fixed;inset:0;z-index:10001;background:#05090eee;" +
+        "display:none;align-items:center;justify-content:center;padding:16px";
+      layer.innerHTML =
+        '<div class="panel" style="width:min(620px,100%);max-height:85vh;' +
+        'overflow:auto;border:2px solid var(--gold)">' +
+        '<h2 id="secretEvolutionTitle"></h2>' +
+        '<p id="secretEvolutionText"></p>' +
+        '<div id="secretEvolutionChoices"></div></div>';
+      document.body.appendChild(layer);
+    }
+
+    document.getElementById("secretEvolutionTitle").textContent = title;
+    document.getElementById("secretEvolutionText").textContent = description;
+
+    const box = document.getElementById("secretEvolutionChoices");
+    box.replaceChildren();
+
+    choices.forEach(choice => {
+      const button = document.createElement("button");
+      button.textContent = choice.label;
+      button.style.cssText =
+        "display:block;width:100%;text-align:left;margin:8px 0;padding:12px";
+
+      if (choice.disabled) button.disabled = true;
+
+      button.onclick = () => {
+        if (button.disabled) return;
+        box.querySelectorAll("button").forEach(b => b.disabled = true);
+
+        try {
+          choice.run();
+        } catch (error) {
+          console.error("Secret evolution error:", error);
+          log("เหตุการณ์พิเศษเกิดข้อผิดพลาด");
+        }
+
+        layer.style.display = "none";
+        G.eventPending = false;
+
+        if (typeof window.render === "function") window.render();
+        if (typeof window.silentAutoSave === "function") {
+          window.silentAutoSave();
+        }
+        renderPanel();
+      };
+
+      box.appendChild(button);
+    });
+
+    G.eventPending = true;
+    layer.style.display = "flex";
+  }
+
+  function unlockClass(name, source) {
+    const d = data();
+    if (!d || d.unlocked.includes(name)) return;
+
+    d.unlocked.push(name);
+    d.flags["source:" + name] = source || "ไม่ทราบที่มา";
+    log("ปลดล็อกคลาส: " + name + " — " + (source || "เงื่อนไขสำเร็จ"));
+    renderPanel();
+  }
+
+  function choosePrimary(name) {
+    const d = data();
+    if (!d) return;
+
+    const options = Object.keys(PATHS);
+    if (!options.includes(name)) return;
+
+    if (d.primary && d.primary !== name) {
+      modal(
+        "เปลี่ยนเส้นทางอาชีพ?",
+        "การเปลี่ยนสายจะปิดบางเส้นทางเดิม ทักษะเก่ายังคงอยู่ แต่คลาสที่ขัดแย้งกันอาจปลดล็อกไม่ได้อีก",
+        [
+          {
+            label: "ยืนยันเปลี่ยนเป็น " + name,
+            run: () => {
+              const old = PATHS[d.primary];
+              if (old) {
+                d.forbidden.push(...old.locks);
+              }
+              d.primary = name;
+              log("เปลี่ยนสายหลักเป็น " + name);
+            }
+          },
+          { label: "ยกเลิก", run: () => {} }
+        ]
+      );
+      return;
+    }
+
+    d.primary = name;
+    if (!d.unlocked.includes(name)) d.unlocked.push(name);
+    log("เลือกสายหลัก: " + name);
+    renderPanel();
+  }
+
+  function evolve(name) {
+    const d = data();
+    if (!d || !d.primary) return;
+
+    const path = PATHS[d.primary];
+    if (!path || !path.next.includes(name)) return;
+
+    if (d.forbidden.includes(name)) {
+      log("ไม่สามารถเปลี่ยนเป็น " + name + " ได้ เพราะเส้นทางเดิมขัดแย้งกัน");
+      return;
+    }
+
+    const skillLevel = Number(d.skills[path.skill]) || 0;
+    if (skillLevel < 5 || stat("knowledge") < 3) {
+      log("ยังขาดเงื่อนไขวิวัฒนาการ: ฝึก " + path.skill +
+        " ระดับ 5 และความรู้ 3");
+      return;
+    }
+
+    unlockClass(name, "ฝึกสาย " + d.primary + " ถึงเกณฑ์");
+  }
+
+  function trainSkill(name) {
+    const d = data();
+    if (!d) return;
+
+    const cost = 10 + (Number(d.skills[name]) || 0) * 5;
+    const xp = Number(G.c.xp) || Number(G.c.exp) || 0;
+
+    if (xp < cost) {
+      log("XP ไม่พอสำหรับฝึก " + name + " ต้องใช้ " + cost);
+      return;
+    }
+
+    if (typeof G.c.xp === "number") G.c.xp -= cost;
+    else if (typeof G.c.exp === "number") G.c.exp -= cost;
+    else {
+      log("ไม่พบช่อง XP ที่ระบบเกมใช้ จึงยังฝึกทักษะนี้ไม่ได้");
+      return;
+    }
+
+    d.skills[name] = (Number(d.skills[name]) || 0) + 1;
+    log("ฝึกทักษะ " + name + " เป็นระดับ " + d.skills[name]);
+    renderPanel();
+  }
+
+  function attemptSpecial(name) {
+    const d = data();
+    const spec = SPECIAL_CLASSES[name];
+    if (!d || !spec) return;
+
+    if (d.forbidden.includes(name)) {
+      log("เส้นทางนี้ถูกปิดจากการตัดสินใจในอดีต");
+      return;
+    }
+
+    if (!hasItem(spec.item) || !requirementsMet(spec.requirements)) {
+      log("ยังขาดวัตถุดิบหรือคุณสมบัติสำหรับ " + name);
+      return;
+    }
+
+    modal(
+      "พิธีกรรม: " + name,
+      spec.description + " วัตถุดิบจะถูกใช้ และการเปลี่ยนแปลงนี้อาจมีผลถาวร",
+      [
+        {
+          label: "ยอมรับพลัง",
+          run: () => {
+            removeItem(spec.item);
+            unlockClass(name, "พิธีกรรมเฉพาะ");
+            if (spec.race) changeRace(spec.race);
+          }
+        },
+        { label: "ยังไม่พร้อม", run: () => {} }
+      ]
+    );
+  }
+
+  function changeRace(race) {
+    const oldRace = G.c.race;
+    if (oldRace === race) return;
+
+    G.c.race = race;
+    log("เปลี่ยนเผ่าพันธุ์จาก " + oldRace + " เป็น " + race);
+    log("การเปลี่ยนเผ่าพันธุ์อาจกระทบความสัมพันธ์ ทักษะ และความเข้ากันได้ของเวท");
+  }
+
+  function raceRitual(name) {
+    const d = data();
+    const recipe = RACE_RECIPES[name];
+    if (!d || !recipe) return;
+
+    if (!hasItem(recipe.item) || !requirementsMet(recipe.requirements)) {
+      log("ยังไม่สามารถเริ่มพิธีเปลี่ยนเผ่าพันธุ์: ขาดสารตั้งต้นหรือความรู้");
+      return;
+    }
+
+    modal(
+      "พิธีเปลี่ยนเผ่าพันธุ์",
+      recipe.warning + " ต้องการดำเนินพิธีด้วย " + recipe.item + " หรือไม่?",
+      [
+        {
+          label: "เริ่มพิธี",
+          run: () => {
+            removeItem(recipe.item);
+            changeRace(recipe.race);
+            d.flags["raceChanged:" + recipe.race] = true;
+          }
+        },
+        { label: "ยกเลิก", run: () => {} }
+      ]
+    );
+  }
+
+  function triggerEvent(id) {
+    const d = data();
+    if (!d || d.discoveredEvents.includes(id)) return;
+    d.discoveredEvents.push(id);
+
+    if (id === "dragon_egg") {
+      modal("ไข่มังกรที่ถูกทิ้ง",
+        "ในซากถ้ำ คุณพบไข่มังกรที่กำลังแตกร้าว เสียงจากภายในขอให้ช่วย",
+        [
+          {
+            label: "ปกป้องไข่และพามันออกไป",
+            run: () => {
+              grantItem("เกล็ดมังกรโบราณ");
+              log("การตัดสินใจนี้เปิดเส้นทางผู้สืบทอดมังกร");
+            }
+          },
+          {
+            label: "ดูดซับพลังจากไข่",
+            run: () => {
+              G.c.magic = stat("magic") + 3;
+              grantItem("เศษแก่นมิติ");
+              d.forbidden.push("อัศวินศักดิ์สิทธิ์");
+              log("ได้รับพลังเวท แต่พลังจากไข่ทำให้บางเส้นทางปิดลง");
+            }
+          },
+          {
+            label: "ทำลายไข่เพื่อขายซาก",
+            run: () => {
+              if (typeof G.c.gold === "number") G.c.gold += 100;
+              d.forbidden.push("ผู้สืบทอดมังกร");
+              log("ได้รับเงิน แต่เส้นทางผู้สืบทอดมังกรถูกปิดถาวร");
+            }
+          }
+        ]);
+    }
+
+    if (id === "spirit_tree") {
+      modal("ต้นไม้แห่งวิญญาณ",
+        "ต้นไม้โบราณเสนอเมล็ดวิญญาณให้ แลกกับคำสัญญาที่ต้องรักษา",
+        [
+          {
+            label: "สาบานว่าจะปกป้องป่า",
+            run: () => {
+              grantItem("เมล็ดวิญญาณ");
+              d.flags.protectedForest = true;
+              log("ได้รับเมล็ดวิญญาณจากพันธสัญญา");
+            }
+          },
+          {
+            label: "ขโมยเมล็ดวิญญาณ",
+            run: () => {
+              grantItem("เมล็ดวิญญาณ");
+              d.flags.spiritTreeHostile = true;
+              log("ได้เมล็ดวิญญาณ แต่ต้นไม้จะจดจำการกระทำนี้");
+            }
+          },
+          {
+            label: "ปฏิเสธข้อเสนอ",
+            run: () => {
+              d.forbidden.push("ผู้สัมผัสวิญญาณ");
+              log("คุณปฏิเสธพันธสัญญา เส้นทางนี้อาจปิดลง");
+            }
+          }
+        ]);
+    }
+
+    if (id === "dark_altar") {
+      modal("แท่นบูชาในเงามืด",
+        "แท่นบูชาต้องการหัวใจของสัตว์ประหลาดที่คุณสังหาร",
+        [
+          {
+            label: "สังเวยพลังชีวิต",
+            run: () => {
+              G.c.hp = Math.max(1, stat("hp") - 10);
+              grantItem("หัวใจเงาต้องสาป");
+              d.forbidden.push("นักบวช");
+              log("ได้รับสารตั้งต้นต้องห้าม แลกกับพลังชีวิต");
+            }
+          },
+          {
+            label: "ทำลายแท่นบูชา",
+            run: () => {
+              d.forbidden.push("ผู้กลืนกินความมืด");
+              log("แท่นบูชาถูกทำลาย เส้นทางพลังมืดถูกปิด");
+            }
+          }
+        ]);
+    }
+  }
+
+  function renderPanel() {
+    const d = data();
+    if (!d) return;
+
+    let panel = document.getElementById("secretEvolutionPanel");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "secretEvolutionPanel";
+      panel.className = "panel";
+      const game = document.getElementById("game");
+      (game || document.body).appendChild(panel);
+    }
+
+    panel.replaceChildren();
+
+    const title = document.createElement("h2");
+    title.textContent = "🜂 คลาส วิวัฒนาการ และสายเลือดลับ";
+    panel.appendChild(title);
+
+    const info = document.createElement("p");
+    info.textContent = "สายหลัก: " + (d.primary || "ยังไม่เลือก") +
+      " · เผ่าพันธุ์: " + (G.c.race || "ไม่ทราบ");
+    panel.appendChild(info);
+
+    const addHeading = text => {
+      const h = document.createElement("h3");
+      h.textContent = text;
+      panel.appendChild(h);
+    };
+
+    const addButton = (text, fn) => {
+      const b = document.createElement("button");
+      b.textContent = text;
+      b.onclick = fn;
+      panel.appendChild(b);
+    };
+
+    addHeading("เลือกสายหลัก");
+    Object.keys(PATHS).forEach(name =>
+      addButton(name, () => choosePrimary(name))
+    );
+
+    addHeading("วิวัฒนาการสายหลัก");
+    if (d.primary && PATHS[d.primary]) {
+      PATHS[d.primary].next.forEach(name =>
+        addButton("ปลดล็อก " + name, () => evolve(name))
+      );
+    }
+
+    addHeading("ฝึกทักษะ");
+    ["ดาบ", "เวทมนตร์", "ลอบเร้น", "รักษา", "สำรวจ", "ประดิษฐ์"]
+      .forEach(name =>
+        addButton("ฝึก " + name + " (" + (d.skills[name] || 0) + ")", 
+          () => trainSkill(name))
+      );
+
+    addHeading("คลาสพิเศษ");
+    Object.keys(SPECIAL_CLASSES).forEach(name =>
+      addButton("พิธีกรรม " + name, () => attemptSpecial(name))
+    );
+
+    addHeading("พิธีเปลี่ยนเผ่าพันธุ์");
+    Object.keys(RACE_RECIPES).forEach(name =>
+      addButton(name, () => raceRitual(name))
+    );
+
+    addHeading("เหตุการณ์ลับ");
+    addButton("ค้นหาไข่มังกร", () => triggerEvent("dragon_egg"));
+    addButton("ค้นหาต้นไม้แห่งวิญญาณ", () => triggerEvent("spirit_tree"));
+    addButton("ค้นหาแท่นบูชา", () => triggerEvent("dark_altar"));
+
+    addHeading("ประวัติการปลดล็อก");
+    d.history.slice(0, 15).forEach(entry => {
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = (entry.date ? entry.date + " — " : "") + entry.text;
+      panel.appendChild(p);
+    });
+  }
+
+  const oldRender = window.render;
+  if (typeof oldRender === "function") {
+    window.render = function () {
+      const result = oldRender.apply(this, arguments);
+      try { renderPanel(); } catch (e) { console.error(e); }
+      return result;
+    };
+  }
+
+  const oldStart = window.startGame;
+  if (typeof oldStart === "function") {
+    window.startGame = function () {
+      const result = oldStart.apply(this, arguments);
+      try { renderPanel(); } catch (e) { console.error(e); }
+      return result;
+    };
+  }
+
+  window.addEventListener("load", () => {
+    try { if (gameReady()) renderPanel(); } catch (e) {
+      console.error("Secret evolution initialization:", e);
+    }
+  });
+
+  window.secretEvolution = {
+    triggerEvent,
+    grantItem,
+    unlockClass,
+    choosePrimary,
+    evolve,
+    trainSkill,
+    renderPanel
+  };
+})();
+
 </script>
 </body>
 </html>
