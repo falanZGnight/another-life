@@ -3176,7 +3176,7 @@ function evtInit(){
 
   evtPanelInit();
 
-  // เชื่อมระบบกับเวลาเดิมของเกม โดยไม่เขียนทับฟังก์ชัน advance ทั้งชุด
+  // เชื่อมระบบอีเวนต์เข้ากับเวลาเดิมของเกม
   if(!window.__evtAdvanceHook && typeof advance==="function"){
     const oldAdvance=advance;
 
@@ -3187,19 +3187,10 @@ function evtInit(){
 
       if(G && G.world){
         for(let day=before+1;day<=after;day++){
-          // ตั้งวันที่จำลองให้ระบบประมวลผลทีละวัน
-          const w=G.world;
-          const save={year:w.year,month:w.month,day:w.day};
-          const serial=(save.year-1)*360+(save.month||0)*30+save.day;
-
-          if (day <= serial) {
-            evtProcessDay();
-          }
+          evtProcessDay();
         }
       }
-            evtRender();
-      return result;
-    };
+
       evtRender();
       return result;
     };
@@ -3209,11 +3200,13 @@ function evtInit(){
 
   if(!window.__evtRenderHook && typeof render==="function"){
     const oldRender=render;
+
     render=function(){
       const result=oldRender.apply(this,arguments);
       evtRender();
       return result;
     };
+
     window.__evtRenderHook=true;
   }
 
