@@ -4162,38 +4162,61 @@ escInit();
     if (!window.G || !G.world || !G.c) return false;
 
     G.world.archipelago ||= {
-      current:"shore",
-      discovered:["shore"],
-      resources:{},
-      visitedAt:{},
-      relics:[],
-      weather:"แจ่มใส"
+      current: "shore",
+      discovered: ["shore"],
+      resources: {},
+      visitedAt: {},
+      relics: [],
+      weather: "แจ่มใส"
     };
 
     const a = G.world.archipelago;
+
     a.discovered ||= ["shore"];
     a.resources ||= {};
     a.visitedAt ||= {};
     a.relics ||= [];
 
+    // ซ่อมค่าเกาะปัจจุบัน หากเซฟเก่าหรือข้อมูลไม่ครบ
+    if (!islandData.some(island => island.id === a.current)) {
+      a.current = "shore";
+    }
+
     for (const island of islandData) {
       a.resources[island.id] ||= {
-        water:island.water,
-        food:island.food,
-        wood:island.wood,
-        ore:island.ore
+        water: island.water,
+        food: island.food,
+        wood: island.wood,
+        ore: island.ore
       };
     }
+
     return true;
   }
-
+  
   function currentIsland() {
-    initData();
+    // ถ้าข้อมูลเกมยังไม่พร้อม อย่าเข้าถึง G.world.archipelago
+    if (!initData()) {
+      return islandData[0];
+    }
+
+    const archipelago = G.world.archipelago;
+
+    // ป้องกันเซฟเก่าหรือค่าเกาะที่ไม่มีอยู่จริง
+    if (!archipelago ||
+        !islandData.some(island => island.id === archipelago.current)) {
+      if (G.world) {
+        G.world.archipelago ||= {};
+        G.world.archipelago.current = "shore";
+      }
+
+      return islandData[0];
+    }
+
     return islandData.find(
-      i => i.id === G.world.archipelago.current
+      island => island.id === archipelago.current
     ) || islandData[0];
   }
-
   function logEvent(type, message) {
     if (typeof window.log === "function") {
       window.log(type, message);
