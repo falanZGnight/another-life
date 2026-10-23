@@ -427,6 +427,199 @@ label {
   }
 }
 
+/* ===== ANOTHER LIFE RPG: MAP-FIRST LAYOUT ===== */
+
+/* พื้นที่เกมหลัก */
+main {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(245px, 285px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+/* แผงสถานะติดด้านบนขณะเลื่อนหน้า */
+main > aside {
+  min-width: 0;
+}
+
+main > aside > .panel:first-child {
+  position: sticky;
+  top: 12px;
+  z-index: 3;
+}
+
+/* พื้นที่เกม */
+main > section,
+#game {
+  min-width: 0;
+  width: 100%;
+}
+
+/* แผนที่เป็นแผงหลัก */
+#pixelPanel {
+  width: 100%;
+  padding: 14px;
+  margin: 0 0 18px;
+  background: linear-gradient(145deg, #1b3026, #17221d);
+  border: 2px solid #7d6942;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+}
+
+#pixelPanel .pixel-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+#pixelPanel .pixel-heading h2 {
+  font-size: 18px;
+}
+
+#pixelPanel .pixel-layout {
+  grid-template-columns: minmax(0, 1fr) 205px;
+  align-items: start;
+  gap: 14px;
+}
+
+#pixelPanel .pixel-screen {
+  width: 100%;
+  background: #101a16;
+  border: 3px solid #647b50;
+  border-radius: 6px;
+}
+
+#pixelCanvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+}
+
+#pixelPanel .pixel-side {
+  min-width: 0;
+  border-radius: 6px;
+}
+
+#pixelPanel .pixel-stat {
+  overflow-wrap: anywhere;
+}
+
+#pixelPanel .pixel-stat b {
+  text-align: right;
+}
+
+/* ปุ่มควบคุม */
+#pixelPanel .pixel-controls {
+  max-width: 240px;
+  margin: 12px auto 0;
+}
+
+#pixelPanel .pixel-controls button {
+  min-height: 42px;
+  font-size: 17px;
+}
+
+#pixelPanel .pixel-actions {
+  justify-content: center;
+}
+
+#pixelPanel .pixel-help {
+  text-align: center;
+}
+
+/* เมนูระบบ */
+#alExtraNav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 10px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+#alExtraNav button {
+  min-height: 42px;
+}
+
+/* แผงเนื้อหา */
+.panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* จอแท็บเล็ต */
+@media (max-width: 1000px) {
+  main {
+    grid-template-columns: 230px minmax(0, 1fr);
+    padding: 12px;
+    gap: 12px;
+  }
+
+  #pixelPanel .pixel-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #pixelPanel .pixel-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+  }
+
+  #pixelPanel .pixel-side h3 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* มือถือ */
+@media (max-width: 780px) {
+  main {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px;
+    gap: 10px;
+  }
+
+  main > aside > .panel:first-child {
+    position: static;
+  }
+
+  #pixelPanel {
+    padding: 9px;
+  }
+
+  #pixelPanel .pixel-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #pixelPanel .pixel-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #alExtraNav {
+    position: sticky;
+    top: 0;
+    gap: 5px;
+  }
+
+  #alExtraNav button {
+    flex: 1 1 40%;
+    min-width: 0;
+    padding: 8px 5px;
+    font-size: 13px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3606,63 +3799,20 @@ function pixelInit(){
       '</aside>'+
     '</div>';
 
-  const game=document.getElementById("game");
-  const scene=game ? game.querySelector(".panel") : null;
+  const game = document.getElementById("game");
+  const scene = game ? game.querySelector(".panel") : null;
 
-  if(scene && scene.parentNode){
-    scene.parentNode.insertBefore(panel,scene.nextSibling);
-  }else if(game){
-    game.insertBefore(panel,game.firstChild);
+  // ให้แผนที่อยู่ก่อนแผงข้อมูลอื่นในหน้าชีวิต
+  if (scene && scene.parentNode) {
+    scene.parentNode.insertBefore(panel, scene);
+  } else if (game) {
+    game.insertBefore(panel, game.firstChild);
   }
 
-  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+  if (!G.pixelMap) G.pixelMap = { x: 8, y: 7 };
 
-  if(!window.pixelKeysBound){
-    window.pixelKeysBound=true;
-
-    document.addEventListener("keydown",function(e){
-      if(!G || G.c.dead) return;
-
-      const game=document.getElementById("game");
-      if(!game || game.style.display==="none") return;
-
-      if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-
-      const keys={
-        ArrowUp:[0,-1],w:[0,-1],
-        ArrowDown:[0,1],s:[0,1],
-        ArrowLeft:[-1,0],a:[-1,0],
-        ArrowRight:[1,0],d:[1,0]
-      };
-
-      const move=keys[e.key.length===1 ? e.key.toLowerCase() : e.key];
-
-      if(move){
-        e.preventDefault();
-        pixelMove(move[0],move[1]);
-      }
-    });
-  }
-
-  pixelRender();
-}
-
-function pixelMove(dx,dy){
-  if(!G || !G.c || G.c.dead) return;
 
   if(!G.pixelMap) G.pixelMap={x:8,y:7};
-
-  G.pixelMap.x=Math.max(1,Math.min(16,G.pixelMap.x+dx));
-  G.pixelMap.y=Math.max(1,Math.min(9,G.pixelMap.y+dy));
-
-  pixelRender();
-}
-
-function pixelResetPosition(){
-  if(!G) return;
-  G.pixelMap={x:8,y:7};
-  pixelRender();
-}
 
 function pxRect(ctx,x,y,w,h,color){
   ctx.fillStyle=color;
@@ -3720,7 +3870,128 @@ function pxHouse(ctx,x,y,roof,shop){
   }
 }
 
-function pixelRender(){
+/* ===== LIVING SCENE: IDLE ANIMATION + ACTION FX ===== */
+let pixelFrame = 0;
+let pixelFx = null;
+let pixelActionTimer = null;
+let pixelLoopStarted = false;
+
+function pixelShowAction(kind, label) {
+  if (!G || !G.c) return;
+
+  const messages = {
+    observe: "กำลังสังเกตสิ่งรอบตัว",
+    interact: "กำลังพูดคุยกับผู้คน",
+    skill: "กำลังร่ายสกิล",
+    item: "กำลังใช้งานไอเทม",
+    heal: "ได้รับการฟื้นฟู",
+    attack: "กำลังโจมตี",
+    summon: "กำลังอัญเชิญ"
+  };
+
+  const text = document.getElementById("pixelActionText");
+  if (text) text.textContent = label || messages[kind] || "เกิดกิจกรรม";
+
+  pixelFx = {
+    kind: kind || "observe",
+    label: label || messages[kind] || "กิจกรรม",
+    start: performance.now(),
+    duration: kind === "observe" ? 900 : 1500
+  };
+
+  const effectText = document.getElementById("pixelEffectText");
+  if (effectText) {
+    effectText.textContent =
+      kind === "item" ? "🎒 ใช้ไอเทม" :
+      kind === "heal" ? "💚 ฟื้นฟูพลังชีวิต" :
+      kind === "skill" ? "✨ ใช้สกิล" :
+      kind === "attack" ? "⚔️ โจมตี" :
+      kind === "summon" ? "🔮 อัญเชิญ" : "";
+  }
+
+  clearTimeout(pixelActionTimer);
+  pixelActionTimer = setTimeout(() => {
+    if (text) text.textContent = "ตัวละครกำลังใช้ชีวิตตามปกติ";
+    if (effectText) effectText.textContent = "";
+  }, 2500);
+}
+
+function pixelDrawEffects(ctx, x, y, now) {
+  if (!pixelFx) return;
+
+  const elapsed = now - pixelFx.start;
+  if (elapsed > pixelFx.duration) {
+    pixelFx = null;
+    return;
+  }
+
+  const progress = elapsed / pixelFx.duration;
+  const cx = x * 32 + 16;
+  const cy = y * 32 + 15;
+  const alpha = Math.max(0, 1 - progress);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (pixelFx.kind === "heal" || pixelFx.kind === "item") {
+    ctx.fillStyle = pixelFx.kind === "heal" ? "#72ff9a" : "#ffe58a";
+
+    for (let i = 0; i < 6; i++) {
+      const px = cx + Math.sin(elapsed / 120 + i * 2) * (8 + progress * 15);
+      const py = cy + 18 - progress * 45 - i * 4;
+      ctx.fillRect(Math.round(px), Math.round(py), 4, 4);
+    }
+  } else if (pixelFx.kind === "skill" ||
+             pixelFx.kind === "summon") {
+    ctx.strokeStyle = pixelFx.kind === "summon" ? "#bd8cff" : "#83ddff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8 + progress * 35, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = pixelFx.kind === "summon" ? "#bd8cff" : "#83ddff";
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4 + elapsed / 180;
+      const radius = 10 + progress * 30;
+      ctx.fillRect(
+        Math.round(cx + Math.cos(angle) * radius),
+        Math.round(cy + Math.sin(angle) * radius),
+        4, 4
+      );
+    }
+  } else if (pixelFx.kind === "attack") {
+    ctx.strokeStyle = "#fff1c4";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 22, cy + 18);
+    ctx.lineTo(cx + 22, cy - 18);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "#fff1a8";
+    ctx.fillRect(cx - 2, cy - 30 - progress * 10, 4, 4);
+    ctx.fillRect(cx + 12, cy - 20 - progress * 8, 3, 3);
+  }
+
+  ctx.restore();
+}
+
+function pixelStartLoop() {
+  if (pixelLoopStarted) return;
+  pixelLoopStarted = true;
+
+  function frame(now) {
+    pixelFrame++;
+    if (G && G.c && document.getElementById("pixelCanvas")) {
+      pixelRender(now);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+/* ===== END LIVING SCENE ===== */
+
+function pixelRender(now = performance.now()){
   if(!G || !G.c) return;
 
   if(!document.getElementById("pixelPanel")) pixelInit();
@@ -3757,7 +4028,14 @@ function pixelRender(){
     pxRect(ctx,x*tile,2*tile+5,tile,3,"#5aa6c7");
 
     if(x%3===0){
-      pxRect(ctx,x*tile+12,2*tile+18,8,3,"#85c9d7");
+     pxRect(
+  ctx,
+  x * tile + ((pixelFrame + x * 5) % 24),
+  2 * tile + 18,
+  8,
+  3,
+  "#85c9d7"
+);
     }
   }
 
@@ -3884,7 +4162,7 @@ function pixelInteract(){
     log("แผนที่","คุณมองหาผู้คนในบริเวณใกล้เคียง");
   }
 
-  pixelRender();
+  pixelRender(); pixelStartLoop();;pixelDrawEffects(ctx, p.x, p.y, now);
 }
 
 /* ===== END PIXEL MAP ===== */
