@@ -1070,11 +1070,7 @@ function ageTick(){
 }
 
   
-let c=G.c;
-let totalDays=(G.world.year-1)*360+G.world.month*30+G.world.day;
-if(!c.lastAgeDay)c.lastAgeDay=totalDays;
-if(totalDays-c.lastAgeDay>=360){let years=Math.floor((totalDays-c.lastAgeDay)/360);c.age+=years;c.lastAgeDay+=years*360;log("เติบโต","คุณมีอายุ "+c.age+" ปีแล้ว");if(c.age>=12&&c.job==="ผู้ฝึกหัด")log("โอกาส","คุณโตพอจะเริ่มฝึกอาชีพจริงจังแล้ว ลองหาครูหรือสมัครงาน");}
-}
+
 function die(reason){
 if(!G||G.c.dead)return;
 G.c.dead=true;G.deathReason=reason;pauseTime();
