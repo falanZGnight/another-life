@@ -4131,6 +4131,566 @@ function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textCont
 lcInit();
 evtInit();
 escInit();
+  
+/* =========================================================
+   ANOTHER LIFE V2 — ADDITIVE ARCHIPELAGO EXPANSION
+   ใช้ G.c / G.world และระบบเวลาเดิม
+   ไม่แทนที่ฐานข้อมูลตัวละคร, NPC, AI, ไอเทม หรือครอบครัว
+   ========================================================= */
+(function installArchipelagoExpansion() {
+  "use strict";
+
+  const islandData = [
+    {id:"shore",name:"เกาะชายฝั่ง",icon:"🏝️",danger:1,
+      water:3,food:3,wood:3,ore:1,
+      desc:"ชายฝั่งมีลำธาร ซากเรือ และป่าที่หาอาหารได้ง่าย"},
+    {id:"forest",name:"เกาะพฤกษาลึก",icon:"🌳",danger:2,
+      water:3,food:5,wood:5,ore:1,
+      desc:"ป่าโบราณอุดมด้วยสมุนไพร แต่มีสัตว์ป่าหวงถิ่น"},
+    {id:"reef",name:"เกาะแนวปะการัง",icon:"🐚",danger:2,
+      water:1,food:5,wood:1,ore:1,
+      desc:"แหล่งสัตว์น้ำและเปลือกหอย ระวังกระแสน้ำ"},
+    {id:"mist",name:"เกาะหมอกนิรันดร์",icon:"🌫️",danger:4,
+      water:4,food:2,wood:2,ore:2,
+      desc:"หมอกบดบังเส้นทาง มีเสียงประหลาดใกล้ซากโบราณ"},
+    {id:"volcano",name:"เกาะเพลิงดำ",icon:"🌋",danger:5,
+      water:0,food:1,wood:1,ore:5,
+      desc:"พื้นที่ร้อนจัด มีแร่หายากและสัตว์ทนไฟ"},
+    {id:"ruins",name:"เกาะนครสาบสูญ",icon:"🏛️",danger:5,
+      water:1,food:1,wood:1,ore:4,
+      desc:"นครโบราณเต็มไปด้วยกลไก กับดัก และความรู้ที่สูญหาย"}
+  ];
+
+  const originalRender = window.render;
+  const originalRandomEvent = window.randomWorldEvent;
+
+  function initData() {
+    if (!window.G || !G.world || !G.c) return false;
+
+    G.world.archipelago ||= {
+      current:"shore",
+      discovered:["shore"],
+      resources:{},
+      visitedAt:{},
+      relics:[],
+      weather:"แจ่มใส"
+    };
+
+    const a = G.world.archipelago;
+    a.discovered ||= ["shore"];
+    a.resources ||= {};
+    a.visitedAt ||= {};
+    a.relics ||= [];
+
+    for (const island of islandData) {
+      a.resources[island.id] ||= {
+        water:island.water,
+        food:island.food,
+        wood:island.wood,
+        ore:island.ore
+      };
+    }
+    return true;
+  }
+
+  function currentIsland() {
+    initData();
+    return islandData.find(
+      i => i.id === G.world.archipelago.current
+    ) || islandData[0];
+  }
+
+  function logEvent(type, message) {
+    if (typeof window.log === "function") {
+      window.log(type, message);
+    }
+  }
+
+  function ensureUI() {
+    if (document.getElementById("al2Archipelago")) return;
+
+    const panel = document.createElement("section");
+    panel.id = "al2Archipelago";
+    panel.className = "panel";
+    panel.innerHTML = `
+      <h2>🧭 หมู่เกาะและการเอาชีวิตรอด</h2>
+      <div id="al2IslandStatus"></div>
+      <div id="al2IslandButtons" class="actions"></div>
+      <hr style="border-color:var(--line);margin:12px 0">
+      <h3>ทรัพยากรบนเกาะ</h3>
+      <div id="al2Resources"></div>
+      <div class="actions" style="margin-top:10px">
+        <button id="al2Gather">เก็บทรัพยากร</button>
+        <button id="al2Water">ค้นหาน้ำ</button>
+        <button id="al2Food">หาอาหาร</button>
+        <button id="al2Cook">ปรุงเนื้อ</button>
+        <button id="al2Raw">กินเนื้อดิบ</button>
+        <button id="al2Stream">ดื่มน้ำจากลำธาร</button>
+      </div>
+      <p class="muted" style="margin-top:8px">
+        การสำรวจใช้เวลาในโลกเดิม และทรัพยากรบนเกาะมีจำนวนจำกัด
+      </p>`;
+
+    const game = document.getElementById("game");
+    (game || document.querySelector("main") || document.body)
+      .appendChild(panel);
+
+    document.getElementById("al2Gather").onclick = gather;
+    document.getElementById("al2Water").onclick = findWater;
+    document.getElementById("al2Food").onclick = findFood;
+    document.getElementById("al2Cook").onclick = cookMeat;
+    document.getElementById("al2Raw").onclick = eatRawMeat;
+    document.getElementById("al2Stream").onclick = drinkStream;
+
+    ensureEventModal();
+  }
+
+  function ensureEventModal() {
+    if (document.getElementById("al2EventModal")) return;
+
+    const layer = document.createElement("div");
+    layer.id = "al2EventModal";
+    layer.style.cssText = `
+      display:none;position:fixed;inset:0;z-index:9999;
+      background:#05090eee;align-items:center;
+      justify-content:center;padding:16px`;
+    layer.innerHTML = `
+      <div class="panel" style="
+        width:min(620px,100%);max-height:90vh;overflow:auto;
+        border:2px solid var(--gold);box-shadow:0 20px 90px #000">
+        <div class="tag">เหตุการณ์สำคัญ · เวลาหยุด</div>
+        <h2 id="al2EventTitle" style="margin-top:12px"></h2>
+        <p id="al2EventText"></p>
+        <div id="al2EventChoices"></div>
+      </div>`;
+    document.body.appendChild(layer);
+  }
+
+  let modalOpen = false;
+  let pausedByExpansion = false;
+
+  function decision(title, text, choices) {
+    if (!initData()) return;
+
+    // ป้องกันเหตุการณ์ซ้อนกัน
+    if (modalOpen || G.eventPending) return;
+    modalOpen = true;
+    G.eventPending = true;
+
+    pausedByExpansion = !!timer;
+    if (typeof window.pauseTime === "function") pauseTime();
+
+    const layer = document.getElementById("al2EventModal");
+    document.getElementById("al2EventTitle").textContent = title;
+    document.getElementById("al2EventText").textContent = text;
+
+    const box = document.getElementById("al2EventChoices");
+    box.replaceChildren();
+
+    choices.forEach(choice => {
+      const button = document.createElement("button");
+      button.style.cssText =
+        "display:block;width:100%;text-align:left;margin:8px 0;padding:12px";
+
+      const heading = document.createElement("strong");
+      heading.textContent = choice.label;
+      button.appendChild(heading);
+
+      if (choice.detail) {
+        const detail = document.createElement("div");
+        detail.className = "muted";
+        detail.textContent = choice.detail;
+        button.appendChild(detail);
+      }
+
+      button.onclick = () => {
+        if (!modalOpen) return;
+
+        box.querySelectorAll("button").forEach(b => b.disabled = true);
+        try {
+          choice.run();
+        } catch (error) {
+          console.error("Archipelago event error:", error);
+          logEvent("ข้อผิดพลาด", "เหตุการณ์นี้ดำเนินการไม่สำเร็จ");
+        }
+
+        modalOpen = false;
+        G.eventPending = false;
+        layer.style.display = "none";
+
+        if (typeof window.render === "function") render();
+
+        if (G && G.c && !G.c.dead && pausedByExpansion) {
+          setSpeed(speed || 1);
+        }
+        pausedByExpansion = false;
+        if (typeof window.silentAutoSave === "function") silentAutoSave();
+      };
+      box.appendChild(button);
+    });
+
+    layer.style.display = "flex";
+  }
+
+  function travelIsland(id) {
+    const target = islandData.find(i => i.id === id);
+    if (!target || !initData()) return;
+
+    const a = G.world.archipelago;
+    if (id === a.current) return;
+
+    if (G.c.energy < 15) {
+      logEvent("เดินทาง", "พลังงานไม่พอสำหรับการเดินทางทางทะเล");
+      return;
+    }
+
+    decision(
+      "เดินทางไป" + target.name,
+      target.desc + " การเดินทางอาจใช้เสบียงและพบอันตรายกลางทะเล",
+      [
+        {
+          label:"ออกเดินทาง",
+          detail:"ใช้พลังงานและเวลาในโลกเดิม",
+          run:() => {
+            G.c.energy = Math.max(0, G.c.energy - 15);
+            G.world.archipelago.current = id;
+
+            if (!a.discovered.includes(id)) {
+              a.discovered.push(id);
+              G.world.discovery = (G.world.discovery || 0) + 1;
+              logEvent("ค้นพบเกาะ", "ค้นพบ " + target.name);
+            }
+
+            a.visitedAt[id] = G.world.year * 360 +
+              G.world.month * 30 + G.world.day;
+
+            logEvent("เดินเรือ", "เดินทางถึง" + target.name);
+            advance(180 + Math.floor(Math.random() * 121), false);
+
+            if (Math.random() < target.danger * 0.06) {
+              decision("พายุระหว่างเดินทาง",
+                "คลื่นสูงขึ้นและเรือเริ่มเสียการควบคุม",
+                [
+                  {label:"ลดใบเรือ",detail:"เสียเวลา แต่ปลอดภัยกว่า",
+                    run:() => {
+                      logEvent("เดินเรือ","รอจนพายุสงบ");
+                      advance(60, false);
+                    }},
+                  {label:"ฝ่าคลื่นต่อ",detail:"เสี่ยงเสียพลังชีวิตและเสบียง",
+                    run:() => {
+                      if (Math.random() < 0.5) {
+                        logEvent("เดินเรือ","ฝ่าพายุมาได้อย่างปลอดภัย");
+                      } else {
+                        G.c.hp -= 8;
+                        logEvent("อุบัติเหตุ","คลื่นซัดเรือจนคุณบาดเจ็บ");
+                      }
+                    }}
+                ]);
+            }
+            render();
+          }
+        },
+        {label:"ยกเลิก",detail:"ยังไม่ออกเดินทาง",run:() => {}}
+      ]
+    );
+  }
+
+  function spendActivity(minutes, energy) {
+    if (!initData() || G.c.dead) return false;
+    if (G.eventPending) return false;
+
+    if (G.c.energy < energy) {
+      logEvent("เอาชีวิตรอด","คุณเหนื่อยเกินไป ควรพักก่อน");
+      return false;
+    }
+
+    G.c.energy = Math.max(0, G.c.energy - energy);
+    advance(minutes, false);
+    return !!(G && G.c && !G.c.dead);
+  }
+
+  function gather() {
+    if (!spendActivity(35, 5)) return;
+    const a = G.world.archipelago;
+    const island = currentIsland();
+    const res = a.resources[island.id];
+
+    const options = [];
+    if (res.wood > 0) options.push("wood");
+    if (res.ore > 0) options.push("ore");
+    if (island.food > 0) options.push("food");
+
+    if (!options.length) {
+      logEvent("ทรัพยากร","พื้นที่นี้ถูกเก็บจนแทบไม่เหลือทรัพยากร");
+      render();
+      return;
+    }
+
+    const type = options[Math.floor(Math.random() * options.length)];
+    res[type]--;
+
+    if (type === "wood") addItem("ไม้", 1, "material", 2);
+    if (type === "ore") addItem("แร่ดิบ", 1, "material", 5);
+    if (type === "food") addItem("ผลไม้ป่า", 1, "food", 3);
+
+    G.c.survival = (G.c.survival || 0) + 1;
+    logEvent("เก็บทรัพยากร","เก็บ " +
+      ({wood:"ไม้",ore:"แร่ดิบ",food:"ผลไม้ป่า"}[type]) +
+      " ได้ 1 หน่วย");
+    render();
+  }
+
+  function findWater() {
+    const island = currentIsland();
+    const res = G.world.archipelago.resources[island.id];
+
+    if (!spendActivity(30, 4)) return;
+
+    if (res.water <= 0) {
+      decision("ไม่พบแหล่งน้ำ",
+        "บริเวณนี้แห้งแล้ง คุณต้องเลือกว่าจะเดินทางต่อหรือเสี่ยงค้นหาน้ำ",
+        [
+          {label:"เดินทางไปพื้นที่อื่น",detail:"ใช้เวลาและพลังงาน",
+            run:() => logEvent("น้ำ","คุณเลือกหาแหล่งน้ำที่อื่น")},
+          {label:"ค้นหาต่อ",detail:"อาจเสียเวลาโดยไม่ได้อะไร",
+            run:() => {
+              advance(60, false);
+              if (Math.random() < 0.2) {
+                addItem("น้ำจากธรรมชาติ",1,"drink",1);
+                logEvent("น้ำ","พบแอ่งน้ำเล็ก ๆ");
+              } else {
+                G.c.thirst = Math.min(100,G.c.thirst+10);
+                logEvent("น้ำ","ค้นหาไม่สำเร็จ ความกระหายเพิ่มขึ้น");
+              }
+            }}
+        ]);
+      return;
+    }
+
+    res.water--;
+    addItem("น้ำจากธรรมชาติ",1,"drink",1);
+    logEvent("น้ำ","พบน้ำจากธรรมชาติ 1 หน่วย");
+    render();
+  }
+
+  function findFood() {
+    const island = currentIsland();
+    const res = G.world.archipelago.resources[island.id];
+
+    if (!spendActivity(45, 6)) return;
+
+    if (res.food <= 0) {
+      logEvent("อาหาร","อาหารธรรมชาติบนเกาะนี้เริ่มขาดแคลน");
+      render();
+      return;
+    }
+
+    res.food--;
+    addItem("ผลไม้ป่า",1,"food",3);
+    logEvent("อาหาร","พบผลไม้ป่า 1 หน่วย");
+    render();
+  }
+
+  function cookMeat() {
+    const meat = G.c.inventory.find(i =>
+      i.name === "เนื้อดิบ" && i.qty > 0
+    );
+    const wood = G.c.inventory.find(i =>
+      i.name === "ไม้" && i.qty > 0
+    );
+
+    if (!meat || !wood) {
+      logEvent("ทำอาหาร","ต้องมีเนื้อดิบและไม้เพื่อก่อไฟ");
+      return;
+    }
+
+    if (!spendActivity(25, 3)) return;
+
+    meat.qty--;
+    wood.qty--;
+    cleanInventory();
+    addItem("เนื้อย่าง",1,"food",6);
+    G.c.craft = (G.c.craft || 0) + 1;
+    logEvent("ทำอาหาร","ปรุงเนื้อดิบเป็นเนื้อย่างแล้ว");
+    render();
+  }
+
+  function eatRawMeat() {
+    const meat = G.c.inventory.find(i =>
+      i.name === "เนื้อดิบ" && i.qty > 0
+    );
+
+    if (!meat) {
+      logEvent("อาหาร","ไม่มีเนื้อดิบในกระเป๋า");
+      return;
+    }
+
+    decision("กินเนื้อดิบ",
+      "การกินเนื้อดิบช่วยประทังความหิว แต่เสี่ยงต่อการติดเชื้อหรือปรสิต",
+      [
+        {label:"กินเนื้อดิบ",detail:"ลดความหิว แต่มีโอกาสป่วย",
+          run:() => {
+            meat.qty--;
+            G.c.hunger = Math.max(0,G.c.hunger-25);
+            if (Math.random() < 0.3) {
+              addCondition("เจ็บป่วย");
+              logEvent("เจ็บป่วย","กินเนื้อดิบแล้วเกิดอาการป่วย");
+            } else {
+              logEvent("อาหาร","กินเนื้อดิบเพื่อประทังชีวิต");
+            }
+            cleanInventory();
+            advance(5,false);
+          }},
+        {label:"เก็บไว้ปรุงสุก",detail:"ปลอดภัยกว่าเมื่อมีไฟและเชื้อเพลิง",
+          run:() => logEvent("อาหาร","คุณเก็บเนื้อไว้ปรุงภายหลัง")}
+      ]);
+  }
+
+  function drinkStream() {
+    decision("น้ำจากลำธาร",
+      "คุณพบลำธาร น้ำดูใสแต่ยังไม่รู้ว่าปลอดภัยหรือไม่",
+      [
+        {label:"ดื่มทันที",detail:"ลดความกระหาย แต่เสี่ยงติดเชื้อ",
+          run:() => {
+            G.c.thirst = Math.max(0,G.c.thirst-30);
+            if (Math.random() < 0.35) {
+              addCondition("เจ็บป่วย");
+              logEvent("เจ็บป่วย","น้ำจากลำธารทำให้คุณป่วย");
+            } else {
+              logEvent("เอาชีวิตรอด","ดื่มน้ำจากลำธารเพื่อเอาชีวิตรอด");
+            }
+            advance(3,false);
+          }},
+        {label:"รองน้ำไปต้ม",detail:"ต้องมีภาชนะและแหล่งไฟจึงจะทำได้",
+          run:() => {
+            addItem("น้ำจากธรรมชาติ",1,"drink",1);
+            logEvent("น้ำ","เก็บน้ำดิบไว้เพื่อหาวิธีทำให้ปลอดภัย");
+          }},
+        {label:"ไม่ดื่ม",detail:"หลีกเลี่ยงความเสี่ยง",
+          run:() => logEvent("น้ำ","คุณตัดสินใจไม่เสี่ยงกับน้ำลำธาร")}
+      ]);
+  }
+
+  function renderExpansion() {
+    if (!initData()) return;
+    ensureUI();
+
+    const a = G.world.archipelago;
+    const island = currentIsland();
+    const resources = a.resources[island.id];
+
+    document.getElementById("al2IslandStatus").innerHTML =
+      "<b>" + island.icon + " " + island.name + "</b><br>" +
+      island.desc + "<br><span class='tag'>อันตราย " +
+      island.danger + "/5</span>";
+
+    document.getElementById("al2Resources").textContent =
+      "น้ำ " + resources.water +
+      " · อาหารธรรมชาติ " + resources.food +
+      " · ไม้ " + resources.wood +
+      " · แร่ " + resources.ore;
+
+    const buttons = document.getElementById("al2IslandButtons");
+    buttons.replaceChildren();
+
+    islandData.forEach(target => {
+      const b = document.createElement("button");
+      b.textContent = (a.discovered.includes(target.id) ? "🧭 " : "❔ ") +
+        target.name;
+      b.disabled = target.id === island.id || G.c.dead || modalOpen;
+      b.onclick = () => travelIsland(target.id);
+      buttons.appendChild(b);
+    });
+  }
+
+  // เก็บฟังก์ชันเดิมไว้ แล้วต่อการแสดงผลใหม่เข้าท้าย render
+  if (typeof originalRender === "function") {
+    window.render = function () {
+      originalRender();
+      try { renderExpansion(); }
+      catch (error) { console.error("Archipelago render:", error); }
+    };
+  }
+
+  // รักษาเหตุการณ์สุ่มเดิมไว้ แล้วเพิ่มโอกาสให้เกิดเหตุการณ์แบบเลือกตอบ
+  if (typeof originalRandomEvent === "function") {
+    window.randomWorldEvent = function () {
+      if (!initData() || G.eventPending || modalOpen) return;
+
+      if (Math.random() < 0.4) {
+        const island = currentIsland();
+        decision(
+          "เสียงจากพื้นที่ใกล้เคียง",
+          "ระหว่างเดินทางบน" + island.name +
+            " คุณพบร่องรอยที่อาจนำไปสู่ทรัพยากรหรืออันตราย",
+          [
+            {label:"ตรวจสอบร่องรอย",detail:"มีโอกาสได้ของหรือบาดเจ็บ",
+              run:() => {
+                if (Math.random() < 0.65) {
+                  addItem("สมุนไพรป่า",1,"material",3);
+                  logEvent("ค้นพบ","พบสมุนไพรป่าจากร่องรอย");
+                } else {
+                  G.c.hp -= 4;
+                  logEvent("อันตราย","คุณบาดเจ็บเล็กน้อยระหว่างตรวจสอบ");
+                }
+              }},
+            {label:"เดินผ่านไป",detail:"ไม่เสี่ยงกับสิ่งที่ไม่รู้จัก",
+              run:() => {
+                logEvent("สำรวจ","คุณเลือกไม่เข้าใกล้ร่องรอย");
+              }},
+            {label:"ใช้เวลาเฝ้าดู",detail:"อาจเรียนรู้พฤติกรรมของสิ่งมีชีวิต",
+              run:() => {
+                G.c.knowledge = (G.c.knowledge || 0) + 1;
+                advance(15,false);
+                logEvent("ความรู้","คุณสังเกตพื้นที่และเพิ่มความรู้");
+              }}
+          ]
+        );
+        return;
+      }
+
+      // เหตุการณ์เก่าของเกมยังคงทำงานได้
+      originalRandomEvent();
+    };
+  }
+
+  // ทำให้ระบบส่วนขยายพร้อมใช้งานหลังเริ่มหรือโหลดเซฟ
+  const oldStartGame = window.startGame;
+  if (typeof oldStartGame === "function") {
+    window.startGame = function () {
+      const result = oldStartGame.apply(this, arguments);
+      initData();
+      ensureUI();
+      renderExpansion();
+      return result;
+    };
+  }
+
+  const oldLoadGame = window.loadGame;
+  if (typeof oldLoadGame === "function") {
+    window.loadGame = function () {
+      const result = oldLoadGame.apply(this, arguments);
+      setTimeout(() => {
+        initData();
+        ensureUI();
+        renderExpansion();
+      }, 0);
+      return result;
+    };
+  }
+
+  window.addEventListener("load", () => {
+    try {
+      if (initData()) {
+        ensureUI();
+        renderExpansion();
+      }
+    } catch (error) {
+      console.error("Archipelago initialization:", error);
+    }
+  });
+})();
+
 </script>
 </body>
 </html>
