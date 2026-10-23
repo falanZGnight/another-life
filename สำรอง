@@ -1,1 +1,4136 @@
 
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Another Life V2 — Another World</title>
+<style>
+:root{color-scheme:dark;--bg:#10151c;--panel:#1b2531;--panel2:#222f3d;--line:#35485b;--gold:#e7c77c;--text:#e8edf2;--muted:#a9b7c6;--green:#7dd6a4;--red:#f18b8b;--blue:#88bfff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,sans-serif}
+header{padding:22px 18px;background:linear-gradient(120deg,#1c3140,#18202c);border-bottom:1px solid var(--line)}
+h1{margin:0;color:var(--gold);font-size:27px}header p{margin:3px 0 0;color:var(--muted)}
+main{max-width:1200px;margin:auto;padding:16px;display:grid;grid-template-columns:290px minmax(0,1fr);gap:15px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:14px;min-width:0}
+h2{font-size:18px;color:var(--gold);margin:0 0 10px}h3{font-size:15px;margin:10px 0 5px}
+label{display:block;color:var(--muted);font-size:13px;margin:7px 0 3px}
+input,select,textarea{width:100%;background:#101821;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:9px;font:inherit}
+button{background:#30465b;color:white;border:1px solid #49647c;border-radius:7px;padding:8px 11px;cursor:pointer;font:inherit;margin:3px 2px 3px 0}
+button:hover{filter:brightness(1.18)}button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:#705d31;border-color:#b49752}.danger{background:#693b42;border-color:#a65c63}.good{background:#24533f;border-color:#438464}
+.actions{display:flex;flex-wrap:wrap;gap:4px}.stat{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #2d3a47;padding:4px 0}
+.muted{color:var(--muted)}.gold{color:var(--gold)}.goodtxt{color:var(--green)}.badtxt{color:var(--red)}
+.bar{height:8px;background:#0d1218;border-radius:10px;overflow:hidden;margin:4px 0 8px}.bar span{display:block;height:100%;background:var(--green)}
+#log{height:290px;overflow:auto;white-space:pre-wrap;background:#111922;border-radius:8px;padding:10px;font-size:13px}
+.logline{padding:5px 0;border-bottom:1px solid #26323e}.tag{display:inline-block;padding:1px 6px;border-radius:5px;background:#293d50;color:var(--blue);font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.card{background:#151e28;border:1px solid var(--line);padding:10px;border-radius:8px}
+#game{display:none}.notice{border-left:3px solid var(--gold);padding:7px 10px;background:#222a31;margin:8px 0}
+#deathOverlay{display:none;position:fixed;inset:0;background:#080b0eeF;z-index:10;align-items:center;justify-content:center;padding:20px}
+#deathOverlay .panel{max-width:520px;width:100%;border-color:#a65c63}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+@media(max-width:780px){main{grid-template-columns:1fr}.two{grid-template-columns:1fr}#log{height:240px}}
+
+/* ===== 16-BIT PIXEL RPG ===== */
+.pixel-panel {
+  padding: 12px;
+  margin-bottom: 14px;
+  background: #17221d;
+  border: 3px solid #6d5638;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #26392b;
+}
+.pixel-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pixel-heading h2 {
+  color: #f4d58a;
+  font-family: monospace;
+  margin: 0 0 10px;
+}
+.pixel-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+}
+.pixel-screen {
+  overflow: hidden;
+  border: 4px solid #3c4935;
+  background: #101a16;
+}
+#pixelCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: manipulation;
+}
+.pixel-side {
+  padding: 10px;
+  color: #e8edcf;
+  background: #101a16;
+  border: 2px solid #3c4935;
+  font: 13px monospace;
+}
+.pixel-side h3 {
+  margin: 0 0 8px;
+  color: #f4d58a;
+}
+.pixel-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 5px 0;
+  border-bottom: 1px solid #314133;
+}
+.pixel-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 8px;
+}
+.pixel-controls button,
+.pixel-actions button {
+  margin: 0;
+  border: 2px solid #6d5638;
+  border-radius: 2px;
+  background: #3b4b35;
+  font-family: monospace;
+}
+.pixel-controls button {
+  min-height: 38px;
+  padding: 6px;
+}
+.pixel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.pixel-help {
+  color: #b8c6ae;
+  font-size: 12px;
+}
+@media(max-width:650px) {
+  .pixel-layout {
+    grid-template-columns: 1fr;
+  }
+  .pixel-side {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 10px;
+  }
+  .pixel-side h3 {
+    grid-column: 1/-1;
+  }
+}
+
+/* ===== STATIC PIXEL CHARACTER ===== */
+.avatar-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 2px solid #6d5638;
+  background: #17221d;
+  color: #e8edcf;
+  font-family: monospace;
+}
+.avatar-panel h2 {
+  margin: 0 0 10px;
+  color: #f4d58a;
+  font-size: 16px;
+}
+.avatar-layout {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.avatar-stage {
+  width: 150px;
+  min-height: 174px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #101a16;
+  border: 2px solid #3c4935;
+}
+#avatarCanvas {
+  width: 120px;
+  height: 160px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.avatar-info {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+}
+.avatar-info div {
+  padding: 5px 0;
+  border-bottom: 1px solid #314133;
+}
+.avatar-info b {
+  color: #f4d58a;
+}
+.avatar-note {
+  color: #aebca6;
+  font-size: 11px;
+  margin-top: 8px;
+}
+@media(max-width:480px) {
+  .avatar-stage {
+    width: 112px;
+    min-height: 150px;
+  }
+  #avatarCanvas {
+    width: 96px;
+    height: 128px;
+  }
+}
+
+</style>
+</head>
+<body>
+<header>
+<h1>Another Life V2</h1>
+<p>ชีวิตใหม่ในโลกที่ไม่เคยหยุดเดิน — เลือกเส้นทางของตัวเอง</p>
+</header>
+
+<main>
+<aside>
+<div class="panel">
+<h2>สถานะตัวละคร</h2>
+<div id="identity" class="muted">ยังไม่ได้เริ่มชีวิต</div>
+<div id="stats"></div>
+<div id="needs"></div>
+<div class="stat"><span>เงิน</span><b id="gold">—</b></div>
+<div class="stat"><span>ชื่อเสียง</span><b id="fame">—</b></div>
+<div class="stat"><span>อาชีพหลัก</span><b id="job">—</b></div>
+<div class="stat"><span>วิถีชีวิต</span><b id="lifePath">—</b></div>
+<div class="stat"><span>สถานที่</span><b id="place">—</b></div>
+<div class="stat"><span>เวลาโลก</span><b id="clock">—</b></div>
+<div class="stat"><span>ความอันตราย</span><b id="danger">—</b></div>
+<div class="actions">
+<button onclick="saveGame()">เซฟเกม</button>
+<button onclick="loadGame()">โหลดเกม</button>
+<button onclick="exportSave()">ส่งออกเซฟ</button>
+</div>
+<div style="margin-top:8px">
+<label>นำเข้าเซฟ JSON</label>
+<input id="importFile" type="file" accept=".json,application/json">
+<button onclick="importSave()">นำเข้าเซฟ</button>
+</div>
+</div>
+
+<div class="panel">
+<h2>เร่งเวลา</h2>
+<div class="muted">เวลาจะเดินต่อเมื่อทำกิจกรรม หรือเร่งเวลา หากมีเหตุการณ์ฉุกเฉินจะหยุดให้ตัดสินใจ</div>
+<div class="actions">
+<button onclick="setSpeed(1)">1×</button>
+<button onclick="setSpeed(3)">3×</button>
+<button onclick="setSpeed(10)">10×</button>
+<button class="danger" onclick="pauseTime()">หยุดเวลา</button>
+</div>
+<div class="actions">
+<button onclick="waitTime(10)">รอ 10 นาที</button>
+<button onclick="waitTime(60)">รอ 1 ชั่วโมง</button>
+<button onclick="waitTime(360)">รอ 6 ชั่วโมง</button>
+</div>
+<div class="muted" id="speedText">เวลาเดินตามปกติ</div>
+</div>
+  
+<div class="panel">
+  <h2>การตัดสินใจของตัวละคร</h2>
+  <p class="muted">ตัวละครจะประเมินความต้องการ เป้าหมาย และอันตราย แล้วเลือกกิจกรรมเองเมื่อเวลาเดิน</p>
+  <div class="actions">
+    <button class="good" id="aiToggle" onclick="toggleAI()">AI: เปิด</button>
+    <button onclick="runAIDecision(true)">ตัดสินใจตอนนี้</button>
+  </div>
+  <label>เป้าหมายชีวิต</label>
+  <select id="aiGoal" onchange="setAIPreference('goal',this.value)">
+    <option value="balanced">สมดุลชีวิต</option>
+    <option value="wealth">หาเงิน</option>
+    <option value="skill">ฝึกทักษะ</option>
+    <option value="explore">สำรวจโลก</option>
+    <option value="social">สร้างความสัมพันธ์</option>
+    <option value="peaceful">ใช้ชีวิตปลอดภัย</option>
+  </select>
+  <label>ระดับความเสี่ยง</label>
+  <select id="aiRisk" onchange="setAIPreference('risk',this.value)">
+    <option value="low">ระมัดระวัง</option>
+    <option value="normal">ปานกลาง</option>
+    <option value="high">กล้าเสี่ยง</option>
+  </select>
+  <div id="aiStatus" class="notice">กำลังเตรียมระบบตัดสินใจ</div>
+  <div id="aiLast" class="muted">ยังไม่มีการตัดสินใจ</div>
+</div>
+
+</aside>
+
+<section>
+<div id="creation" class="panel">
+<h2>เริ่มต้นชีวิตใหม่</h2>
+<p class="muted">คุณเกิดมาในโลกที่มีหลายเผ่าพันธุ์ อาณาจักร และความขัดแย้ง ไม่มีเส้นทางไหนถูกกำหนดไว้ล่วงหน้า</p>
+<div class="two">
+<div>
+<label>ชื่อตัวละคร</label><input id="cName" value="เรน">
+<label>เพศตัวละคร</label>
+<select id="cGender">
+  <option value="ชาย">ชาย</option>
+  <option value="หญิง">หญิง</option>
+  <option value="ไม่ระบุ">ไม่ระบุ</option>
+</select>
+
+<label>เผ่าพันธุ์</label>
+<select id="cRace">
+<option value="มนุษย์">มนุษย์ — ปรับตัวได้ดี</option>
+<option value="เอลฟ์">เอลฟ์ — สัมผัสเวทมนตร์และธรรมชาติ</option>
+<option value="คนแคระ">คนแคระ — ช่างฝีมือและอดทน</option>
+<option value="เผ่าสัตว์">เผ่าสัตว์ — ประสาทสัมผัสและความคล่องตัว</option>
+<option value="เผ่ามังกรสายเลือดเจือจาง">ผู้มีสายเลือดมังกรเจือจาง — พลังสูงแต่ถูกจับตามอง</option>
+<option value="เผ่าวิญญาณ">เผ่าวิญญาณ — ไวต่อพลังลี้ลับ แต่ร่างกายเปราะบาง</option>
+</select>
+<label>พรสวรรค์</label>
+<select id="cTalent">
+<option value="นักเรียนรู้">นักเรียนรู้ — เรียนรู้ทักษะไวขึ้น</option>
+<option value="ผู้เอาตัวรอด">ผู้เอาตัวรอด — ได้เปรียบเมื่อตกอยู่ในอันตราย</option>
+<option value="ช่างสังเกต">ช่างสังเกต — สำรวจพบสิ่งผิดปกติง่ายขึ้น</option>
+<option value="ผู้มีเสน่ห์">ผู้มีเสน่ห์ — เริ่มความสัมพันธ์ง่ายขึ้น</option>
+<option value="พลังเวท">พลังเวท — พลังเวทเริ่มต้นสูงขึ้น</option>
+<option value="ร่างกายแข็งแกร่ง">ร่างกายแข็งแกร่ง — พลังชีวิตและแรงกายสูงขึ้น</option>
+</select>
+<label>ข้อเสียประจำตัว</label>
+<select id="cFlaw">
+<option value="ไม่มี">ไม่มีข้อเสียเด่นชัด</option>
+<option value="ร่างกายอ่อนแอ">ร่างกายอ่อนแอ — พลังชีวิตต่ำลง</option>
+<option value="ขี้ระแวง">ขี้ระแวง — สร้างความไว้ใจยากขึ้น</option>
+<option value="โลภ">โลภ — การตัดสินใจบางครั้งเสี่ยงขึ้น</option>
+<option value="พลังเวทต่ำ">พลังเวทต่ำ — ใช้เวทได้จำกัด</option>
+</select>
+<label>บุคลิก</label>
+<select id="cPersonality">
+<option>สุขุม</option><option>กล้าหาญ</option><option>ช่างสงสัย</option>
+<option>ใจดี</option><option>เจ้าเล่ห์</option><option>รักอิสระ</option>
+</select>
+<label>พื้นเพ</label>
+<select id="cOrigin">
+<option value="ชาวบ้าน">ลูกชาวบ้าน</option><option value="ตระกูลพ่อค้า">ตระกูลพ่อค้า</option>
+<option value="ผู้ลี้ภัย">ผู้ลี้ภัย</option><option value="เด็กกำพร้า">เด็กกำพร้า</option>
+<option value="ตระกูลนักรบ">ตระกูลนักรบ</option><option value="ผู้ถูกอุปถัมภ์">ผู้ถูกอุปถัมภ์</option>
+</select>
+</div>
+<div>
+<label>พื้นที่เกิด</label>
+<select id="cSpawn">
+<option value="หมู่บ้านชายป่า">หมู่บ้านชายป่า — ทรัพยากรธรรมชาติและมอนสเตอร์ระดับต่ำ</option>
+<option value="เมืองการค้า">เมืองการค้า — งาน เงิน และผู้คนหลากหลาย</option>
+<option value="ชุมชนคนแคระ">ชุมชนคนแคระ — งานช่างและเหมือง</option>
+<option value="เขตชายแดน">เขตชายแดน — ค่าตอบแทนสูง แต่อันตราย</option>
+<option value="ชุมชนเอลฟ์">ชุมชนเอลฟ์ — สมุนไพร เวทมนตร์ และธรรมชาติ</option>
+</select>
+<label>อาชีพหลักเริ่มต้น</label>
+<select id="cJob">
+<option value="ผู้ฝึกหัด">ผู้ฝึกหัด — ยังไม่มีอาชีพเฉพาะ เรียนรู้ได้กว้าง</option>
+<option value="นักผจญภัย">นักผจญภัย — สำรวจและรับภารกิจ</option>
+<option value="ช่างฝีมือ">ช่างฝีมือ — สร้างและซ่อมอุปกรณ์</option>
+<option value="พ่อค้า">พ่อค้า — ซื้อขายและต่อรอง</option>
+<option value="นักวิจัย">นักวิจัย — ศึกษาสิ่งมีชีวิตและความรู้</option>
+<option value="ผู้รักษา">ผู้รักษา — ปรุงยาและดูแลผู้บาดเจ็บ</option>
+<option value="เกษตรกร">เกษตรกร — ปลูกพืชและหาอาหาร</option>
+<option value="ผู้ลาดตระเวน">ผู้ลาดตระเวน — ติดตามร่องรอยและป้องกันพื้นที่</option>
+<option value="ผู้ช่วยชุมชน">ผู้ช่วยชุมชน — สร้างความไว้ใจและชื่อเสียง</option>
+</select>
+<label>วิถีชีวิตที่สนใจ</label>
+<select id="cLife">
+<option value="อิสระ">อิสระ — เลือกได้ทุกทาง</option>
+<option value="นักผจญภัย">ผจญภัยและสำรวจ</option><option value="พ่อค้า">ค้าขายและสะสมทรัพย์</option>
+<option value="ช่างฝีมือ">สร้างสิ่งของและเป็นช่างผู้เชี่ยวชาญ</option>
+<option value="นักวิชาการ">ค้นคว้าและค้นพบสิ่งใหม่</option>
+<option value="ชีวิตสงบ">ใช้ชีวิตสงบและสร้างชุมชน</option>
+<option value="ผู้มีอำนาจ">สร้างอิทธิพลและมีส่วนร่วมทางการเมือง</option>
+</select>
+<div class="notice">ตัวละครเริ่มต้นเมื่ออายุ 8 ปี อาชีพเต็มรูปแบบบางอย่างต้องฝึกฝน มีคุณสมบัติ หรือรอให้ถึงวัยที่เหมาะสม</div>
+<button type="button" style="width:100%" onclick="startGame()">เริ่มชีวิต</button>
+</div>
+</div>
+</div>
+
+<div id="game" style="display:none">
+<div class="panel">
+<h2 id="sceneTitle">โลกใบใหม่</h2>
+<div id="sceneText"></div>
+<div class="actions" id="sceneActions"></div>
+</div>
+
+<div class="two">
+<div class="panel">
+<h2>การใช้ชีวิต</h2>
+<div class="actions">
+<button onclick="rest()">พักผ่อน</button>
+<button onclick="eat()">กินอาหาร</button>
+<button onclick="drink()">ดื่มน้ำ</button>
+<button onclick="train()">ฝึกทักษะ</button>
+<button onclick="work()">ทำงาน</button>
+<button onclick="study()">ไปเรียน</button>
+<button onclick="explore()">สำรวจพื้นที่</button>
+<button onclick="shortRest()">พักระยะสั้น</button>
+</div>
+<h3>อาชีพและการเรียนรู้</h3>
+<div id="professionInfo"></div>
+<div class="actions">
+<button onclick="showJobChoices()">เลือก/ฝึกอาชีพ</button>
+<button onclick="craft()">สร้างสิ่งของ</button>
+<button onclick="research()">ศึกษาสิ่งมีชีวิต</button>
+</div>
+</div>
+<div class="panel">
+<h2>โลกและการเดินทาง</h2>
+<div id="locationInfo"></div>
+<div class="actions" id="travelActions"></div>
+<h3>สังคมและการเมือง</h3>
+<div id="politicsInfo"></div>
+<div class="actions">
+<button onclick="socialize()">พบปะผู้คน</button>
+<button onclick="community()">ช่วยชุมชน</button>
+<button onclick="politics()">ติดตามข่าวการเมือง</button>
+</div>
+</div>
+</div>
+
+<div class="two">
+<div class="panel">
+<h2>กระเป๋าและอุปกรณ์</h2>
+<div id="inventory"></div>
+<div class="actions">
+<button onclick="useSelectedItem()">ใช้ไอเทมที่เลือก</button>
+<button onclick="equipSelectedGear()">สวมใส่ไอเทม</button>
+<button onclick="sellSelectedItem()">ขายไอเทมที่เลือก</button>
+</div>
+<label>เลือกไอเทม</label><select id="itemSelect"></select>
+<h3>ตลาดและพ่อค้า</h3>
+<div id="merchantInfo"></div>
+<div class="actions">
+<button onclick="visitMerchant()">พบพ่อค้า</button>
+<button onclick="buyMerchantItem()">ซื้อของที่เลือก</button>
+<button onclick="refreshMerchant()">สุ่มสินค้าใหม่</button>
+</div>
+<label>สินค้าในร้าน</label><select id="merchantSelect"></select>
+</div>
+<div class="panel">
+<h2>มอนสเตอร์และการต่อสู้</h2>
+<div id="monsterInfo">ยังไม่มีการพบมอนสเตอร์</div>
+<div class="actions">
+<button onclick="hunt()">ออกล่ามอนสเตอร์</button>
+<button onclick="fight()">ต่อสู้</button>
+<button onclick="flee()">หนี</button>
+</div>
+<h3>บันทึกการค้นพบ</h3><div id="bestiary"></div>
+</div>
+</div>
+
+<div class="two">
+<div class="panel">
+<h2>ผู้คนและความสัมพันธ์</h2>
+<div id="npcInfo"></div>
+<div class="actions">
+<button onclick="meetNPC()">พบผู้คนใหม่</button>
+<button onclick="talkNPC()">พูดคุย</button>
+<button onclick="inviteNPC()">ชวนเข้าปาร์ตี้</button>
+<button onclick="giftNPC()">มอบของขวัญ</button>
+</div>
+<label>เลือกบุคคล</label><select id="npcSelect"></select>
+<div id="partyInfo"></div>
+</div>
+<div class="panel">
+<h2>ประวัติชีวิต</h2>
+<div class="stat"><span>จำนวนชีวิต</span><b id="lifeCount">1</b></div>
+<div class="stat"><span>มอนสเตอร์ที่สังหาร</span><b id="kills">0</b></div>
+<div class="stat"><span>การค้นพบ</span><b id="discoveries">0</b></div>
+<div class="stat"><span>บาดแผล/สถานะ</span><b id="conditions">ปกติ</b></div>
+<div id="history"></div>
+</div>
+</div>
+
+<div class="panel">
+<h2>บันทึกเหตุการณ์</h2>
+<div id="log"></div>
+</div>
+</div>
+</section>
+</main>
+
+<div id="deathOverlay">
+<div class="panel">
+<h2 class="badtxt">ชีวิตนี้สิ้นสุดลง</h2>
+<p id="deathReason"></p>
+<p>โลกยังคงดำเนินต่อไป สิ่งที่คุณทำ ชื่อเสียงของคุณ และเรื่องราวที่ทิ้งไว้จะถูกเก็บไว้ในประวัติศาสตร์</p>
+<div id="reviveChoices"></div>
+<hr>
+<h3>หรือเริ่มชีวิตใหม่</h3>
+<p class="muted">ชีวิตใหม่จะเริ่มตั้งแต่วัยเด็ก แต่ยังอยู่ในโลกเดิมที่มีประวัติและผลกระทบจากชีวิตก่อน</p>
+<button class="primary" onclick="newLife()">เกิดใหม่</button>
+</div>
+</div>
+<footer>Another Life V2 — ไฟล์เกมออฟไลน์ บันทึกไว้ในเบราว์เซอร์เครื่องนี้</footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const SAVEKEY="anotherLifeV2Save";
+const MONTHS=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const LOCATIONS={
+"หมู่บ้านชายป่า":{danger:1,desc:"หมู่บ้านเล็กติดป่า มีชาวบ้าน คนตัดไม้ และเส้นทางเก่า",jobs:["เกษตรกร","ผู้ช่วยชุมชน","ผู้ลาดตระเวน"]},
+"เมืองการค้า":{danger:1,desc:"ตลาดใหญ่ โรงเตี๊ยม สมาคมนักผจญภัย และการเมืองของพ่อค้า",jobs:["พ่อค้า","นักผจญภัย","ช่างฝีมือ","ผู้รักษา"]},
+"ชุมชนคนแคระ":{danger:2,desc:"ชุมชนช่างฝีมือใกล้เหมือง มีแร่และเตาหลอม",jobs:["ช่างฝีมือ","นักวิจัย","ผู้ลาดตระเวน"]},
+"เขตชายแดน":{danger:4,desc:"ด่านชายแดนที่มีทหาร ผู้ลี้ภัย และการปะทะระหว่างกลุ่มอำนาจ",jobs:["นักผจญภัย","ผู้ลาดตระเวน","ผู้รักษา"]},
+"ชุมชนเอลฟ์":{danger:2,desc:"ชุมชนในป่าลึกที่เชี่ยวชาญสมุนไพรและเวทมนตร์",jobs:["นักวิจัย","ผู้รักษา","ผู้ลาดตระเวน"]}
+};
+
+const RACES={
+  "มนุษย์":{hp:0,atk:0,magic:0,skill:"ปรับตัว",adultAge:15,lifeExpectancy:80,maxAge:110},
+  "เอลฟ์":{hp:-2,atk:0,magic:3,skill:"สัมผัสธรรมชาติ",adultAge:30,lifeExpectancy:750,maxAge:1200},
+  "คนแคระ":{hp:5,atk:1,magic:-1,skill:"ช่างโลหะ",adultAge:20,lifeExpectancy:250,maxAge:400},
+  "เผ่าสัตว์":{hp:1,atk:2,magic:0,skill:"ประสาทสัมผัส",adultAge:15,lifeExpectancy:100,maxAge:150},
+  "เผ่ามังกรสายเลือดเจือจาง":{hp:6,atk:3,magic:2,skill:"สายเลือดมังกร",adultAge:25,lifeExpectancy:180,maxAge:300},
+  "เผ่าวิญญาณ":{hp:-4,atk:0,magic:5,skill:"สัมผัสวิญญาณ",adultAge:18,lifeExpectancy:500,maxAge:1000}
+};
+
+  
+const AGE_RULES = {
+  "มนุษย์": {
+    adult: 15,
+    elder: 60,
+    lifespan: 80
+  },
+  "เอลฟ์": {
+    adult: 30,
+    elder: 350,
+    lifespan: 500
+  },
+  "คนแคระ": {
+    adult: 20,
+    elder: 140,
+    lifespan: 200
+  },
+  "เผ่าสัตว์": {
+    adult: 15,
+    elder: 65,
+    lifespan: 90
+  },
+  "เผ่ามังกรสายเลือดเจือจาง": {
+    adult: 50,
+    elder: 700,
+    lifespan: 1000
+  },
+  "เผ่าวิญญาณ": {
+    adult: 18,
+    elder: 250,
+    lifespan: 400
+  }
+};
+
+function ageRule(race) {
+  return AGE_RULES[race] || AGE_RULES["มนุษย์"];
+}
+
+function maturityStage(age, race) {
+  const rule = ageRule(race);
+
+  if (age < rule.adult * 0.6) return "เด็ก";
+  if (age < rule.adult) return "วัยกำลังเติบโต";
+  if (age >= rule.lifespan) return "สิ้นอายุขัยตามธรรมชาติ";
+  if (age >= rule.elder) return "ผู้สูงวัย";
+  return "ผู้ใหญ่";
+}
+
+function raceRules(race){
+  const r=RACES[race]||RACES["มนุษย์"];
+  return {
+    adultAge:r.adultAge||15,
+    lifeExpectancy:r.lifeExpectancy||80,
+    maxAge:r.maxAge||110
+  };
+}
+
+function ageStage(person){
+  const rules=raceRules(person.race);
+  const age=Number(person.age)||0;
+
+  if(age<3) return "ทารก";
+  if(age<10) return "เด็กเล็ก";
+  if(age<rules.adultAge-3) return "เด็ก";
+  if(age<rules.adultAge) return "วัยรุ่น";
+  if(age<rules.lifeExpectancy*0.75) return "ผู้ใหญ่";
+  if(age<rules.maxAge) return "สูงวัย";
+  return "ชรามาก";
+}
+
+function isAdult(person){
+  return Number(person.age)>=raceRules(person.race).adultAge;
+}
+
+const JOBS={
+"ผู้ฝึกหัด":"ฝึกทักษะได้กว้าง แต่ยังไม่มีรายได้เฉพาะทาง",
+"นักผจญภัย":"รับงานสำรวจ ต่อสู้ และกำจัดภัยคุกคาม",
+"ช่างฝีมือ":"สร้างอุปกรณ์และรับงานซ่อม",
+"พ่อค้า":"ค้าขาย เก็งราคา และหาโอกาสทางเศรษฐกิจ",
+"นักวิจัย":"ค้นคว้ามอนสเตอร์ สมุนไพร และความรู้",
+"ผู้รักษา":"ปรุงยา รักษาบาดแผล และช่วยผู้คน",
+"เกษตรกร":"ปลูกพืช หาอาหาร และสร้างผลผลิต",
+"ผู้ลาดตระเวน":"สำรวจพื้นที่ ติดตามร่องรอย และเฝ้าระวัง",
+"ผู้ช่วยชุมชน":"ช่วยเหลือผู้คน เพิ่มความไว้วางใจและชื่อเสียง"
+};
+let G=null, speed=1, timer=null, currentMonster=null, selectedNPC=null, autoSaveTimer=null;
+
+function freshWorld(){
+return {year:1,minute:8*60,day:1,month:0,events:[],history:[],politics:35,trade:50,war:15,discovery:0,kills:0,lifeCount:0,npcs:[],bestiary:[],visited:[],merchant:[],nextNPC:1};
+}
+function makeCharacter(name,race,talent,flaw,personality,origin,spawn,job,life){
+const rr=RACES[race]||RACES["มนุษย์"];
+let c={
+name:name||"เรน",
+race,
+gender:$("cGender") ? $("cGender").value : "ไม่ระบุ",
+talent,flaw,personality,origin,spawn,job,
+lifePath:life,
+age:8,
+hp:30+rr.hp+(talent==="ร่างกายแข็งแกร่ง"?8:0)+(flaw==="ร่างกายอ่อนแอ"?-8:0),
+maxHp:30+rr.hp+(talent==="ร่างกายแข็งแกร่ง"?8:0)+(flaw==="ร่างกายอ่อนแอ"?-8:0),
+stamina:30,maxStamina:30,mana:12+rr.magic*2-(flaw==="พลังเวทต่ำ"?6:0),maxMana:12+rr.magic*2-(flaw==="พลังเวทต่ำ"?6:0),
+atk:4+rr.atk,def:1,skill:0,knowledge:0,craft:0,social:0,survival:0,magic:Math.max(0,rr.magic),
+gold:25,fame:0,trust:0,hunger:10,thirst:10,energy:90,condition:[],inventory:[
+{name:"ขนมปัง",qty:3,type:"food",value:3},{name:"น้ำสะอาด",qty:3,type:"drink",value:2},
+{name:"ผ้าพันแผล",qty:1,type:"heal",value:8},{name:"เหรียญนำโชค",qty:1,type:"charm",value:5}
+ ], equipment:[], wearing:{   head:null,   body:null,   legs:null,   weapon:null }, party:[], jobLevel:1, dead:false, lifeHistory:[], lastAction:"เริ่มต้นชีวิต" };
+return c;
+}
+
+function startGame(){
+  G = {
+    world: freshWorld(),
+    c: makeCharacter(
+      $("cName").value,
+      $("cRace").value,
+      $("cTalent").value,
+      $("cFlaw").value,
+      $("cPersonality").value,
+      $("cOrigin").value,
+      $("cSpawn").value,
+      $("cJob").value,
+      $("cLife").value
+    ),
+    location: $("cSpawn").value,
+    deathReason: "",
+    eventPending: false
+  };
+
+  G.auto = {
+    enabled: true,
+    goal: "balanced",
+    risk: "low",
+    minutes: 0,
+    last: "เริ่มต้นชีวิต"
+  };
+
+  G.world.lifeCount = 1;
+
+  if (!Array.isArray(G.world.visited)) {
+    G.world.visited = [];
+  }
+
+  if (G.location && !G.world.visited.includes(G.location)) {
+    G.world.visited.push(G.location);
+  }
+
+  applyOrigin();
+  ensureMerchant();
+
+  $("creation").style.display = "none";
+  $("game").style.display = "block";
+
+  evtInit();
+
+  log("ชีวิตใหม่เริ่มต้น",
+    "คุณเกิดใน" + G.location + " เมื่ออายุ 8 ปี อาชีพหลักคือ" + G.c.job + " เส้นทางในอนาคตยังเปิดกว้าง"
+  );
+
+  log("โลก", "" + LOCATIONS[G.location].desc);
+
+  if (G.c.job !== "ผู้ฝึกหัด") {
+    log("อาชีพ", "คุณเริ่มต้นเป็น" + G.c.job + " แต่ต้องพัฒนาทักษะเพื่อเลื่อนระดับ");
+  }
+
+  render();
+  startAutoSave();
+  setSpeed(speed);
+  saveGame();
+}
+
+
+function applyOrigin(){
+  let c = G.c;
+
+  if(c.origin === "ตระกูลพ่อค้า") c.gold += 30;
+  if(c.origin === "ตระกูลนักรบ"){
+    c.atk += 1;
+    c.def += 1;
+  }
+  if(c.origin === "ผู้ลี้ภัย"){
+    c.survival += 2;
+    c.gold = Math.max(0, c.gold - 10);
+  }
+  if(c.origin === "เด็กกำพร้า") c.survival += 1;
+  if(c.origin === "ผู้ถูกอุปถัมภ์"){
+    c.knowledge += 1;
+    c.gold += 10;
+  }
+}
+
+function log(type,text){
+if(!G)return;
+G.world.events.unshift({date:dateString(),type,text});
+G.world.events=G.world.events.slice(0,120);
+}
+function dateString(){
+if(!G)return "";
+let w=G.world,h=Math.floor(w.minute/60)%24,m=w.minute%60;
+return "ปี "+w.year+" วันที่ "+w.day+" "+MONTHS[w.month]+" "+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+function danger(){return LOCATIONS[G.location]?.danger||1;}
+function timeLabel(){
+let m=G.world.minute, h=Math.floor(m/60)%24, mm=m%60;
+let part=h>=5&&h<11?"เช้า":h>=11&&h<15?"กลางวัน":h>=15&&h<19?"เย็น":"กลางคืน";
+return `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")} น. (${part})`;
+}
+
+function advance(minutes, allowEncounter = true) {
+  if (!G || G.c.dead || !Number.isFinite(minutes) || minutes <= 0) return;
+
+  const w = G.world;
+  const c = G.c;
+
+  const oldDay = evtDayNumber();
+  const oldPeriod = timeLabel();
+  const totalMinutes = Math.floor(minutes);
+
+  // คำนวณเวลาและวันใหม่ โดยใช้เวลาของโลกเดิม
+  let remaining = totalMinutes;
+  let crossedDays = 0;
+
+  while (remaining > 0) {
+    const untilMidnight = 1440 - w.minute;
+    const step = Math.min(remaining, untilMidnight);
+
+    w.minute += step;
+    remaining -= step;
+
+    if (w.minute >= 1440) {
+      w.minute = 0;
+      w.day++;
+
+      if (w.day > 30) {
+        w.day = 1;
+        w.month++;
+
+        if (w.month > 11) {
+          w.month = 0;
+          w.year++;
+        }
+      }
+
+      crossedDays++;
+    }
+  }
+
+  // ความต้องการพื้นฐานเปลี่ยนตามเวลาที่ผ่านไป
+  const elapsedHours = totalMinutes / 60;
+
+  c.hunger = clamp(c.hunger + elapsedHours * 1.1, 0, 100);
+  c.thirst = clamp(c.thirst + elapsedHours * 1.8, 0, 100);
+
+  if (c.hunger >= 100) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 4));
+    addCondition("หิวโหย");
+  }
+
+  if (c.thirst >= 100) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 2));
+    addCondition("ขาดน้ำ");
+  }
+
+  if (c.energy <= 0) {
+    c.hp -= Math.max(1, Math.ceil(elapsedHours / 5));
+    addCondition("อ่อนล้า");
+  }
+
+  if (c.hp <= 0) {
+    die("ร่างกายทนต่อความหิว กระหาย หรือความเหนื่อยล้าไม่ไหว");
+    return;
+  }
+
+  // ตรวจสอบการเปลี่ยนวันและเหตุการณ์ของโลก
+  const newDay = evtDayNumber();
+
+  if (typeof evtProcessDay === "function") {
+    const firstDay = oldDay + 1;
+
+    for (let day = firstDay; day <= newDay; day++) {
+      // แต่ละวันมีโอกาสเกิดเหตุการณ์เพียงรอบเดียว
+      evtProcessDay(day);
+    }
+  }
+
+  // เหตุการณ์สุ่มจากระบบเดิมของเกม
+  if (
+    allowEncounter &&
+    Math.random() < Math.min(0.24, totalMinutes / 600 * 0.12 * danger())
+  ) {
+    randomWorldEvent();
+  }
+
+
+  // อัปเดตหน้าจอหลังเวลาทั้งหมดเดินเสร็จ
+  evtRender();
+  render();
+}
+
+function addCondition(x){
+  if(!G.c.condition.includes(x)) G.c.condition.push(x);
+}
+
+function clearCondition(x){
+  G.c.condition=G.c.condition.filter(v=>v!==x);
+}
+
+ function setSpeed(n){
+  if(!G || G.c.dead) return;
+
+  speed=n;
+
+  if(timer) clearInterval(timer);
+
+  timer=setInterval(()=>{
+    if(!G || G.c.dead){
+      pauseTime();
+      return;
+    }
+
+    const minutes=speed*5;
+
+    advance(minutes,true);
+
+    // ถ้าตายระหว่างเวลาเดิน ห้าม AI ทำงานต่อ
+    if(!G || G.c.dead) return;
+
+    G.auto=G.auto||{
+      enabled:true,
+      goal:"balanced",
+      risk:"low",
+      minutes:0
+    };
+
+    // ให้ AI ตัดสินใจทุก 60 นาทีในเกม
+    if(G.auto.enabled){
+      G.auto.minutes=(G.auto.minutes||0)+minutes;
+
+      while(
+        G.auto.minutes>=60 &&
+        G &&
+        !G.c.dead &&
+        G.auto.enabled
+      ){
+        G.auto.minutes-=60;
+        runAIDecision(false);
+      }
+    }
+  },500);
+
+  $("speedText").textContent=
+    "เวลาเดิน "+n+"× (ทุกครึ่งวินาที)";
+
+  log("เวลา","ตั้งความเร็วเป็น "+n+"×");
+  render();
+}
+
+function pauseTime(){
+  if(timer){
+    clearInterval(timer);
+    timer=null;
+  }
+
+  $("speedText").textContent="หยุดเวลา";
+
+  // บันทึกสถานะทันทีเมื่อหยุด
+  if(G) silentAutoSave();
+}
+function spend(n){advance(n,true);}
+function actionTime(n){advance(n,true);return !!(G&&!G.c.dead);}
+function rest(){
+if(!G||G.c.dead)return;let c=G.c;
+c.energy=clamp(c.energy+40,0,100);c.stamina=clamp(c.stamina+20,0,c.maxStamina);
+c.hp=clamp(c.hp+5,0,c.maxHp);log("พักผ่อน","คุณพักผ่อนและฟื้นกำลัง");if(!actionTime(360))return;
+}
+function shortRest(){
+let c=G.c;c.energy=clamp(c.energy+12,0,100);c.stamina=clamp(c.stamina+8,0,c.maxStamina);
+log("พัก","คุณพักหายใจและตรวจดูบาดแผล");actionTime(30);
+}
+function eat(){
+let c=G.c;if(!consumeType("food")){log("อาหาร","ไม่มีอาหารในกระเป๋า");return;}
+c.hunger=clamp(c.hunger-35,0,100);c.energy=clamp(c.energy+5,0,100);
+log("อาหาร","คุณกินอาหาร ลดความหิว");actionTime(10);
+}
+function drink(){
+let c=G.c;if(!consumeType("drink")){log("น้ำ","ไม่มีน้ำดื่ม");return;}
+c.thirst=clamp(c.thirst-45,0,100);log("น้ำ","คุณดื่มน้ำ ลดความกระหาย");actionTime(3);
+}
+function consumeType(type){let it=G.c.inventory.find(i=>i.type===type&&i.qty>0);if(!it)return false;it.qty--;cleanInventory();return true;}
+function cleanInventory(){G.c.inventory=G.c.inventory.filter(i=>i.qty>0);}
+function train(){
+let c=G.c;if(c.energy<10){log("ฝึกฝน","คุณเหนื่อยเกินกว่าจะฝึกได้");return;}
+c.energy-=10;c.stamina=Math.max(0,c.stamina-5);
+let skill=pick(["survival","atk","knowledge","craft","social","magic"]);
+if(skill==="atk")c.atk+=1;else c[skill]+=1;
+c.skill+=1;log("ฝึกฝน","ฝึกทักษะ "+skill+" สำเร็จ เพิ่มความสามารถ");actionTime(120);
+}
+function work(){
+let c=G.c;if(c.age<12){log("งาน","คุณยังเด็กเกินไปสำหรับงานเต็มเวลา ลองช่วยงานเล็ก ๆ หรือเรียนรู้ก่อน");c.gold+=rand(1,3);actionTime(60);return;}
+if(c.energy<15){log("งาน","พลังงานไม่พอ ควรพักก่อน");return;}
+let base=c.job==="พ่อค้า"?16:c.job==="ช่างฝีมือ"?14:c.job==="นักวิจัย"?12:c.job==="ผู้รักษา"?14:c.job==="เกษตรกร"?11:c.job==="นักผจญภัย"?danger()*8:8;
+let wage=Math.max(2,Math.floor(base+rand(-3,7)+c.jobLevel*2));
+c.gold+=wage;c.energy-=15;c.fame+=Math.random()<.25?1:0;
+log("งาน","ทำงานในฐานะ "+c.job+" ได้รับ "+wage+" เหรียญ");actionTime(240);
+}
+function study(){
+let c=G.c;if(c.age<10){log("การเรียน","คุณยังเด็ก แต่เริ่มเรียนพื้นฐานได้");}
+if(c.gold<2){log("การเรียน","ต้องใช้ค่าเรียน 2 เหรียญ");return;}
+c.gold-=2;c.knowledge+=1;c.magic+=Math.random()<.25?1:0;c.energy-=8;
+log("การเรียน","เรียนรู้ทักษะพื้นฐาน ความรู้เพิ่มขึ้น");actionTime(120);
+}
+function explore(){
+let c=G.c;if(c.energy<15){log("สำรวจ","คุณเหนื่อยเกินไป");return;}
+c.energy-=15;c.survival+=1;
+let roll=rand(1,20)+c.survival+(c.talent==="ช่างสังเกต"?3:0);
+if(roll>=16){let item=pick(["สมุนไพรป่า","แร่ดิบ","เห็ดเรืองแสง","เศษผลึกเวท"]);addItem(item,1,"material",rand(3,9));G.world.discovery++;log("ค้นพบ","คุณพบ "+item+" จากการสำรวจ");}
+else if(roll>=10){c.gold+=rand(1,5);log("สำรวจ","คุณพบเศษเหรียญและร่องรอยเก่า");}
+else log("สำรวจ","ไม่พบสิ่งมีค่า แต่คุณได้เรียนรู้พื้นที่นี้");
+actionTime(90);
+}
+function community(){
+let c=G.c;c.energy-=6;c.social+=1;c.fame+=1;G.world.politics=clamp(G.world.politics+1,0,100);
+log("ชุมชน","คุณช่วยเหลือผู้คน ชื่อเสียงเพิ่มขึ้นเล็กน้อย");actionTime(90);
+}
+function research(){
+let c=G.c;if(c.energy<5)return;
+if(!G.world.bestiary.length){log("วิจัย","ยังไม่มีตัวอย่างที่ค้นพบ ลองสำรวจหรือต่อสู้ก่อน");return;}
+c.knowledge+=2;G.world.discovery++;c.energy-=5;
+log("วิจัย","ศึกษาบันทึกสิ่งมีชีวิตและเพิ่มความรู้");actionTime(120);
+}
+function politics(){
+let w=G.world;
+let headlines=[
+"สภาเมืองกำลังถกเถียงเรื่องภาษีการค้า",
+"กลุ่มพ่อค้าต้องการสิทธิ์ผูกขาดเส้นทางขนส่ง",
+"ชาวบ้านร้องเรียนเรื่องความปลอดภัยตามชายแดน",
+"ผู้นำชุมชนเผ่าต่าง ๆ เรียกร้องให้มีตัวแทนในสภา",
+"ข่าวลือเรื่องการเคลื่อนกำลังทหารแพร่ไปตามโรงเตี๊ยม",
+"มีข้อเสนอให้ลดข้อจำกัดการเดินทางระหว่างเผ่าพันธุ์"
+];
+let h=pick(headlines);log("การเมือง",h);
+if(w.politics<25)log("ความขัดแย้ง","ความตึงเครียดเพิ่มสูง มีโอกาสเกิดเหตุปะทะ");
+actionTime(20);
+}
+function showJobChoices(){
+let c=G.c;
+let choices=Object.keys(JOBS);
+let menu="เลือกอาชีพที่ต้องการฝึก:\n"+choices.map((j,i)=>(i+1)+". "+j+" — "+JOBS[j]).join("\n");
+let answer=prompt(menu+"\nพิมพ์หมายเลขอาชีพ");
+let idx=Number(answer)-1;if(!answer||!choices[idx])return;
+let job=choices[idx];
+if(c.age<12&&job!=="ผู้ฝึกหัด"){log("อาชีพ","ตอนอายุ "+c.age+" คุณเริ่มฝึก "+job+" ได้ แต่ยังไม่สามารถรับตำแหน่งเต็มรูปแบบ");c.job=job;c.jobLevel=1;}
+else if(c.knowledge+c.skill+c.craft+c.social+c.survival<2&&job!=="ผู้ฝึกหัด"){log("อาชีพ","ยังขาดพื้นฐาน ลองเรียน ฝึก หรือทำงานช่วยเหลือก่อน");return;}
+else{c.job=job;c.jobLevel=Math.max(1,c.jobLevel);log("อาชีพ","คุณเริ่มเส้นทางอาชีพ "+job);}
+c.lifePath=job==="นักวิจัย"?"นักวิชาการ":job==="ผู้ช่วยชุมชน"?"ชีวิตสงบ":job;actionTime(60);render();
+}
+function craft(){
+let c=G.c;
+let categories=["อาวุธ","เกราะ","ยา","เครื่องมือ","อาหาร","วัสดุ"];
+let cat=prompt("เลือกประเภทที่จะสร้าง:\n1. อาวุธ\n2. เกราะ\n3. ยา\n4. เครื่องมือ\n5. อาหาร\n6. วัสดุ");
+let idx=Number(cat)-1;if(!categories[idx])return;
+let materials=c.inventory.filter(i=>i.type==="material"&&i.qty>0);
+if(!materials.length){log("สร้างของ","ต้องมีวัสดุอย่างน้อย 1 ชิ้น ลองสำรวจก่อน");return;}
+let mat=pick(materials);mat.qty--;
+let names={
+"อาวุธ":["มีดทำมือ","หอกฝึกหัด","กระบองเสริมแกน","ดาบเศษผลึก"],
+"เกราะ":["เสื้อหนังเย็บ","สนับแขน","เกราะแผ่นบาง"],
+"ยา":["ยาสมุนไพร","ยาฟื้นกำลัง","น้ำยาต้านพิษ"],
+"เครื่องมือ":["ชุดเครื่องมือพกพา","เบ็ดทำมือ","มีดช่าง"],
+"อาหาร":["อาหารเดินทาง","ซุปสมุนไพร","ขนมปังอบ"],
+"วัสดุ":["แผ่นโลหะผสม","เส้นใยเหนียว","ผลึกบด"]
+};
+let qualityRoll=rand(1,20)+c.craft+(c.job==="ช่างฝีมือ"?3:0);
+let quality=qualityRoll>=19?"ชั้นดี":qualityRoll>=13?"คุณภาพมาตรฐาน":qualityRoll>=7?"คุณภาพต่ำ":"งานไม่สมบูรณ์";
+if(qualityRoll<7){log("สร้างของ","การสร้างล้มเหลว วัสดุถูกใช้ไป แต่คุณได้ประสบการณ์");c.craft++;cleanInventory();actionTime(45);return;}
+let name=pick(names[categories[idx]]);
+let type=idx===2?"heal":idx===4?"food":idx===0?"weapon":idx===1?"armor":idx===3?"tool":"material";
+addItem(name+" ("+quality+")",1,type,qualityRoll>=19?25:qualityRoll>=13?12:5);
+c.craft++;c.skill++;log("สร้างของ","สร้าง "+name+" ได้สำเร็จ ระดับ "+quality+" โดยใช้ "+mat.name);
+cleanInventory();actionTime(60);
+}
+ 
+function addItem(name, qty, type, value, slot = null) {
+  if (!G || !G.c) return;
+
+  if (!Array.isArray(G.c.inventory)) {
+    G.c.inventory = [];
+  }
+
+  const item = G.c.inventory.find(i =>
+    i.name === name &&
+    i.type === type &&
+    (i.slot || null) === (slot || null)
+  );
+
+  if (item) {
+    item.qty = (Number(item.qty) || 0) + qty;
+    item.value = value ?? item.value ?? 0;
+  } else {
+    G.c.inventory.push({
+      name,
+      qty,
+      type,
+      value,
+      slot
+    });
+  }
+}
+
+function useSelectedItem(){
+let c=G.c,name=$("itemSelect").value,it=c.inventory.find(i=>i.name===name);
+if(!it)return;
+if(it.type==="heal"){c.hp=clamp(c.hp+18,0,c.maxHp);clearCondition("บาดเจ็บ");log("ไอเทม","ใช้ "+it.name+" ฟื้นฟูพลังชีวิต");}
+else if(it.type==="food"){c.hunger=clamp(c.hunger-35,0,100);log("ไอเทม","กิน "+it.name);}
+else if(it.type==="drink"){c.thirst=clamp(c.thirst-45,0,100);log("ไอเทม","ดื่ม "+it.name);}
+else if(it.name==="ยาชุบชีวิต"){log("ไอเทม","ไอเทมชุบชีวิตใช้ได้เมื่อเสียชีวิตเท่านั้น");return;}
+else if(it.type==="weapon"){c.atk+=2;log("อุปกรณ์","คุณฝึกใช้อาวุธ "+it.name+" พลังโจมตีเพิ่มชั่วคราวไม่ได้ — ฝึกฝนเพื่อเพิ่มทักษะถาวร");}
+else{log("ไอเทม","คุณตรวจสอบ "+it.name+" แต่ยังไม่มีวิธีใช้เฉพาะ");return;}
+it.qty--;cleanInventory();render();
+}
+function sellSelectedItem(){
+let name=$("itemSelect").value,it=G.c.inventory.find(i=>i.name===name);
+if(!it)return;
+if(it.name==="ยาชุบชีวิต"){log("ตลาด","คุณตัดสินใจเก็บไอเทมชุบชีวิตไว้");return;}
+let price=Math.max(1,Math.floor((it.value||3)*(.65+G.world.trade/250)));
+it.qty--;G.c.gold+=price;cleanInventory();log("ซื้อขาย","ขาย "+name+" ได้ "+price+" เหรียญ");render();
+}
+function ensureMerchant(){
+if(G.world.merchant.length===0)refreshMerchant(true);
+}
+  
+/* ===== ANOTHER LIFE ITEM DATABASE ===== */
+const ITEM_CATALOG = (() => {
+  const items = [];
+
+  function add(names, type, baseValue, slot = null) {
+    names.forEach((name, index) => {
+      items.push({
+        name,
+        type,
+        value: baseValue + index * 2,
+        slot
+      });
+    });
+  }
+
+  // อาหาร 20
+  add([
+    "ขนมปัง","เนื้อย่าง","ปลาแห้ง","ชีส","ผลไม้ป่า",
+    "ถั่วอบ","ซุปสมุนไพร","ข้าวห่อใบไม้","เนื้อรมควัน","ขนมน้ำผึ้ง",
+    "อาหารเดินทาง","ข้าวปั้น","เห็ดผัด","ขนมปังธัญพืช","เนื้อกวางย่าง",
+    "สตูว์รากไม้","เสบียงทหาร","อาหารนักเดินทาง","อาหารเอลฟ์","ขนมปังคนแคระ"
+  ], "food", 3);
+
+  // เครื่องดื่ม 10
+  add([
+    "น้ำสะอาด","ชาสมุนไพร","นมแพะ","น้ำผลไม้","น้ำแร่",
+    "ชาดอกไม้","น้ำผึ้งผสมน้ำ","เครื่องดื่มเกลือแร่","น้ำค้างเอลฟ์","น้ำแร่ภูเขา"
+  ], "drink", 2);
+
+  // ยาและของฟื้นฟู 15
+  add([
+    "ผ้าพันแผล","ยาฟื้นพลัง","ยาสมุนไพร","ยาห้ามเลือด","ยาแก้พิษ",
+    "ยาแก้ไข้","ยาฟื้นมานา","ยาบำรุงกำลัง","ยาทนหนาว","ยาทนร้อน",
+    "ยาแก้คำสาป","ยาฟื้นฟูขั้นสูง","น้ำยาต้านพิษเข้มข้น",
+    "ยาฟื้นฟูมานาใหญ่","ยาชุบชีวิต"
+  ], "heal", 8);
+
+  // เครื่องมือและของใช้ 20
+  add([
+    "เชือกป่าน","ตะเกียง","น้ำมันตะเกียง","ชุดเครื่องมือ","ค้อนช่าง",
+    "เลื่อยพกพา","พลั่ว","เสียม","เบ็ดตกปลา","กับดักเชือก",
+    "เข็มและด้าย","ชุดซ่อมเกราะ","ชุดซ่อมอาวุธ","แผนที่หยาบ","เข็มทิศ",
+    "ถุงนอน","เต็นท์เดินทาง","กล้องส่องทางไกล","ขวดแก้ว","กระเป๋าหนัง"
+  ], "tool", 6);
+
+  // วัตถุดิบ 50
+  add([
+    "สมุนไพรป่า","เห็ดเรืองแสง","แร่ดิบ","แร่เหล็ก","แร่ทองแดง",
+    "แร่เงิน","แร่ทอง","แร่มิธริล","ถ่านหิน","หินปูน",
+    "ทรายแก้ว","ผลึกเวท","เศษผลึกเวท","แกนผลึก","ไม้เนื้ออ่อน",
+    "ไม้โอ๊ก","ไม้เอลฟ์","ไม้ดำ","เส้นใยป่าน","เส้นใยเหนียว",
+    "ผ้าดิบ","หนังสัตว์","หนังหมาป่า","หนังหมี","เกล็ดมอนสเตอร์",
+    "เขี้ยวประหลาด","เขากวาง","ขนนก","ขนนกไฟ","กระดูกสัตว์",
+    "กระดูกวิญญาณ","เขี้ยวพิษ","ต่อมพิษ","เกล็ดมังกร","เปลือกแมลง",
+    "แกนโกเล็ม","แก่นธาตุไฟ","แก่นธาตุน้ำ","แก่นธาตุลม","แก่นธาตุดิน",
+    "ดอกจันทร์เงิน","รากรักษา","ใบชาดำ","ผลึกน้ำแข็ง","ผงเวท",
+    "เกสรภูต","ไข่มุกแม่น้ำ","อำพัน","ออบซิเดียน","เศษโลหะ"
+  ], "material", 3);
+
+  // อาวุธ 35
+  add([
+    "มีดเหล็ก","ดาบสั้น","ดาบเหล็ก","ดาบยาว","ดาบใหญ่",
+    "ดาบเงิน","ดาบมิธริล","ดาบเพลิง","ดาบน้ำแข็ง","ดาบอัสนี",
+    "ดาบผู้พิทักษ์","หอกไม้","หอกเหล็ก","หอกทหาร","หอกมังกร",
+    "ธนูไม้","ธนูยาว","ธนูเอลฟ์","หน้าไม้","หน้าไม้กลไก",
+    "คทาฝึกหัด","คทาเวท","คทาผลึก","ไม้เท้าผู้รักษา","ค้อนสงคราม",
+    "ขวานมือเดียว","ขวานศึก","มีดสังหาร","กรงเล็บนักล่า","กระบอง",
+    "โล่ใบมีด","แส้หนัง","เคียวจันทรา","ตรีศูลทะเล","ดาบมังกร"
+  ], "gear", 18, "weapon");
+
+  // หมวก 12
+  add([
+    "หมวกผ้า","หมวกหนัง","หมวกเหล็ก","หมวกนักเดินทาง",
+    "หมวกนักธนู","หมวกเวท","หมวกคนแคระ","มงกุฎเงิน",
+    "หน้ากากกรองพิษ","หมวกยาม","หมวกเกล็ดมังกร","หมวกผู้พิทักษ์"
+  ], "gear", 8, "head");
+
+  // เกราะและเสื้อคลุม 17
+  add([
+    "เสื้อผ้าชาวบ้าน","เสื้อหนัง","เสื้อเกราะหนัง","เกราะโซ่",
+    "เกราะเหล็ก","เกราะเงิน","เกราะมิธริล","เสื้อคลุมเวท",
+    "เสื้อคลุมเอลฟ์","เกราะคนแคระ","เกราะเกล็ดมังกร",
+    "เกราะผู้พิทักษ์","เสื้อกันหนาว","เสื้อคลุมพรางตัว",
+    "เกราะเบานักผจญภัย","เสื้อคลุมผู้รักษา","ชุดพ่อค้า"
+  ], "gear", 15, "body");
+
+  // กางเกงและรองเท้า 14
+  add([
+    "กางเกงเดินทาง","กางเกงหนัง","กางเกงเกราะ","สนับขาเหล็ก",
+    "รองเท้าผ้า","รองเท้าหนัง","รองเท้าปีนเขา","รองเท้าวิ่ง",
+    "รองเท้าเกราะ","รองเท้าเอลฟ์","รองเท้าทนไฟ","รองเท้าลุยน้ำ",
+    "รองเท้าคนแคระ","สนับขามิธริล"
+  ], "gear", 9, "legs");
+
+  // เครื่องประดับ 11
+  add([
+    "แหวนทองแดง","แหวนเงิน","แหวนเวท","แหวนป้องกันพิษ",
+    "สร้อยผลึก","จี้ผู้พิทักษ์","ต่างหูเอลฟ์","กำไลนักรบ",
+    "เข็มกลัดกิลด์","เครื่องรางโชคดี","ตราราชสำนัก"
+  ], "gear", 12, "accessory");
+
+  // สินค้าการค้า 30
+  add([
+    "ผ้าฝ้าย","ผ้าไหม","เครื่องเทศ","เกลือ","น้ำตาล",
+    "ชาดำ","เมล็ดกาแฟ","เครื่องปั้นดินเผา","จานโลหะ","เครื่องแก้ว",
+    "เครื่องประดับทองแดง","อัญมณีหยาบ","อัญมณีเจียระไน",
+    "หนังสือพื้นฐาน","กระดาษ","หมึกเขียน","เครื่องมือเกษตร",
+    "เมล็ดข้าว","เมล็ดสมุนไพร","ปุ๋ยธรรมชาติ","สินค้าหัตถกรรม",
+    "ตุ๊กตาไม้","ของเล่นเด็ก","พรมทอมือ","ถังไม้","ตะกร้าสาน",
+    "เชือกเรือ","ผ้าใบกันฝน","ชุดเครื่องแบบ","ตราพ่อค้า"
+  ], "trade", 4);
+
+  // ของภารกิจและของสำคัญ 20
+  add([
+    "จดหมายปิดผนึก","หลักฐานภาษีเถื่อน","กุญแจซากโบราณ",
+    "แผนที่สุสาน","บันทึกนักสำรวจ","ตราประจำตระกูล",
+    "สัญญากิลด์","รายงานชายแดน","คัมภีร์อักษรโบราณ",
+    "รูนผนึกประตู","เศษศิลาจารึก","เครื่องรางต้องสาป",
+    "หัวใจโกเล็มโบราณ","เหรียญอาณาจักรเก่า",
+    "ใบอนุญาตผ่านแดน","หลักฐานการค้า","บัญชีขุนนาง",
+    "จดหมายทูต","แผนที่เหมืองลับ","เมล็ดพันธุ์หายาก"
+  ], "quest", 10);
+
+  return items;
+})();
+/* ===== END ITEM DATABASE ===== */
+
+function refreshMerchant(silent = false) {
+  const pool = ITEM_CATALOG.filter(
+    item => item.type !== "quest"
+  );
+
+  if (!G || !G.world || pool.length === 0) {
+    console.error("ไม่พบฐานข้อมูลสินค้า หรือข้อมูลโลกยังไม่พร้อม");
+    return;
+  }
+
+  G.world.merchant = [];
+
+  const count = rand(4, 6);
+
+  for (let i = 0; i < count; i++) {
+    const item = pick(pool);
+
+    if (!item) continue;
+
+    G.world.merchant.push({
+      ...item,
+      qty: rand(1, 4)
+    });
+  }
+
+  if (!silent) {
+    log("พ่อค้า", "สินค้าในร้านเปลี่ยนใหม่แล้ว");
+  }
+
+  render();
+}
+
+G.world.merchant=[];
+let count=rand(4,6);
+for(let i=0;i<count;i++){let p={...pick(pool),qty:rand(1,4)};G.world.merchant.push(p);}
+if(!silent)log("พ่อค้า","สินค้าในร้านเปลี่ยนใหม่แล้ว");
+render();
+}
+function visitMerchant(){ensureMerchant();log("พ่อค้า","พ่อค้าเดินทางมาตั้งร้าน มีสินค้าไม่เหมือนกันในแต่ละครั้ง");render();}
+function buyMerchantItem(){
+let name=$("merchantSelect").value,it=G.world.merchant.find(i=>i.name===name);
+if(!it||it.qty<=0)return;
+let price=it.value+Math.ceil(it.value*(100-G.world.trade)/200);
+if(G.c.gold<price){log("ซื้อขาย","เงินไม่พอสำหรับ "+name+" ราคา "+price+" เหรียญ");return;}
+G.c.gold-=price;it.qty--;
+addItem(it.name,1,it.type,it.value,it.slot||null);log("ซื้อขาย","ซื้อ "+it.name+" สำเร็จ เงินลดลง "+price+" เหรียญ");actionTime(5);render();
+}
+const MONSTER_ROOTS=["หมาป่าผลึก","กิ้งก่าหนาม","แมลงเถ้าถ่าน","เห็ดกินแสง","สุนัขเงา","นกกระดูก","หมูป่าหิน","ตัวกินฝัน","งูเกล็ดแก้ว","ผู้เฝ้าซาก"];
+const MONSTER_TRAITS=["เพลิง","น้ำแข็ง","พิษ","เงา","สายฟ้า","ป่า","วิญญาณ","โลหะ","ผลึก","โลหิต"];
+function generateMonster(){
+let d=danger(),hour=Math.floor(G.world.minute/60)%24;
+let level=clamp(rand(1,2+d)+Math.floor(G.c.age/20),1,30);
+if(G.location==="เขตชายแดน")level+=rand(0,3);
+let root=pick(MONSTER_ROOTS),trait=pick(MONSTER_TRAITS);
+let hybrid=Math.random()<.38;
+let name=hybrid?root+"ผสม"+pick(MONSTER_ROOTS):root+"ธาตุ"+trait;
+let nocturnal=hour>=19||hour<5;
+let hp=8+level*5+rand(0,8);
+return {name,level,hp,maxHp:hp,atk:2+level*1.5+rand(0,3),def:Math.floor(level/3),xp:level*3+rand(1,5),trait,hybrid,nocturnal};
+}
+function hunt(){
+if(G.c.energy<10){log("ล่า","คุณเหนื่อยเกินไป");return;}
+G.c.energy-=10;
+let chance=.18+danger()*.12+((Math.floor(G.world.minute/60)<5||Math.floor(G.world.minute/60)>19)?.08:0);
+if(Math.random()<chance){currentMonster=generateMonster();log("มอนสเตอร์","พบ "+currentMonster.name+" ระดับ "+currentMonster.level+"!");$("monsterInfo").textContent=monsterDescription();}
+else{let item=pick(["สมุนไพรป่า","แร่ดิบ","เห็ดเรืองแสง"]);if(Math.random()<.65){addItem(item,1,"material",5);log("ล่า","ไม่พบมอนสเตอร์ แต่เก็บ "+item+" ได้");}else log("ล่า","ไม่มีมอนสเตอร์ปรากฏ คุณพบเพียงร่องรอย");}
+actionTime(45);render();
+}
+function monsterDescription(){
+if(!currentMonster)return "ยังไม่มีมอนสเตอร์";
+let m=currentMonster;
+return `${m.name} | ระดับ ${m.level} | HP ${m.hp}/${m.maxHp} | พลังโจมตี ${Math.floor(m.atk)} | ธาตุ ${m.trait}${m.hybrid?" | สายพันธุ์ผสม":""}`;
+}
+function fight(){
+let c=G.c,m=currentMonster;if(!m){log("ต่อสู้","ยังไม่มีเป้าหมาย ลองออกล่าก่อน");return;}
+let roll=rand(1,20)+(c.atk+c.skill)+((c.talent==="ผู้เอาตัวรอด")?2:0);
+let damage=Math.max(1,roll-m.def);
+m.hp-=damage;log("ต่อสู้",`ทอยเต๋าได้ ${roll} คุณโจมตี ${m.name} สร้างความเสียหาย ${damage}`);
+if(m.hp<=0){
+let xp=m.xp;c.gold+=Math.ceil(xp/2);c.skill+=1;c.fame+=1;G.world.kills++;
+if(!G.world.bestiary.includes(m.name))G.world.bestiary.push(m.name);
+if(Math.random()<.65)addItem(pick(["เขี้ยวประหลาด","แกนผลึก","เกล็ดมอนสเตอร์"]),1,"material",Math.max(3,m.level*2));
+log("ชัยชนะ","กำจัด "+m.name+" ได้รับเงินและประสบการณ์");currentMonster=null;actionTime(15);render();return;
+}
+let enemyRoll=rand(1,20)+Math.floor(m.atk);
+let incoming=Math.max(1,enemyRoll-c.def);
+c.hp-=incoming;c.stamina=Math.max(0,c.stamina-3);
+log("ถูกโจมตี",`${m.name} ทอยเต๋าได้ ${enemyRoll} ทำความเสียหาย ${incoming}`);
+if(c.hp<=0){die("พ่ายแพ้ในการต่อสู้กับ "+m.name);return;}
+actionTime(5);render();
+}
+function flee(){
+if(!currentMonster){log("หนี","ไม่มีศัตรูที่ต้องหนี");return;}
+let roll=rand(1,20)+G.c.survival;
+if(roll>=10+currentMonster.level){log("หนี","คุณหนีออกจากการต่อสู้ได้");currentMonster=null;}
+else{let dmg=Math.max(1,Math.floor(currentMonster.atk/2));G.c.hp-=dmg;log("หนีไม่สำเร็จ","คุณถูกโจมตีขณะหลบหนี เสีย HP "+dmg);if(G.c.hp<=0){die("เสียชีวิตระหว่างหลบหนี");return;}}
+actionTime(10);render();
+}
+function randomWorldEvent(){
+if(!G||G.c.dead||G.eventPending)return;
+let c=G.c;
+let events=[
+()=>{c.gold+=5;log("เหตุการณ์","คนแปลกหน้าทำกระเป๋าเงินตก คุณเก็บเหรียญได้ 5 เหรียญ");},
+()=>{let n=pick(["สมุนไพรป่า","แร่ดิบ","เห็ดเรืองแสง"]);addItem(n,1,"material",5);log("เหตุการณ์","ระหว่างเดินทางคุณพบ "+n);},
+()=>{log("เหตุการณ์","ได้ยินข่าวลือเรื่องมอนสเตอร์ชนิดใหม่ในพื้นที่");},
+()=>{if(c.energy>15){c.energy-=5;log("เหตุการณ์","เกิดฝนหนักระหว่างทาง ทำให้การเดินทางลำบาก");}else log("เหตุการณ์","ฝนเริ่มตก ควรหาที่พักที่ปลอดภัย");},
+()=>{G.world.politics=clamp(G.world.politics+rand(-3,3),0,100);log("ข่าวโลก","ความสัมพันธ์ระหว่างกลุ่มอำนาจมีความเปลี่ยนแปลง");},
+()=>{if(c.age>=12){let n=rand(2,7);c.gold+=n;log("เหตุการณ์","คุณได้รับข้อเสนอให้ช่วยงานสั้น ๆ ได้เงิน "+n+" เหรียญ");}else log("เหตุการณ์","ชาวบ้านคนหนึ่งชวนคุณไปช่วยงานเล็กน้อย");}
+];
+pick(events)();
+if(Math.random()<.06&&danger()>=2){currentMonster=generateMonster();log("อันตราย","มีบางอย่างเคลื่อนไหวในบริเวณใกล้เคียง: "+currentMonster.name);}
+}
+function travel(to){
+if(!LOCATIONS[to]||to===G.location)return;
+let cost=to==="เขตชายแดน"?90:to==="ชุมชนคนแคระ"?70:60;
+if(G.c.energy<10){log("เดินทาง","คุณเหนื่อยเกินกว่าจะออกเดินทาง");return;}
+G.c.energy-=10;G.location=to;
+if(!G.world.visited.includes(to)){G.world.visited.push(to);G.world.discovery++;log("ค้นพบพื้นที่","คุณค้นพบ "+to+" เป็นครั้งแรก");}
+log("เดินทาง","เดินทางมาถึง "+to+" — "+LOCATIONS[to].desc);
+ensureMerchant();actionTime(cost);render();
+}
+function randomNPC(){
+let names=["อาริน","ลูเซีย","โทเรน","มีรา","เซฟ","คาเอล","นารา","เอลเวน","ดาเรน","ฟีรา","ออร์น","เวส"];
+let roles=["ช่างฝีมือ","นักเดินทาง","พ่อค้า","ผู้รักษา","ทหารยาม","นักเรียน","นักวิจัย","ชาวนา"];
+let races=Object.keys(RACES);
+
+let race=pick(races);
+let n={
+id:G.world.nextNPC++,
+name:pick(names)+rand(1,99),
+race,
+gender:pick(["ชาย","หญิง","ไม่ระบุ"]),
+age:rand(5,Math.min(60,raceRules(race).maxAge)),
+role:pick(roles),
+personality:pick(["สุขุม","ใจดี","ระแวง","กล้าหาญ","เจ้าเล่ห์"]),
+location:G.location,
+
+like:0,trust:0,fear:0,respect:0,intimacy:0,friend:false,party:false,inviteUntil:0,memory:[],known:true};
+G.world.npcs.push(n);return n;
+}
+function meetNPC(){
+let available=G.world.npcs.filter(n=>n.location===G.location);
+let n=available.length&&Math.random()<.45?pick(available):randomNPC();
+n.location=G.location;
+selectedNPC=n.id;
+log("พบผู้คน",`คุณได้พบ ${n.name} (${n.race} / ${n.role})`);
+render();
+}
+function getNPC(){let id=Number($("npcSelect").value);return G.world.npcs.find(n=>n.id===id);}
+function talkNPC(){
+let n=getNPC();if(!n){log("สังคม","ยังไม่มีบุคคลที่รู้จัก ลองพบปะผู้คนก่อน");return;}
+let roll=rand(1,20)+G.c.social+(G.c.talent==="ผู้มีเสน่ห์"?3:0)-(G.c.flaw==="ขี้ระแวง"?1:0);
+if(roll>=10){n.like+=rand(1,3);n.trust+=1;G.c.social++;n.memory.push("บทสนทนาดี");log("ความสัมพันธ์","บทสนทนากับ "+n.name+" เป็นไปด้วยดี ความชอบและความไว้ใจเพิ่มขึ้น");}
+else{n.fear+=G.c.flaw==="โลภ"?1:0;log("ความสัมพันธ์",n.name+" ยังไม่ค่อยเปิดใจ คุณอาจลองพูดคุยอีกครั้งในภายหลัง");}
+actionTime(15);render();
+}
+function inviteNPC(){
+let n=getNPC();if(!n){log("ปาร์ตี้","ไม่มีบุคคลให้ชวน");return;}
+if(G.c.age<12){log("ปาร์ตี้","ตอนนี้คุณยังเด็กเกินไปสำหรับการเดินทางเสี่ยงภัยร่วมกัน");return;}
+n.inviteUntil=G.world.year*360+G.world.month*30+G.world.day+1;
+if(n.like+n.trust+n.respect>=4||Math.random()<.2){n.party=true;n.friend=true;if(!G.c.party.includes(n.id))G.c.party.push(n.id);log("ปาร์ตี้",n.name+" ตอบรับเข้าร่วมปาร์ตี้");}
+else{log("ปาร์ตี้",n.name+" ยังไม่ไว้ใจพอที่จะร่วมเดินทาง อาจต้องใช้เวลาสร้างความสัมพันธ์");}
+actionTime(10);render();
+}
+function giftNPC(){
+let n=getNPC();if(!n)return;
+let names=G.c.inventory.filter(i=>i.qty>0&&i.name!=="ยาชุบชีวิต").map(i=>i.name);
+if(!names.length){log("ของขวัญ","ไม่มีไอเทมให้มอบ");return;}
+let chosen=prompt("เลือกของขวัญโดยพิมพ์ชื่อ:\n"+names.join(", "));
+let it=G.c.inventory.find(i=>i.name===chosen&&i.qty>0);
+if(!it){log("ของขวัญ","ไม่พบไอเทมที่เลือก");return;}
+it.qty--;n.like+=it.value>=10?3:1;n.trust+=1;n.memory.push("ได้รับของขวัญ "+it.name);
+log("ของขวัญ","คุณมอบ "+it.name+" ให้ "+n.name+" ความสัมพันธ์ดีขึ้น");cleanInventory();actionTime(5);render();
+}
+function socialize(){
+let people=G.world.npcs.filter(n=>n.location===G.location);
+if(!people.length)meetNPC();else talkNPC();
+}
+function ensureNPCSelect(){
+let s=$("npcSelect"),old=s.value;s.innerHTML="";
+G.world.npcs.filter(n=>n.known).forEach(n=>{let o=document.createElement("option");o.value=n.id;o.textContent=n.name+" — "+n.role+" ("+n.location+")";s.appendChild(o);});
+if(old)s.value=old;
+}
+
+
+function ageTick(){
+  if(!G||!G.c) return;
+
+  let c=G.c;
+  let totalDays=(G.world.year-1)*360+
+    G.world.month*30+G.world.day;
+
+  if(!Number.isFinite(Number(c.age))) c.age=8;
+
+  if(!c.lastAgeDay) c.lastAgeDay=totalDays;
+
+  if(totalDays-c.lastAgeDay>=360){
+    let years=Math.floor((totalDays-c.lastAgeDay)/360);
+    let oldAge=c.age;
+    c.age+=years;
+    c.lastAgeDay+=years*360;
+
+    log("เติบโต",c.name+" มีอายุ "+c.age+" ปีแล้ว");
+
+    if(oldAge<raceRules(c.race).adultAge &&
+       c.age>=raceRules(c.race).adultAge){
+      log("เติบโต",c.name+" เติบโตเป็นผู้ใหญ่ตามธรรมเนียมของเผ่า"+c.race);
+    }
+  }
+}
+
+  
+
+function die(reason){
+if(!G||G.c.dead)return;
+G.c.dead=true;G.deathReason=reason;pauseTime();
+log("ความตาย",G.c.name+" เสียชีวิต: "+reason);
+$("deathReason").textContent=reason;
+let revive=G.c.inventory.find(i=>i.type==="revive"&&i.qty>0);
+$("reviveChoices").innerHTML="";
+if(revive){
+let b=document.createElement("button");b.className="good";b.textContent="ใช้ยาชุบชีวิต";
+b.onclick=()=>revivePlayer();$("reviveChoices").appendChild(b);
+}
+let b2=document.createElement("button");b2.textContent="ยอมรับความตายและเกิดใหม่";b2.onclick=()=>newLife();$("reviveChoices").appendChild(b2);
+$("deathOverlay").style.display="flex";render();
+}
+function revivePlayer(){
+if(!G||!G.c.dead)return;
+let it=G.c.inventory.find(i=>i.type==="revive"&&i.qty>0);
+if(!it){log("ชุบชีวิต","ไม่มีไอเทมชุบชีวิต");return;}
+it.qty--;cleanInventory();G.c.dead=false;G.c.hp=Math.max(1,Math.floor(G.c.maxHp*.5));
+G.c.energy=Math.max(20,G.c.energy);clearCondition("ขาดน้ำ");clearCondition("หิวโหย");
+$("deathOverlay").style.display="none";
+log("ชุบชีวิต","พลังของยาชุบชีวิตดึงคุณกลับจากความตาย คุณฟื้นด้วยพลังชีวิตครึ่งหนึ่ง");
+render();
+startAutoSave();
+setSpeed(speed);
+saveGame();
+}
+
+function newLife(){
+  if(!G) return;
+
+  // หยุดระบบเดิมก่อนสร้างชีวิตใหม่
+  if(timer){
+    clearInterval(timer);
+    timer=null;
+  }
+
+  const old=G.c;
+  const previousAuto=G.auto||{
+    enabled:true,
+    goal:"balanced",
+    risk:"low"
+  };
+
+  G.world.lifeCount++;
+
+  G.world.history.push({
+    name:old.name,
+    age:old.age,
+    race:old.race,
+    job:old.job,
+    fame:old.fame,
+    kills:G.world.kills,
+    death:G.deathReason,
+    year:G.world.year
+  });
+
+  G.world.history=G.world.history.slice(-30);
+
+  const name=prompt(
+    "ตั้งชื่อตัวละครชีวิตใหม่",
+    old.name+" II"
+  );
+
+  const newName=name&&name.trim()
+    ?name.trim()
+    :old.name+" II";
+
+  const race=pick(Object.keys(RACES));
+
+  G.c=makeCharacter(
+    newName,
+    race,
+    pick([
+      "นักเรียนรู้",
+      "ผู้เอาตัวรอด",
+      "ช่างสังเกต",
+      "ผู้มีเสน่ห์",
+      "พลังเวท",
+      "ร่างกายแข็งแกร่ง"
+    ]),
+    "ไม่มี",
+    pick(["สุขุม","กล้าหาญ","ช่างสงสัย","ใจดี","รักอิสระ"]),
+    pick(["ชาวบ้าน","ตระกูลพ่อค้า","เด็กกำพร้า","ผู้ถูกอุปถัมภ์"]),
+    pick(Object.keys(LOCATIONS)),
+    "ผู้ฝึกหัด",
+    "อิสระ"
+  );
+
+  G.location=G.c.spawn;
+  G.c.lifeHistory=G.world.history.map(x=>x.name);
+  G.c.gold+=Math.min(30,Math.floor(old.fame/2));
+  G.c.lastAgeDay=
+    (G.world.year-1)*360+
+    G.world.month*30+
+    G.world.day;
+
+  G.deathReason="";
+  G.c.dead=false;
+  G.eventPending=false;
+  currentMonster=null;
+
+  // เก็บเป้าหมายที่ผู้เล่นเลือกไว้
+  G.auto={
+    enabled:previousAuto.enabled!==false,
+    goal:previousAuto.goal||"balanced",
+    risk:previousAuto.risk||"low",
+    minutes:0,
+    last:"เริ่มต้นชีวิตใหม่"
+  };
+
+  $("deathOverlay").style.display="none";
+  $("creation").style.display="none";
+  $("game").style.display="block";
+
+  G.world.visited=G.world.visited||[];
+
+  if(!G.world.visited.includes(G.location)){
+    G.world.visited.push(G.location);
+  }
+
+  applyOrigin();
+  ensureMerchant();
+
+  log(
+    "เกิดใหม่",
+    "ชีวิตใหม่เริ่มต้นขึ้นใน "+G.location+
+    " ประวัติศาสตร์จากชีวิตก่อนยังคงอยู่"
+  );
+
+  render();
+  startAutoSave();
+
+  if(G.auto.enabled){
+    setSpeed(speed);
+  }else{
+    pauseTime();
+  }
+
+  saveGame();
+}
+
+function render(){
+if(!G)return;
+  
+avatarInit();
+avatarRender();
+  
+ageTick();
+let c=G.c,w=G.world;
+
+const rules=raceRules(c.race);
+$("identity").innerHTML=
+  `<b>${esc(c.name)}</b> · ${esc(c.race)}<br>`+
+  `เพศ ${esc(c.gender||"ไม่ระบุ")} · อายุ ${c.age} ปี<br>`+
+  `${ageStage(c)} · วัยผู้ใหญ่ตั้งแต่อายุ ${rules.adultAge} ปี<br>`+
+  `<span class="muted">${esc(c.personality)} · ${esc(c.origin)} / ${esc(c.talent)}</span>`;
+
+$("stats").innerHTML=`<div class="stat"><span>HP</span><b>${Math.max(0,c.hp)}/${c.maxHp}</b></div><div class="bar"><span style="width:${clamp(c.hp/c.maxHp*100,0,100)}%"></span></div>
+<div class="stat"><span>พลังงาน</span><b>${Math.round(c.energy)}%</b></div><div class="bar"><span style="width:${c.energy}%"></span></div>
+<div class="stat"><span>แรงกาย</span><b>${c.stamina}/${c.maxStamina}</b></div>
+<div class="stat"><span>โจมตี / ป้องกัน</span><b>${c.atk} / ${c.def}</b></div>
+<div class="stat"><span>เวทมนตร์</span><b>${c.magic}</b></div>
+<div class="stat"><span>ความรู้ / งานช่าง</span><b>${c.knowledge} / ${c.craft}</b></div>
+<div class="stat"><span>สังคม / เอาตัวรอด</span><b>${c.social} / ${c.survival}</b></div>`;
+$("needs").innerHTML=`<div class="stat"><span>ความหิว</span><b class="${c.hunger>75?"badtxt":""}">${Math.round(c.hunger)}%</b></div><div class="bar"><span style="width:${c.hunger}%;background:${c.hunger>75?"#e77":"#d9b66e"}"></span></div><div class="stat"><span>กระหาย</span><b class="${c.thirst>75?"badtxt":""}">${Math.round(c.thirst)}%</b></div><div class="bar"><span style="width:${c.thirst}%;background:${c.thirst>75?"#e77":"#88bfff"}"></span></div>`;
+$("gold").textContent=c.gold+" เหรียญ";$("fame").textContent=c.fame;$("job").textContent=c.job+" Lv."+c.jobLevel;
+$("lifePath").textContent=c.lifePath;$("place").textContent=G.location;$("clock").textContent=dateString();$("danger").textContent="ระดับ "+danger()+"/5";
+if (G.auto) {
+  $("aiToggle").textContent = G.auto.enabled ? "AI: เปิด" : "AI: ปิด";
+  $("aiStatus").textContent = G.auto.enabled
+    ? "AI ทำงานเมื่อเวลาเดิน"
+    : "AI ปิดอยู่ ตัวละครรอคำสั่งจากคุณ";
+  $("aiLast").textContent =
+    "การตัดสินใจล่าสุด: " + (G.auto.last || "ยังไม่มี");
+
+  $("aiGoal").value = G.auto.goal || "balanced";
+  $("aiRisk").value = G.auto.risk || "low";
+}
+
+$("professionInfo").innerHTML=`<b>${esc(c.job)}</b><p class="muted">${esc(JOBS[c.job]||"เส้นทางชีวิตอิสระ")}<br>ประสบการณ์รวม: ${c.skill+c.knowledge+c.craft+c.social+c.survival}</p>`;
+$("locationInfo").innerHTML=`<b>${esc(G.location)}</b><p class="muted">${esc(LOCATIONS[G.location].desc)}</p><p>พื้นที่ที่เคยไป: ${G.world.visited.map(esc).join(", ")}</p>`;
+$("politicsInfo").innerHTML=`<div class="stat"><span>เสถียรภาพการเมือง</span><b>${w.politics}/100</b></div><div class="bar"><span style="width:${w.politics}%"></span></div><div class="stat"><span>เศรษฐกิจการค้า</span><b>${w.trade}/100</b></div><div class="bar"><span style="width:${w.trade}%"></span></div><div class="stat"><span>ความเสี่ยงสงคราม</span><b>${w.war}/100</b></div>`;
+$("travelActions").innerHTML="";
+Object.keys(LOCATIONS).filter(l=>l!==G.location).forEach(l=>{let b=document.createElement("button");b.textContent="ไป "+l;b.onclick=()=>travel(l);$("travelActions").appendChild(b);});
+$("inventory").innerHTML=c.inventory.length?c.inventory.map(i=>`<div class="stat"><span>${esc(i.name)} ×${i.qty}</span><span class="muted">${i.type}</span></div>`).join(""):"กระเป๋าว่าง";
+fillSelect("itemSelect",c.inventory.map(i=>({value:i.name,text:i.name+" ×"+i.qty})));
+fillSelect("merchantSelect",w.merchant.filter(i=>i.qty>0).map(i=>({value:i.name,text:i.name+" ×"+i.qty+" — "+(i.value+Math.ceil(i.value*(100-w.trade)/200))+" เหรียญ"})));
+$("merchantInfo").textContent=w.merchant.length?"มีสินค้าสุ่ม "+w.merchant.filter(i=>i.qty>0).length+" รายการ":"ยังไม่มีสินค้า";
+$("monsterInfo").textContent=monsterDescription();
+$("bestiary").textContent=w.bestiary.length?w.bestiary.join(", "):"ยังไม่ค้นพบสายพันธุ์";
+ensureNPCSelect();
+$("npcInfo").innerHTML=w.npcs.length?w.npcs.map(n=>`<div class="card"><b>${esc(n.name)}</b> — ${esc(n.race)}<br><span class="muted">${esc(n.role)} · ${esc(n.personality)} · ${esc(n.location)}</span><br>ชอบ ${n.like} | ไว้ใจ ${n.trust} | เคารพ ${n.respect} | กลัว ${n.fear} | สนิทสนม ${n.intimacy} ${n.party?" · <span class='goodtxt'>ร่วมปาร์ตี้</span>":""}</div>`).join(""):"ยังไม่มีคนรู้จัก ลองพบปะผู้คน";
+$("partyInfo").textContent="สมาชิกปาร์ตี้: "+(c.party.map(id=>w.npcs.find(n=>n.id===id)?.name).filter(Boolean).join(", ")||"ไม่มี");
+$("lifeCount").textContent=w.lifeCount;$("kills").textContent=w.kills;$("discoveries").textContent=w.discovery;
+$("conditions").textContent=c.condition.join(", ")||"ปกติ";
+$("history").innerHTML=w.history.length?"<h3>ชีวิตก่อนหน้า</h3>"+w.history.slice().reverse().map(h=>`<div class="card">${esc(h.name)} · ${esc(h.race)} · ${esc(h.job)}<br><span class="muted">อายุ ${h.age} ปี / ชื่อเสียง ${h.fame} / ${esc(h.death)}</span></div>`).join(""):"ประวัติของชีวิตก่อนหน้าจะปรากฏเมื่อมีการเกิดใหม่";
+$("log").innerHTML=w.events.slice(0,50).map(e=>`<div class="logline"><span class="tag">${esc(e.type)}</span> <span class="muted">${esc(e.date)}</span><br>${esc(e.text)}</div>`).join("");
+}
+function fillSelect(id,items){
+let s=$(id),old=s.value;s.innerHTML="";
+items.forEach(x=>{let o=document.createElement("option");o.value=x.value;o.textContent=x.text;s.appendChild(o);});
+if(items.some(x=>x.value===old))s.value=old;
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+
+function silentAutoSave(){
+  if(!G) return;
+
+  try{
+    localStorage.setItem(SAVEKEY,JSON.stringify({
+      G,
+      speed,
+      currentMonster,
+      savedAt:Date.now(),
+      running:!!timer&&!G.c.dead
+    }));
+  }catch(e){
+    // เซฟอัตโนมัติไม่สำเร็จ จะไม่ทำให้เกมหยุด
+  }
+}
+
+function startAutoSave(){
+  if(autoSaveTimer){
+    clearInterval(autoSaveTimer);
+  }
+
+  autoSaveTimer=setInterval(()=>{
+    silentAutoSave();
+  },30000);
+
+  silentAutoSave();
+}
+
+function saveGame(){
+  if(!G){
+    alert("ยังไม่มีเกมให้เซฟ");
+    return;
+  }
+
+  try{
+    silentAutoSave();
+    log("เซฟเกม","บันทึกข้อมูลในเบราว์เซอร์แล้ว");
+    render();
+  }catch(e){
+    alert("บันทึกไม่สำเร็จ: "+e.message);
+  }
+}
+
+function applyOfflineProgress(elapsedMinutes){
+  if(!G||G.c.dead||elapsedMinutes<=0) return;
+
+  // ออฟไลน์ได้สูงสุด 8 ชั่วโมงจริง
+  const minutes=Math.min(
+    480,
+    Math.max(0,Math.floor(elapsedMinutes))
+  );
+
+  let simulated=0;
+
+  // จำลองทีละ 10 นาที เพื่อให้ AI ดูแลความต้องการได้ถี่ขึ้น
+  for(let passed=0;passed<minutes;passed+=10){
+    if(!G||G.c.dead) break;
+
+    const step=Math.min(10,minutes-passed);
+
+    advance(step,false);
+    simulated+=step;
+
+    if(!G||G.c.dead) break;
+
+    G.auto=G.auto||{
+      enabled:true,
+      goal:"balanced",
+      risk:"low",
+      minutes:0
+    };
+
+    if(G.auto.enabled){
+      G.auto.minutes=(G.auto.minutes||0)+step;
+
+      // ตัดสินใจเมื่อเวลาผ่านไปครบหนึ่งชั่วโมงในเกม
+      while(
+        G.auto.minutes>=60&&
+        G&&
+        !G.c.dead&&
+        G.auto.enabled
+      ){
+        G.auto.minutes-=60;
+        runAIDecision(false);
+      }
+    }
+
+    if(!G||G.c.dead) break;
+  }
+
+  if(G&&!G.c.dead&&simulated>0){
+    log(
+      "Idle",
+      "จำลองชีวิตออฟไลน์ "+
+      Math.floor(simulated/60)+" ชั่วโมง "+
+      (simulated%60)+" นาที"
+    );
+  }
+
+  render();
+}
+
+function loadGame(){
+  try{
+    const raw=localStorage.getItem(SAVEKEY);
+
+    if(!raw){
+      alert("ยังไม่มีเซฟเกมในเบราว์เซอร์นี้");
+      return;
+    }
+
+    const d=JSON.parse(raw);
+
+    if(!d.G||!d.G.c||!d.G.world){
+      throw new Error("รูปแบบเซฟไม่ถูกต้อง");
+    }
+
+    // ปิดตัวจับเวลาเก่าก่อนโหลดตัวละครใหม่
+    if(timer){
+      clearInterval(timer);
+      timer=null;
+    }
+
+    G=d.G;
+    speed=d.speed||1;
+    currentMonster=d.currentMonster||null;
+
+    const elapsedMinutes=d.savedAt
+      ?Math.max(
+        0,
+        Math.floor((Date.now()-d.savedAt)/60000)
+      )
+      :0;
+
+    $("creation").style.display="none";
+    $("game").style.display="block";
+
+    const wasRunning=d.running!==false;
+
+    if(!G.c.dead&&wasRunning){
+      applyOfflineProgress(elapsedMinutes);
+    }
+
+    if(G.c.dead){
+      pauseTime();
+      $("deathOverlay").style.display="flex";
+    }else if(wasRunning&&G.auto?.enabled!==false){
+      setSpeed(speed);
+    }else{
+      pauseTime();
+    }
+
+    startAutoSave();
+    log("เซฟเกม","โหลดข้อมูลสำเร็จ");
+    render();
+    silentAutoSave();
+
+  }catch(e){
+    alert("โหลดเซฟไม่สำเร็จ: "+e.message);
+  }
+}
+
+function exportSave(){
+  if(!G){
+    alert("ยังไม่มีเกมให้ส่งออก");
+    return;
+  }
+
+  const data={
+    G,
+    speed,
+    currentMonster,
+    savedAt:Date.now(),
+    running:!!timer&&!G.c.dead
+  };
+
+  const blob=new Blob(
+    [JSON.stringify(data,null,2)],
+    {type:"application/json"}
+  );
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+
+  a.href=url;
+  a.download="another-life-v2-save.json";
+  a.click();
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function importSave(){
+  const f=$("importFile").files[0];
+
+  if(!f){
+    alert("เลือกไฟล์ JSON ก่อน");
+    return;
+  }
+
+  const r=new FileReader();
+
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+
+      if(!d.G||!d.G.c||!d.G.world){
+        throw new Error("รูปแบบเซฟไม่ถูกต้อง");
+      }
+
+      if(timer){
+        clearInterval(timer);
+        timer=null;
+      }
+
+      G=d.G;
+      speed=d.speed||1;
+      currentMonster=d.currentMonster||null;
+
+      const elapsedMinutes=d.savedAt
+        ?Math.max(
+          0,
+          Math.floor((Date.now()-d.savedAt)/60000)
+        )
+        :0;
+
+      const wasRunning=d.running!==false;
+
+      $("creation").style.display="none";
+      $("game").style.display="block";
+
+      if(!G.c.dead&&wasRunning){
+        applyOfflineProgress(elapsedMinutes);
+      }
+
+      if(G.c.dead){
+        pauseTime();
+        $("deathOverlay").style.display="flex";
+      }else if(wasRunning&&G.auto?.enabled!==false){
+        setSpeed(speed);
+      }else{
+        pauseTime();
+      }
+
+      startAutoSave();
+      silentAutoSave();
+      render();
+
+      alert("นำเข้าเซฟสำเร็จ");
+
+    }catch(e){
+      alert("นำเข้าเซฟไม่สำเร็จ: "+e.message);
+    }
+  };
+
+  r.readAsText(f);
+}
+
+function toggleAI() {
+  if (!G) return;
+  G.auto = G.auto || {
+    enabled: true, goal: "balanced", risk: "low", minutes: 0
+  };
+  G.auto.enabled = !G.auto.enabled;
+  log("AI", G.auto.enabled
+    ? "ตัวละครเริ่มตัดสินใจใช้ชีวิตเอง"
+    : "ตัวละครหยุดตัดสินใจอัตโนมัติ");
+  render();
+}
+
+function setAIPreference(key, value) {
+  if (!G) return;
+  G.auto = G.auto || {
+    enabled: true, goal: "balanced", risk: "low", minutes: 0
+  };
+  G.auto[key] = value;
+  log("เป้าหมายชีวิต", "ปรับ " + key + " เป็น " + value);
+  render();
+}
+
+
+function runAIDecision(manual = false) {
+  if (!G || !G.c || G.c.dead) return;
+  G.auto = G.auto || {
+    enabled: true, goal: "balanced", risk: "low", minutes: 0
+  };
+  if (!manual && !G.auto.enabled) return;
+
+  const c = G.c;
+  const goal = G.auto.goal || "balanced";
+  const risk = G.auto.risk || "low";
+  const race = String(c.race || "");
+  const personality = String(c.personality || "");
+  const talent = String(c.talent || "");
+  const flaw = String(c.flaw || "");
+  const origin = String(c.origin || "");
+  const hpRate = c.hp / Math.max(1, c.maxHp);
+  const energy = c.energy ?? 50;
+  const hunger = c.hunger ?? 0;
+  const thirst = c.thirst ?? 0;
+  const inventory = c.inventory || [];
+
+  // ตรวจสอบทรัพยากรที่มีอยู่จริง
+  const hasItem = type =>
+    inventory.some(i => i.type === type && i.qty > 0);
+
+  // ค่าความชอบจากนิสัย ความสามารถ และประสบการณ์
+  const has = (text, words) =>
+    words.some(w => text.includes(w));
+
+  const brave = has(personality, ["กล้าหาญ", "ห้าวหาญ", "ใจกล้า"]);
+  const kind = has(personality, ["ใจดี", "เมตตา", "เห็นอกเห็นใจ"]);
+  const cautious = has(personality, ["ระแวง", "ขี้กลัว", "รอบคอบ"]);
+  const cunning = has(personality, ["เจ้าเล่ห์", "ฉลาดแกมโกง"]);
+  const curious = has(personality, ["อยากรู้อยากเห็น", "ช่างสงสัย"]);
+  const greedy = has(personality + flaw, ["โลภ", "เห็นแก่ตัว"]);
+  const observant = has(talent, ["ช่างสังเกต", "สังเกต"]);
+  const weakBody = has(flaw, ["ร่างกายอ่อนแอ", "อ่อนแอ"]);
+
+  // แต่ละกิจกรรมจะได้รับคะแนนตามสถานการณ์
+  const actions = [];
+  const add = (name, score, reason, run) => {
+    actions.push({ name, score, reason, run });
+  };
+
+  // 1. ความต้องการพื้นฐานต้องมีน้ำหนักสูง
+  if (thirst >= 35 && hasItem("drink")) {
+    add("drink", 45 + thirst * 0.8,
+      "เลือกดื่มน้ำเพราะร่างกายเริ่มขาดน้ำ", () => {
+        consumeType("drink");
+        c.thirst = clamp(c.thirst - 45, 0, 100);
+      });
+  }
+
+  if (hunger >= 35 && hasItem("food")) {
+    add("eat", 42 + hunger * 0.8,
+      "เลือกกินอาหารเพราะเริ่มหิว", () => {
+        consumeType("food");
+        c.hunger = clamp(c.hunger - 35, 0, 100);
+      });
+  }
+
+  if (energy <= 45 || c.stamina <= 10 || hpRate <= 0.4) {
+    let score = 25 + (100 - energy) * 0.45;
+    if (c.stamina <= 10) score += 20;
+    if (hpRate <= 0.4) score += 35;
+    if (weakBody) score += 12;
+
+    add("rest", score, "พักฟื้นเพื่อรักษากำลังและลดความเสี่ยง", () => {
+      c.energy = clamp(energy + 25, 0, 100);
+      c.stamina = clamp(c.stamina + 15, 0, c.maxStamina);
+    });
+  }
+
+  // 2. ประเมินภัยคุกคามก่อนทำกิจกรรมอื่น
+  if (currentMonster) {
+    let fleeScore = risk === "low" ? 65 : 25;
+    if (hpRate < 0.6) fleeScore += 25;
+    if (c.stamina < 10) fleeScore += 15;
+    if (cautious) fleeScore += 18;
+    if (brave) fleeScore -= 15;
+
+    add("flee", fleeScore,
+      "หลีกเลี่ยง " + currentMonster.name +
+      " หลังประเมินกำลังและความเสี่ยง", () => {
+        currentMonster = null;
+      });
+  }
+
+  // 3. เป้าหมายระยะยาว
+  let workScore = 20;
+  if (goal === "wealth") workScore += 30;
+  if (greedy) workScore += 12;
+  if (cunning) workScore += 5;
+  if (c.gold < 10) workScore += 18;
+  if (energy < 25) workScore -= 20;
+
+  add("work", workScore, "ทำงานเพื่อสร้างรายได้", () => {
+    const income = rand(3, 8) + (c.jobLevel || 1);
+    c.gold += income;
+    c.energy = clamp(c.energy - 6, 0, 100);
+  });
+
+  let trainScore = 20;
+  if (goal === "skill") trainScore += 30;
+  if (brave) trainScore += 8;
+  if (race.includes("มังกร") || race.includes("นักรบ")) {
+    trainScore += 5;
+  }
+  if (energy < 30) trainScore -= 20;
+
+  add("train", trainScore, "ฝึกฝนเพื่อพัฒนาความสามารถ", () => {
+    const skill = pick(["skill", "knowledge", "craft", "survival"]);
+    c[skill] = (c[skill] || 0) + 1;
+    c.energy = clamp(c.energy - 6, 0, 100);
+    c.stamina = clamp(c.stamina - 2, 0, c.maxStamina);
+  });
+
+  let exploreScore = 18;
+  if (goal === "explore") exploreScore += 32;
+  if (curious) exploreScore += 12;
+  if (observant) exploreScore += 8;
+  if (risk === "high") exploreScore += 10;
+  if (cautious) exploreScore -= 10;
+  if (hpRate < 0.5) exploreScore -= 25;
+  if (energy < 25) exploreScore -= 18;
+
+  // ความสามารถเฉพาะเผ่าช่วยเปลี่ยนการตัดสินใจ
+  if (race.includes("เอลฟ์")) exploreScore += 14;
+  if (race.includes("สัตว์")) exploreScore += 8;
+  if (race.includes("วิญญาณ")) exploreScore += 8;
+
+  add("explore", exploreScore, "สำรวจพื้นที่ตามความสนใจและความพร้อม", () => {
+    const item = race.includes("เอลฟ์")
+      ? pick(["สมุนไพรป่า", "เห็ดเรืองแสง", "สมุนไพรป่า"])
+      : race.includes("คนแคระ")
+        ? pick(["แร่ดิบ", "แร่ดิบ", "สมุนไพรป่า"])
+        : race.includes("วิญญาณ")
+          ? pick(["เห็ดเรืองแสง", "สมุนไพรป่า", "แร่ดิบ"])
+          : pick(["สมุนไพรป่า", "แร่ดิบ", "เห็ดเรืองแสง"]);
+
+     const materialPool = ITEM_CATALOG.filter(   item => item.type === "material" );  const foundItem = pick(materialPool);  if (foundItem) {   addItem(     foundItem.name,     1,     foundItem.type,     foundItem.value,     foundItem.slot || null   ); }
+    c.survival = (c.survival || 0) + 1;
+    c.energy = clamp(c.energy - 6, 0, 100);
+    c.knowledge = (c.knowledge || 0) + (curious ? 2 : 1);
+  });
+
+  let socialScore = 20;
+  if (goal === "social") socialScore += 30;
+  if (kind) socialScore += 15;
+  if (cunning) socialScore += 4;
+  if (origin.includes("พ่อค้า")) socialScore += 5;
+
+  add("social", socialScore, "พูดคุยและสร้างความสัมพันธ์กับผู้คน", () => {
+    c.social = (c.social || 0) + 1;
+    c.trust = (c.trust || 0) + (kind ? 2 : 1);
+    c.fame = (c.fame || 0) + 1;
+    c.energy = clamp(c.energy - 2, 0, 100);
+  });
+
+  let learnScore = 20;
+  if (goal === "skill") learnScore += 10;
+  if (goal === "peaceful") learnScore += 12;
+  if (curious) learnScore += 12;
+  if (observant) learnScore += 8;
+
+  // เด็กควรเน้นการเรียนรู้และพัฒนาตัวเอง
+  if (c.age < 12) learnScore += 35;
+
+  add("learn", learnScore, "เรียนรู้จากสิ่งรอบตัว", () => {
+    c.knowledge = (c.knowledge || 0) + 1;
+    c.skill = (c.skill || 0) + 1;
+    c.energy = clamp(energy - 2, 0, 100);
+  });
+
+  add("peaceful",
+    goal === "peaceful" ? 48 : 15,
+    "ใช้ชีวิตอย่างสงบและฟื้นฟูจิตใจ", () => {
+      c.knowledge = (c.knowledge || 0) + 1;
+      c.energy = clamp(energy + 5, 0, 100);
+    });
+
+  // 4. เลือกทางเลือกคะแนนสูงสุด พร้อมความแปรผันเล็กน้อย
+  // เพื่อไม่ให้ตัวละครทำสิ่งเดิมซ้ำทุกครั้ง
+  for (const a of actions) {
+    a.score += Math.random() * 7;
+
+    if (a.name === "work" && goal === "explore") a.score -= 5;
+    if (a.name === "explore" && goal === "wealth") a.score -= 5;
+    if (a.name === "social" && goal === "peaceful") a.score -= 3;
+  }
+
+  actions.sort((a, b) => b.score - a.score);
+  const chosen = actions[0];
+
+  if (!chosen) return;
+
+  chosen.run();
+
+  // เก็บผลการตัดสินใจไว้ให้ผู้เล่นเข้าใจพฤติกรรม AI
+  G.auto.last = chosen.reason;
+  c.lastAction = chosen.reason;
+
+  if (Array.isArray(c.lifeHistory)) {
+    c.lifeHistory.push(chosen.reason);
+    if (c.lifeHistory.length > 100) c.lifeHistory.shift();
+  }
+
+  log("การตัดสินใจ", chosen.reason);
+  render();
+}
+
+/* ===== ANOTHER LIFE: LIFE & CRAFTING SYSTEM ===== */
+
+function lcState(){
+  const c = G.c;
+  if(!c.lifeCraft){
+    c.lifeCraft = {
+      wood: 0,
+      stone: 0,
+      ore: 0,
+      herbs: 0,
+      seeds: 0,
+      food: 0,
+      water: 0,
+      farm: 0,
+      planted: [],
+      house: 0,
+      well: false,
+      furnace: false,
+      tools: 0,
+      family: null
+    };
+  }
+  return c.lifeCraft;
+}
+
+function lcRand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
+
+function lcLog(title,msg){
+  if(typeof log === "function") log(title,msg);
+}
+
+function lcSpendTime(minutes){
+  if(typeof actionTime === "function") actionTime(minutes);
+  lcRender();
+}
+
+function lcItem(name,qty,type,value=1){
+  if(typeof addItem === "function"){
+    addItem(name,qty,type,value);
+  }else{
+    const c=G.c;
+    c.inventory=c.inventory||[];
+    const old=c.inventory.find(x=>x.name===name && x.type===type);
+    if(old) old.qty+=qty;
+    else c.inventory.push({name,qty,type,value});
+  }
+}
+
+function lcHas(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  return !!it && it.qty>=qty;
+}
+
+function lcTake(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  if(!it || it.qty<qty) return false;
+  it.qty-=qty;
+  c.inventory=c.inventory.filter(x=>x.qty>0);
+  return true;
+}
+
+function lcNeed(items){
+  return items.every(([name,qty])=>lcHas(name,qty));
+}
+
+function lcPay(items){
+  if(!lcNeed(items)){
+    lcLog("งานช่าง","วัตถุดิบไม่เพียงพอ");
+    return false;
+  }
+  items.forEach(([name,qty])=>lcTake(name,qty));
+  return true;
+}
+
+function lcInit(){
+  if(document.getElementById("lifeCraftPanel")) return;
+
+  const panel=document.createElement("section");
+  panel.id="lifeCraftPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:16px;border:1px solid #7775;" +
+    "border-radius:12px;background:var(--panel, #20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>🏡 ชีวิตและงานช่าง</h2>
+    <div id="lcFamily"></div>
+    <div id="lcResources"></div>
+    <div id="lcStatus"></div>
+    <div id="lcActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
+    <div id="lcMessage" style="margin-top:10px"></div>
+  `;
+
+  const target=document.querySelector("main") ||
+    document.querySelector(".container") ||
+    document.body;
+
+  target.appendChild(panel);
+
+  lcRender();
+}
+
+function lcEnsureFamily(){
+  const c=G.c;
+  const s=lcState();
+
+  if(s.family) return s.family;
+
+  const names=["อาริน","มีรา","โทมัส","ลูเซีย","เรน","เอลนา","คีรัน","นารา"];
+  const parentName=()=>names[lcRand(0,names.length-1)];
+
+  s.family={
+    status:Math.random()<0.12 ? "เด็กกำพร้า" : "มีครอบครัว",
+    parent1:parentName(),
+    parent2:parentName(),
+    care:lcRand(45,90),
+    wealth:lcRand(10,70),
+    relationship:lcRand(45,75)
+  };
+
+  return s.family;
+}
+
+function lcFamilyCare(){
+  const c=G.c;
+  const f=lcEnsureFamily();
+
+  if(c.age>=16){
+    lcLog("ครอบครัว","คุณโตพอที่จะดูแลตัวเองได้มากขึ้น");
+    return;
+  }
+
+  if(f.status==="เด็กกำพร้า"){
+    c.energy=Math.min(100,(c.energy||0)+3);
+    lcLog("ชีวิตวัยเด็ก","คุณต้องพึ่งพาตัวเอง บางครั้งคนในชุมชนก็ช่วยเหลือ");
+  }else{
+    c.hunger=Math.max(0,(c.hunger||0)-10);
+    c.thirst=Math.max(0,(c.thirst||0)-10);
+    c.energy=Math.min(100,(c.energy||0)+5);
+    f.relationship=Math.min(100,f.relationship+1);
+    lcLog("ครอบครัว",f.parent1+" และ "+f.parent2+" ช่วยดูแลคุณในวัยเด็ก");
+  }
+
+  lcSpendTime(30);
+}
+
+function lcGather(){
+  const s=lcState();
+  const c=G.c;
+  const roll=lcRand(1,100);
+
+  if(roll<=35){
+    const n=lcRand(2,4);
+    s.wood+=n;
+    lcLog("เก็บทรัพยากร","เก็บไม้ได้ "+n+" ชิ้น");
+  }else if(roll<=60){
+    const n=lcRand(1,3);
+    s.stone+=n;
+    lcLog("เก็บทรัพยากร","เก็บหินได้ "+n+" ก้อน");
+  }else if(roll<=78){
+    s.herbs+=lcRand(1,3);
+    lcItem("สมุนไพรป่า",1,"material",3);
+    lcLog("เก็บทรัพยากร","พบสมุนไพรป่าระหว่างทาง");
+  }else if(roll<=90){
+    s.seeds+=lcRand(1,2);
+    lcLog("เก็บทรัพยากร","พบเมล็ดพันธุ์ที่อาจนำไปปลูกได้");
+  }else{
+    s.ore+=1;
+    lcLog("เก็บทรัพยากร","พบเศษแร่ดิบในพื้นที่");
+  }
+
+  c.survival=(c.survival||0)+1;
+  c.energy=Math.max(0,(c.energy||0)-5);
+  lcSpendTime(60);
+}
+
+function lcHunt(){
+  const c=G.c;
+  const s=lcState();
+
+  if(c.age<10){
+    lcLog("ล่าสัตว์","ยังเด็กเกินไปที่จะล่าสัตว์ด้วยตัวเอง ลองเก็บทรัพยากรแทน");
+    return;
+  }
+
+  if((c.stamina||0)<5 || (c.energy||0)<10){
+    lcLog("ล่าสัตว์","คุณเหนื่อยเกินไป ควรพักก่อน");
+    return;
+  }
+
+  c.stamina=Math.max(0,c.stamina-5);
+  c.energy=Math.max(0,c.energy-8);
+
+  if(Math.random()<0.65){
+    const meat=lcRand(1,3);
+    s.food+=meat;
+    lcItem("เนื้อดิบ",meat,"material",3);
+    lcLog("ล่าสัตว์","ล่าสำเร็จ ได้เนื้อดิบ "+meat+" ชิ้น");
+  }else{
+    lcLog("ล่าสัตว์","สัตว์หนีไปได้ คุณเสียเวลาแต่ได้เรียนรู้ร่องรอยของมัน");
+    c.survival=(c.survival||0)+1;
+  }
+
+  lcSpendTime(90);
+}
+
+function lcCook(){
+  const c=G.c;
+  const s=lcState();
+
+  if(!lcTake("เนื้อดิบ",1)){
+    lcLog("ทำอาหาร","ต้องมีเนื้อดิบอย่างน้อย 1 ชิ้น");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("เนื้อดิบ",1,"material",3);
+    lcLog("ทำอาหาร","ต้องมีไม้ 1 ชิ้นเพื่อก่อไฟ");
+    return;
+  }
+
+  s.wood--;
+  s.food++;
+  lcItem("เนื้อย่าง",1,"food",6);
+  c.craft=(c.craft||0)+1;
+  lcLog("ทำอาหาร","ปรุงเนื้อย่างสำเร็จ ได้อาหารพร้อมกิน 1 ชิ้น");
+  lcSpendTime(30);
+}
+
+function lcSmelt(){
+  const s=lcState();
+
+  if(s.ore<2 || s.wood<1){
+    lcLog("ถลุงแร่","ต้องมีแร่ดิบ 2 หน่วยและไม้ 1 ชิ้น");
+    return;
+  }
+
+  s.ore-=2;
+  s.wood--;
+  lcItem("แท่งโลหะ",1,"material",12);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("ถลุงแร่","ใช้แร่และเชื้อเพลิงถลุงเป็นแท่งโลหะ 1 แท่ง");
+  lcSpendTime(120);
+}
+
+function lcBuildFurnace(){
+  const s=lcState();
+  if(s.furnace){
+    lcLog("เตาถลุง","คุณมีเตาถลุงอยู่แล้ว");
+    return;
+  }
+  if(s.stone<5 || s.wood<2){
+    lcLog("เตาถลุง","ต้องใช้หิน 5 ก้อนและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.stone-=5;
+  s.wood-=2;
+  s.furnace=true;
+  lcLog("ก่อสร้าง","สร้างเตาถลุงแบบง่ายเรียบร้อย");
+  lcSpendTime(180);
+}
+
+function lcBuildWell(){
+  const s=lcState();
+  if(s.well){
+    lcLog("บ่อน้ำ","มีบ่อน้ำอยู่แล้ว");
+    return;
+  }
+  if(s.wood<3 || s.stone<4){
+    lcLog("บ่อน้ำ","ต้องใช้ไม้ 3 ชิ้นและหิน 4 ก้อน");
+    return;
+  }
+
+  s.wood-=3;
+  s.stone-=4;
+  s.well=true;
+  lcLog("ก่อสร้าง","สร้างบ่อน้ำพื้นฐาน ช่วยให้เข้าถึงน้ำได้ง่ายขึ้น");
+  lcSpendTime(240);
+}
+
+function lcDrawWater(){
+  const s=lcState();
+  if(!s.well){
+    lcLog("น้ำดื่ม","ต้องสร้างบ่อน้ำก่อน");
+    return;
+  }
+
+  lcItem("น้ำสะอาด",2,"drink",2);
+  lcLog("บ่อน้ำ","ตักน้ำสะอาดได้ 2 หน่วย");
+  lcSpendTime(10);
+}
+
+function lcBuildFarm(){
+  const s=lcState();
+
+  if(s.seeds<1 || s.wood<2){
+    lcLog("ฟาร์ม","ต้องมีเมล็ดพันธุ์อย่างน้อย 1 หน่วยและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.seeds--;
+  s.wood-=2;
+  s.farm++;
+  s.planted.push({days:0});
+  lcLog("เพาะปลูก","ทำแปลงเพาะปลูกใหม่ พืชต้องใช้เวลาเติบโต");
+  lcSpendTime(60);
+}
+
+function lcHarvest(){
+  const s=lcState();
+  const ready=s.planted.filter(p=>p.days>=3);
+
+  if(!ready.length){
+    lcLog("เก็บเกี่ยว","พืชยังไม่โต ต้องผ่านเวลาในเกมอีก");
+    return;
+  }
+
+  const amount=ready.length;
+  s.planted=s.planted.filter(p=>p.days<3);
+  s.food+=amount*2;
+  s.seeds+=amount;
+
+  for(let i=0;i<amount*2;i++){
+    lcItem("ผลผลิตจากฟาร์ม",1,"food",4);
+  }
+
+  lcLog("เก็บเกี่ยว","เก็บผลผลิตได้ "+amount*2+" หน่วย และได้เมล็ดพันธุ์คืน");
+  lcRender();
+}
+
+function lcBuildHouse(){
+  const s=lcState();
+
+  if(s.house>=3){
+    lcLog("บ้าน","บ้านของคุณอยู่ในระดับสูงสุดของระบบนี้แล้ว");
+    return;
+  }
+
+  const costs=[
+    [["ไม้",s.wood,5],["หิน",s.stone,2]],
+    [["ไม้",s.wood,8],["หิน",s.stone,6]],
+    [["ไม้",s.wood,12],["หิน",s.stone,10]]
+  ][s.house];
+
+  const woodNeed=costs[0][2];
+  const stoneNeed=costs[1][2];
+
+  if(s.wood<woodNeed || s.stone<stoneNeed){
+    lcLog("บ้าน","ต้องใช้ไม้ "+woodNeed+" ชิ้นและหิน "+stoneNeed+" ก้อน");
+    return;
+  }
+
+  s.wood-=woodNeed;
+  s.stone-=stoneNeed;
+  s.house++;
+
+  const labels=["","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  lcLog("ก่อสร้าง","สร้างสำเร็จ: "+labels[s.house]);
+  lcSpendTime(240);
+}
+
+function lcCraftWeapon(){
+  const s=lcState();
+
+  if(!lcTake("แท่งโลหะ",1)){
+    lcLog("งานช่าง","ต้องมีแท่งโลหะ 1 แท่ง");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("แท่งโลหะ",1,"material",12);
+    lcLog("งานช่าง","ต้องใช้ไม้ 1 ชิ้นทำด้ามอาวุธ");
+    return;
+  }
+
+  s.wood--;
+  lcItem("ดาบเหล็กทำมือ",1,"weapon",15);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("งานช่าง","สร้างดาบเหล็กทำมือสำเร็จ");
+  lcSpendTime(120);
+}
+
+function lcSleep(){
+  const c=G.c;
+  const s=lcState();
+
+  const bonus=s.house>0 ? 10*s.house : 0;
+  c.energy=Math.min(100,(c.energy||0)+35+bonus);
+  c.stamina=Math.min(c.maxStamina,c.stamina+15);
+  c.hp=Math.min(c.maxHp,c.hp+Math.floor(2+s.house));
+
+  lcLog("พักผ่อน",s.house>0
+    ?"นอนพักในบ้าน ช่วยฟื้นกำลังได้ดีขึ้น"
+    :"พักผ่อนกลางแจ้ง ฟื้นกำลังได้บางส่วน");
+
+  lcSpendTime(360);
+}
+
+function lcNewDay(){
+  const s=lcState();
+
+  s.planted.forEach(p=>p.days++);
+
+  if(s.farm>0 && s.planted.length===0 && s.seeds>0){
+    // ไม่ปลูกอัตโนมัติ ผู้เล่นเลือกจัดการฟาร์มเอง
+  }
+}
+
+function lcRender(){
+  if(!G || !G.c) return;
+
+  const panel=document.getElementById("lifeCraftPanel");
+  if(!panel) return;
+
+  const c=G.c;
+  const s=lcState();
+  const f=lcEnsureFamily();
+
+  document.getElementById("lcFamily").innerHTML=
+    `<p><b>ครอบครัว:</b> ${f.status==="เด็กกำพริ"?"เด็กกำพร้า":f.status}`+
+    ` · ผู้ดูแล: ${f.status==="เด็กกำพร้า"?"ไม่มีผู้ปกครองประจำ":f.parent1+" และ "+f.parent2}`+
+    `<br>ความเป็นอยู่ ${f.wealth}/100 · ความสัมพันธ์ ${f.relationship}/100</p>`;
+
+  document.getElementById("lcResources").innerHTML=
+    `<p><b>ทรัพยากร</b><br>`+
+    `🪵 ไม้ ${s.wood} · 🪨 หิน ${s.stone} · ⛏️ แร่ ${s.ore}<br>`+
+    `🌿 สมุนไพร ${s.herbs} · 🌱 เมล็ดพันธุ์ ${s.seeds} · 🍲 อาหารสำรอง ${s.food}<br>`+
+    `🌾 แปลงปลูก ${s.farm} · พืชที่กำลังโต ${s.planted.length}</p>`;
+
+  const houseNames=["ไม่มีบ้าน","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  document.getElementById("lcStatus").innerHTML=
+    `<p><b>ที่พัก:</b> ${houseNames[s.house]} · `+
+    `บ่อน้ำ: ${s.well?"มีแล้ว":"ยังไม่มี"} · `+
+    `เตาถลุง: ${s.furnace?"มีแล้ว":"ยังไม่มี"}</p>`;
+
+  const actions=[
+    ["เก็บทรัพยากร","lcGather()"],
+    ["ล่าสัตว์หาเนื้อ","lcHunt()"],
+    ["ปรุงเนื้อย่าง","lcCook()"],
+    ["ถลุงแร่","lcSmelt()"],
+    ["สร้างเตาถลุง","lcBuildFurnace()"],
+    ["ขุดสร้างบ่อน้ำ","lcBuildWell()"],
+    ["ตักน้ำ","lcDrawWater()"],
+    ["ทำแปลงฟาร์ม","lcBuildFarm()"],
+    ["เก็บเกี่ยว","lcHarvest()"],
+    ["สร้าง/อัปเกรดบ้าน","lcBuildHouse()"],
+    ["ทำดาบ","lcCraftWeapon()"],
+    ["พักผ่อน/นอน","lcSleep()"],
+    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"]
+  ];
+
+  document.getElementById("lcActions").innerHTML=actions.map(([label,fn])=>
+    `<button type="button" onclick="${fn}" style="padding:8px 10px;border-radius:8px;cursor:pointer">${label}</button>`
+  ).join("");
+}
+
+/* ===== END LIFE & CRAFTING SYSTEM ===== */
+
+
+/* ===== ANOTHER LIFE: LIFE & CRAFTING SYSTEM ===== */
+
+function lcState(){
+  const c = G.c;
+  if(!c.lifeCraft){
+    c.lifeCraft = {
+      wood: 0,
+      stone: 0,
+      ore: 0,
+      herbs: 0,
+      seeds: 0,
+      food: 0,
+      water: 0,
+      farm: 0,
+      planted: [],
+      house: 0,
+      well: false,
+      furnace: false,
+      tools: 0,
+      family: null
+    };
+  }
+  return c.lifeCraft;
+}
+
+function lcRand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
+
+function lcLog(title,msg){
+  if(typeof log === "function") log(title,msg);
+}
+
+function lcSpendTime(minutes){
+  if(typeof actionTime === "function") actionTime(minutes);
+  lcRender();
+}
+
+function lcItem(name,qty,type,value=1){
+  if(typeof addItem === "function"){
+    addItem(name,qty,type,value);
+  }else{
+    const c=G.c;
+    c.inventory=c.inventory||[];
+    const old=c.inventory.find(x=>x.name===name && x.type===type);
+    if(old) old.qty+=qty;
+    else c.inventory.push({name,qty,type,value});
+  }
+}
+
+function lcHas(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  return !!it && it.qty>=qty;
+}
+
+function lcTake(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  if(!it || it.qty<qty) return false;
+  it.qty-=qty;
+  c.inventory=c.inventory.filter(x=>x.qty>0);
+  return true;
+}
+
+function lcNeed(items){
+  return items.every(([name,qty])=>lcHas(name,qty));
+}
+
+function lcPay(items){
+  if(!lcNeed(items)){
+    lcLog("งานช่าง","วัตถุดิบไม่เพียงพอ");
+    return false;
+  }
+  items.forEach(([name,qty])=>lcTake(name,qty));
+  return true;
+}
+
+function lcInit(){
+  if(document.getElementById("lifeCraftPanel")) return;
+
+  const panel=document.createElement("section");
+  panel.id="lifeCraftPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:16px;border:1px solid #7775;" +
+    "border-radius:12px;background:var(--panel, #20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>🏡 ชีวิตและงานช่าง</h2>
+    <div id="lcFamily"></div>
+    <div id="lcResources"></div>
+    <div id="lcStatus"></div>
+    <div id="lcActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
+    <div id="lcMessage" style="margin-top:10px"></div>
+  `;
+
+  const target=document.querySelector("main") ||
+    document.querySelector(".container") ||
+    document.body;
+
+  target.appendChild(panel);
+
+  lcRender();
+}
+
+function lcEnsureFamily(){
+  const c=G.c;
+  const s=lcState();
+
+  if(s.family) return s.family;
+
+  const names=["อาริน","มีรา","โทมัส","ลูเซีย","เรน","เอลนา","คีรัน","นารา"];
+  const parentName=()=>names[lcRand(0,names.length-1)];
+
+  s.family={
+    status:Math.random()<0.12 ? "เด็กกำพร้า" : "มีครอบครัว",
+    parent1:parentName(),
+    parent2:parentName(),
+    care:lcRand(45,90),
+    wealth:lcRand(10,70),
+    relationship:lcRand(45,75)
+  };
+
+  return s.family;
+}
+
+function lcFamilyCare(){
+  const c=G.c;
+  const f=lcEnsureFamily();
+
+  if(c.age>=16){
+    lcLog("ครอบครัว","คุณโตพอที่จะดูแลตัวเองได้มากขึ้น");
+    return;
+  }
+
+  if(f.status==="เด็กกำพร้า"){
+    c.energy=Math.min(100,(c.energy||0)+3);
+    lcLog("ชีวิตวัยเด็ก","คุณต้องพึ่งพาตัวเอง บางครั้งคนในชุมชนก็ช่วยเหลือ");
+  }else{
+    c.hunger=Math.max(0,(c.hunger||0)-10);
+    c.thirst=Math.max(0,(c.thirst||0)-10);
+    c.energy=Math.min(100,(c.energy||0)+5);
+    f.relationship=Math.min(100,f.relationship+1);
+    lcLog("ครอบครัว",f.parent1+" และ "+f.parent2+" ช่วยดูแลคุณในวัยเด็ก");
+  }
+
+  lcSpendTime(30);
+}
+
+function lcGather(){
+  const s=lcState();
+  const c=G.c;
+  const roll=lcRand(1,100);
+
+  if(roll<=35){
+    const n=lcRand(2,4);
+    s.wood+=n;
+    lcLog("เก็บทรัพยากร","เก็บไม้ได้ "+n+" ชิ้น");
+  }else if(roll<=60){
+    const n=lcRand(1,3);
+    s.stone+=n;
+    lcLog("เก็บทรัพยากร","เก็บหินได้ "+n+" ก้อน");
+  }else if(roll<=78){
+    s.herbs+=lcRand(1,3);
+    lcItem("สมุนไพรป่า",1,"material",3);
+    lcLog("เก็บทรัพยากร","พบสมุนไพรป่าระหว่างทาง");
+  }else if(roll<=90){
+    s.seeds+=lcRand(1,2);
+    lcLog("เก็บทรัพยากร","พบเมล็ดพันธุ์ที่อาจนำไปปลูกได้");
+  }else{
+    s.ore+=1;
+    lcLog("เก็บทรัพยากร","พบเศษแร่ดิบในพื้นที่");
+  }
+
+  c.survival=(c.survival||0)+1;
+  c.energy=Math.max(0,(c.energy||0)-5);
+  lcSpendTime(60);
+}
+
+function lcHunt(){
+  const c=G.c;
+  const s=lcState();
+
+  if(c.age<10){
+    lcLog("ล่าสัตว์","ยังเด็กเกินไปที่จะล่าสัตว์ด้วยตัวเอง ลองเก็บทรัพยากรแทน");
+    return;
+  }
+
+  if((c.stamina||0)<5 || (c.energy||0)<10){
+    lcLog("ล่าสัตว์","คุณเหนื่อยเกินไป ควรพักก่อน");
+    return;
+  }
+
+  c.stamina=Math.max(0,c.stamina-5);
+  c.energy=Math.max(0,c.energy-8);
+
+  if(Math.random()<0.65){
+    const meat=lcRand(1,3);
+    s.food+=meat;
+    lcItem("เนื้อดิบ",meat,"material",3);
+    lcLog("ล่าสัตว์","ล่าสำเร็จ ได้เนื้อดิบ "+meat+" ชิ้น");
+  }else{
+    lcLog("ล่าสัตว์","สัตว์หนีไปได้ คุณเสียเวลาแต่ได้เรียนรู้ร่องรอยของมัน");
+    c.survival=(c.survival||0)+1;
+  }
+
+  lcSpendTime(90);
+}
+
+function lcCook(){
+  const c=G.c;
+  const s=lcState();
+
+  if(!lcTake("เนื้อดิบ",1)){
+    lcLog("ทำอาหาร","ต้องมีเนื้อดิบอย่างน้อย 1 ชิ้น");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("เนื้อดิบ",1,"material",3);
+    lcLog("ทำอาหาร","ต้องมีไม้ 1 ชิ้นเพื่อก่อไฟ");
+    return;
+  }
+
+  s.wood--;
+  s.food++;
+  lcItem("เนื้อย่าง",1,"food",6);
+  c.craft=(c.craft||0)+1;
+  lcLog("ทำอาหาร","ปรุงเนื้อย่างสำเร็จ ได้อาหารพร้อมกิน 1 ชิ้น");
+  lcSpendTime(30);
+}
+
+function lcSmelt(){
+  const s=lcState();
+
+  if(s.ore<2 || s.wood<1){
+    lcLog("ถลุงแร่","ต้องมีแร่ดิบ 2 หน่วยและไม้ 1 ชิ้น");
+    return;
+  }
+
+  s.ore-=2;
+  s.wood--;
+  lcItem("แท่งโลหะ",1,"material",12);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("ถลุงแร่","ใช้แร่และเชื้อเพลิงถลุงเป็นแท่งโลหะ 1 แท่ง");
+  lcSpendTime(120);
+}
+
+function lcBuildFurnace(){
+  const s=lcState();
+  if(s.furnace){
+    lcLog("เตาถลุง","คุณมีเตาถลุงอยู่แล้ว");
+    return;
+  }
+  if(s.stone<5 || s.wood<2){
+    lcLog("เตาถลุง","ต้องใช้หิน 5 ก้อนและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.stone-=5;
+  s.wood-=2;
+  s.furnace=true;
+  lcLog("ก่อสร้าง","สร้างเตาถลุงแบบง่ายเรียบร้อย");
+  lcSpendTime(180);
+}
+
+function lcBuildWell(){
+  const s=lcState();
+  if(s.well){
+    lcLog("บ่อน้ำ","มีบ่อน้ำอยู่แล้ว");
+    return;
+  }
+  if(s.wood<3 || s.stone<4){
+    lcLog("บ่อน้ำ","ต้องใช้ไม้ 3 ชิ้นและหิน 4 ก้อน");
+    return;
+  }
+
+  s.wood-=3;
+  s.stone-=4;
+  s.well=true;
+  lcLog("ก่อสร้าง","สร้างบ่อน้ำพื้นฐาน ช่วยให้เข้าถึงน้ำได้ง่ายขึ้น");
+  lcSpendTime(240);
+}
+
+function lcDrawWater(){
+  const s=lcState();
+  if(!s.well){
+    lcLog("น้ำดื่ม","ต้องสร้างบ่อน้ำก่อน");
+    return;
+  }
+
+  lcItem("น้ำสะอาด",2,"drink",2);
+  lcLog("บ่อน้ำ","ตักน้ำสะอาดได้ 2 หน่วย");
+  lcSpendTime(10);
+}
+
+function lcBuildFarm(){
+  const s=lcState();
+
+  if(s.seeds<1 || s.wood<2){
+    lcLog("ฟาร์ม","ต้องมีเมล็ดพันธุ์อย่างน้อย 1 หน่วยและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.seeds--;
+  s.wood-=2;
+  s.farm++;
+  s.planted.push({days:0});
+  lcLog("เพาะปลูก","ทำแปลงเพาะปลูกใหม่ พืชต้องใช้เวลาเติบโต");
+  lcSpendTime(60);
+}
+
+function lcHarvest(){
+  const s=lcState();
+  const ready=s.planted.filter(p=>p.days>=3);
+
+  if(!ready.length){
+    lcLog("เก็บเกี่ยว","พืชยังไม่โต ต้องผ่านเวลาในเกมอีก");
+    return;
+  }
+
+  const amount=ready.length;
+  s.planted=s.planted.filter(p=>p.days<3);
+  s.food+=amount*2;
+  s.seeds+=amount;
+
+  for(let i=0;i<amount*2;i++){
+    lcItem("ผลผลิตจากฟาร์ม",1,"food",4);
+  }
+
+  lcLog("เก็บเกี่ยว","เก็บผลผลิตได้ "+amount*2+" หน่วย และได้เมล็ดพันธุ์คืน");
+  lcRender();
+}
+
+function lcBuildHouse(){
+  const s=lcState();
+
+  if(s.house>=3){
+    lcLog("บ้าน","บ้านของคุณอยู่ในระดับสูงสุดของระบบนี้แล้ว");
+    return;
+  }
+
+  const costs=[
+    [["ไม้",s.wood,5],["หิน",s.stone,2]],
+    [["ไม้",s.wood,8],["หิน",s.stone,6]],
+    [["ไม้",s.wood,12],["หิน",s.stone,10]]
+  ][s.house];
+
+  const woodNeed=costs[0][2];
+  const stoneNeed=costs[1][2];
+
+  if(s.wood<woodNeed || s.stone<stoneNeed){
+    lcLog("บ้าน","ต้องใช้ไม้ "+woodNeed+" ชิ้นและหิน "+stoneNeed+" ก้อน");
+    return;
+  }
+
+  s.wood-=woodNeed;
+  s.stone-=stoneNeed;
+  s.house++;
+
+  const labels=["","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  lcLog("ก่อสร้าง","สร้างสำเร็จ: "+labels[s.house]);
+  lcSpendTime(240);
+}
+
+function lcCraftWeapon(){
+  const s=lcState();
+
+  if(!lcTake("แท่งโลหะ",1)){
+    lcLog("งานช่าง","ต้องมีแท่งโลหะ 1 แท่ง");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("แท่งโลหะ",1,"material",12);
+    lcLog("งานช่าง","ต้องใช้ไม้ 1 ชิ้นทำด้ามอาวุธ");
+    return;
+  }
+
+  s.wood--;
+  lcItem("ดาบเหล็กทำมือ",1,"weapon",15);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("งานช่าง","สร้างดาบเหล็กทำมือสำเร็จ");
+  lcSpendTime(120);
+}
+
+function lcSleep(){
+  const c=G.c;
+  const s=lcState();
+
+  const bonus=s.house>0 ? 10*s.house : 0;
+  c.energy=Math.min(100,(c.energy||0)+35+bonus);
+  c.stamina=Math.min(c.maxStamina,c.stamina+15);
+  c.hp=Math.min(c.maxHp,c.hp+Math.floor(2+s.house));
+
+  lcLog("พักผ่อน",s.house>0
+    ?"นอนพักในบ้าน ช่วยฟื้นกำลังได้ดีขึ้น"
+    :"พักผ่อนกลางแจ้ง ฟื้นกำลังได้บางส่วน");
+
+  lcSpendTime(360);
+}
+
+function lcNewDay(){
+  const s=lcState();
+
+  s.planted.forEach(p=>p.days++);
+
+  if(s.farm>0 && s.planted.length===0 && s.seeds>0){
+    // ไม่ปลูกอัตโนมัติ ผู้เล่นเลือกจัดการฟาร์มเอง
+  }
+}
+
+function lcRender(){
+  if(!G || !G.c) return;
+
+  const panel=document.getElementById("lifeCraftPanel");
+  if(!panel) return;
+
+  const c=G.c;
+  const s=lcState();
+  const f=lcEnsureFamily();
+
+  document.getElementById("lcFamily").innerHTML=
+    `<p><b>ครอบครัว:</b> ${f.status==="เด็กกำพริ"?"เด็กกำพร้า":f.status}`+
+    ` · ผู้ดูแล: ${f.status==="เด็กกำพร้า"?"ไม่มีผู้ปกครองประจำ":f.parent1+" และ "+f.parent2}`+
+    `<br>ความเป็นอยู่ ${f.wealth}/100 · ความสัมพันธ์ ${f.relationship}/100</p>`;
+
+  document.getElementById("lcResources").innerHTML=
+    `<p><b>ทรัพยากร</b><br>`+
+    `🪵 ไม้ ${s.wood} · 🪨 หิน ${s.stone} · ⛏️ แร่ ${s.ore}<br>`+
+    `🌿 สมุนไพร ${s.herbs} · 🌱 เมล็ดพันธุ์ ${s.seeds} · 🍲 อาหารสำรอง ${s.food}<br>`+
+    `🌾 แปลงปลูก ${s.farm} · พืชที่กำลังโต ${s.planted.length}</p>`;
+
+  const houseNames=["ไม่มีบ้าน","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  document.getElementById("lcStatus").innerHTML=
+    `<p><b>ที่พัก:</b> ${houseNames[s.house]} · `+
+    `บ่อน้ำ: ${s.well?"มีแล้ว":"ยังไม่มี"} · `+
+    `เตาถลุง: ${s.furnace?"มีแล้ว":"ยังไม่มี"}</p>`;
+
+  const actions=[
+    ["เก็บทรัพยากร","lcGather()"],
+    ["ล่าสัตว์หาเนื้อ","lcHunt()"],
+    ["ปรุงเนื้อย่าง","lcCook()"],
+    ["ถลุงแร่","lcSmelt()"],
+    ["สร้างเตาถลุง","lcBuildFurnace()"],
+    ["ขุดสร้างบ่อน้ำ","lcBuildWell()"],
+    ["ตักน้ำ","lcDrawWater()"],
+    ["ทำแปลงฟาร์ม","lcBuildFarm()"],
+    ["เก็บเกี่ยว","lcHarvest()"],
+    ["สร้าง/อัปเกรดบ้าน","lcBuildHouse()"],
+    ["ทำดาบ","lcCraftWeapon()"],
+    ["พักผ่อน/นอน","lcSleep()"],
+    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"]
+  ];
+
+  document.getElementById("lcActions").innerHTML=actions.map(([label,fn])=>
+    `<button type="button" onclick="${fn}" style="padding:8px 10px;border-radius:8px;cursor:pointer">${label}</button>`
+  ).join("");
+}
+
+/* ===== END LIFE & CRAFTING SYSTEM ===== */
+
+  
+/* ===== ANOTHER LIFE: LIVING WORLD EVENT ENGINE ===== */
+
+function evtWorld(){
+  if(!G.world.chronicle){
+    G.world.chronicle={
+      news:[],
+      flags:{war:false,famine:false,plague:false,portal:false},
+      economy:100,
+      danger:0,
+      stability:60,
+      nextNews:0,
+      processedDay:0
+    };
+  }
+  return G.world.chronicle;
+}
+
+function evtDayNumber(){
+  const w=G.world;
+  return (w.year-1)*360+(w.month||0)*30+w.day;
+}
+
+function evtChance(base,c){
+  let p=base;
+  if(!c)return Math.max(0,Math.min(95,p));
+
+  // ตัวละครเด็กต้องพึ่งพาครอบครัวมากกว่า
+  if(c.age<12)p+=5;
+  if(c.age>=60)p+=2;
+
+  // นิสัยเปลี่ยนแนวโน้มของเหตุการณ์ ไม่ได้บังคับผลลัพธ์
+  const personality=String(c.personality||"");
+  if(/กล้าหาญ|ใจกล้า/.test(personality))p+=2;
+  if(/ระแวง|รอบคอบ/.test(personality))p-=1;
+
+  const world=evtWorld();
+  if(world.flags.war)p+=3;
+  if(world.flags.famine)p+=2;
+  if(world.flags.plague)p+=2;
+
+  return Math.max(1,Math.min(85,p));
+}
+
+function evtPick(list){
+  return list[Math.floor(Math.random()*list.length)];
+}
+
+function evtLog(title,description){
+  if(typeof log==="function")log(title,description);
+  else{
+    G.world.events=G.world.events||[];
+    G.world.events.unshift({date:"",type:title,text:description});
+  }
+}
+
+function evtRemember(title,text){
+  const w=evtWorld();
+  w.news.unshift({
+    day:evtDayNumber(),
+    title,
+    text
+  });
+  w.news=w.news.slice(0,30);
+}
+
+function evtEffect(effect){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(effect.gold)c.gold=Math.max(0,(c.gold||0)+effect.gold);
+  if(effect.energy)c.energy=Math.max(0,Math.min(100,c.energy+effect.energy));
+  if(effect.hp)c.hp=Math.max(0,Math.min(c.maxHp,c.hp+effect.hp));
+  if(effect.hunger)c.hunger=Math.max(0,Math.min(100,c.hunger+effect.hunger));
+  if(effect.thirst)c.thirst=Math.max(0,Math.min(100,c.thirst+effect.thirst));
+  if(effect.knowledge)c.knowledge=(c.knowledge||0)+effect.knowledge;
+  if(effect.social)c.social=(c.social||0)+effect.social;
+  if(effect.trust)c.trust=(c.trust||0)+effect.trust;
+  if(effect.fame)c.fame=(c.fame||0)+effect.fame;
+
+  if(effect.economy)w.economy=Math.max(50,Math.min(160,w.economy+effect.economy));
+  if(effect.danger)w.danger=Math.max(0,Math.min(100,w.danger+effect.danger));
+  if(effect.stability)w.stability=Math.max(0,Math.min(100,w.stability+effect.stability));
+
+  if(effect.flag){
+    w.flags[effect.flag]=effect.value;
+  }
+}
+
+function evtFire(category,title,text,effect={},isNews=false){
+  evtEffect(effect);
+  evtLog(category,title+" — "+text);
+
+  if(isNews){
+    evtRemember(title,text);
+  }
+
+  const c=G.c;
+  c.lastAction="เหตุการณ์: "+title;
+  c.lifeHistory=c.lifeHistory||[];
+  c.lifeHistory.push(title+" — "+text);
+  if(c.lifeHistory.length>100)c.lifeHistory.shift();
+}
+
+function evtFamily(){
+  const c=G.c;
+  const w=evtWorld();
+
+  // เหตุการณ์ครอบครัวจะเกิดบ่อยขึ้นในวัยเด็ก
+  const chance=c.age<16?14:5;
+  if(Math.random()*100>=evtChance(chance,c))return false;
+
+  const events=[
+    {
+      title:"ผู้ปกครองกลับบ้านช้า",
+      text:"พ่อหรือแม่กลับจากงานช้ากว่าปกติ คุณเริ่มกังวล แต่สุดท้ายพวกเขากลับมาอย่างปลอดภัย",
+      effect:{energy:-2,trust:1}
+    },
+    {
+      title:"รายได้พิเศษของครอบครัว",
+      text:"สมาชิกในครอบครัวได้รับค่าจ้างพิเศษ ทำให้มีเงินเหลือสำหรับอาหารและของใช้",
+      effect:{gold:lcRandSafe(2,8),trust:1}
+    },
+    {
+      title:"คนในบ้านไม่สบาย",
+      text:"สมาชิกในครอบครัวล้มป่วย ทุกคนต้องแบ่งเวลาและทรัพยากรมาดูแลกัน",
+      effect:{gold:-lcRandSafe(1,5),trust:2}
+    },
+    {
+      title:"เพื่อนบ้านนำอาหารมาแบ่ง",
+      text:"เพื่อนบ้านแบ่งอาหารให้ครอบครัวในวันที่ลำบาก ทำให้ความสัมพันธ์ในชุมชนดีขึ้น",
+      effect:{hunger:-8,social:1,trust:2}
+    },
+    {
+      title:"ข่าวร้ายจากที่ทำงาน",
+      text:"มีการลดค่าจ้างหรือหยุดงานชั่วคราว ครอบครัวต้องประหยัดเงินมากขึ้น",
+      effect:{gold:-lcRandSafe(2,7),energy:-2}
+    },
+    {
+      title:"ผู้ปกครองสอนทักษะชีวิต",
+      text:"ผู้ใหญ่สอนวิธีอ่านสถานการณ์ ดูแลตัวเอง และหลีกเลี่ยงอันตราย",
+      effect:{knowledge:1,trust:2}
+    },
+    {
+      title:"ของขวัญชิ้นเล็ก",
+      text:"สมาชิกในครอบครัวนำของใช้ชิ้นเล็กกลับมาให้ แม้ไม่แพงแต่ทำให้วันนั้นดีขึ้น",
+      effect:{trust:2,energy:3}
+    }
+  ];
+
+  let event=evtPick(events);
+
+  // ภาวะสงครามและภัยพิบัติเพิ่มความเสี่ยงของข่าวร้าย
+  if(w.flags.war && Math.random()<0.20){
+    event={
+      title:"ครอบครัวได้รับข่าวจากแนวหน้า",
+      text:"มีข่าวความสูญเสียจากพื้นที่ขัดแย้ง คนในบ้านเป็นห่วงญาติและคนรู้จัก",
+      effect:{energy:-8,trust:2,danger:2}
+    };
+  }
+
+  evtFire("ครอบครัว",event.title,event.text,event.effect);
+  return true;
+}
+
+function lcRandSafe(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+function evtDailyLife(){
+  const c=G.c;
+  if(Math.random()*100>=evtChance(24,c))return false;
+
+  const events=[
+    {title:"พบคนเดินทางหลงทาง",text:"คนแปลกหน้าขอถามเส้นทาง คุณช่วยบอกทางและได้เรียนรู้เรื่องเมืองใกล้เคียง",effect:{social:1,knowledge:1,trust:1}},
+    {title:"ฝนตกกะทันหัน",text:"ฝนทำให้กิจกรรมกลางแจ้งล่าช้า คุณต้องหาที่หลบฝน",effect:{energy:-2}},
+    {title:"พบเหรียญตกอยู่",text:"คุณพบเงินจำนวนเล็กน้อย ไม่มีใครอยู่ใกล้พอจะยืนยันว่าเป็นของใคร",effect:{gold:lcRandSafe(1,4)}},
+    {title:"ได้ยินข่าวลือในโรงเตี๊ยม",text:"มีคนพูดถึงซากโบราณสถานนอกเส้นทางหลัก แต่ยังไม่มีหลักฐานยืนยัน",effect:{knowledge:1}},
+    {title:"ชาวบ้านต้องการแรงงาน",text:"ชาวบ้านจ้างให้ช่วยยกของและซ่อมรั้ว ได้ค่าจ้างเล็กน้อย",effect:{gold:lcRandSafe(2,6),energy:-4}},
+    {title:"พบร่องรอยสัตว์ประหลาด",text:"รอยเท้าขนาดใหญ่ปรากฏใกล้เส้นทางเดินทาง ผู้คนเริ่มระมัดระวังตัว",effect:{knowledge:1,danger:2}},
+    {title:"นักดนตรีเร่เดินทางมา",text:"เสียงเพลงจากนักดนตรีเร่ช่วยให้ผู้คนคลายความเครียด คุณได้ฟังเรื่องราวจากแดนไกล",effect:{energy:3,social:1}},
+    {title:"การค้าคึกคัก",text:"มีขบวนพ่อค้าเข้ามาในพื้นที่ ผู้คนมีโอกาสซื้อขายและแลกเปลี่ยนข่าวสาร",effect:{economy:2,social:1}},
+    {title:"ความเข้าใจผิด",text:"คุณถูกเข้าใจผิดจากคำพูดเล็กน้อย หากไม่อธิบาย ความสัมพันธ์อาจเสียหายภายหลัง",effect:{trust:-1}},
+    {title:"ค้นพบเส้นทางลัด",text:"คุณสังเกตเห็นเส้นทางที่คนส่วนใหญ่ไม่ใช้ อาจช่วยประหยัดเวลาในการเดินทางครั้งต่อไป",effect:{knowledge:2,survival:1}}
+  ];
+
+  const e=evtPick(events);
+  evtFire("ชีวิตประจำวัน",e.title,e.text,e.effect);
+  return true;
+}
+
+function evtWorldEvent(){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(Math.random()*100>=evtChance(7,c))return false;
+
+  const events=[
+    {
+      title:"ราคาธัญพืชสูงขึ้น",
+      text:"ผลผลิตลดลงในหลายหมู่บ้าน อาหารเริ่มมีราคาแพง",
+      effect:{economy:-8,flag:"famine",value:true}
+    },
+    {
+      title:"เส้นทางการค้าถูกโจรปล้น",
+      text:"พ่อค้าหลายรายเลี่ยงเส้นทางเดิม สินค้าบางชนิดเริ่มขาดแคลน",
+      effect:{economy:-5,danger:8}
+    },
+    {
+      title:"ข้อตกลงสงบศึก",
+      text:"ผู้นำของสองฝ่ายตกลงหยุดสู้รบชั่วคราว ผู้คนเริ่มกลับไปค้าขาย",
+      effect:{stability:10,danger:-8,flag:"war",value:false,economy:5}
+    },
+    {
+      title:"กิลด์ประกาศรับสมัคร",
+      text:"กิลด์นักผจญภัยเปิดรับสมาชิกและประกาศงานใหม่สำหรับผู้มีความสามารถ",
+      effect:{stability:2,economy:3}
+    },
+    {
+      title:"สัตว์เวทอพยพ",
+      text:"สัตว์เวทจำนวนมากเคลื่อนผ่านป่า ทำให้พื้นที่บางส่วนอันตรายขึ้น แต่มีผู้ตามหาเบาะแส",
+      effect:{danger:10,knowledge:1}
+    },
+    {
+      title:"เทศกาลประจำเมือง",
+      text:"เมืองจัดงานเทศกาล ดึงดูดพ่อค้า นักแสดง และนักเดินทางจากต่างแดน",
+      effect:{economy:7,stability:3}
+    },
+    {
+      title:"พบแหล่งแร่แห่งใหม่",
+      text:"คนงานค้นพบสายแร่ใหม่ ทำให้ช่างตีเหล็กและพ่อค้าคาดหวังผลกำไร",
+      effect:{economy:8,stability:2}
+    },
+    {
+      title:"โรคระบาดในเมืองห่างไกล",
+      text:"มีรายงานโรคระบาดจากเมืองที่อยู่ห่างออกไป ทางการเริ่มตรวจคนเดินทาง",
+      effect:{stability:-5,danger:4,flag:"plague",value:true}
+    },
+    {
+      title:"ข่าวลือเรื่องประตูมิติ",
+      text:"ผู้เดินทางรายงานแสงประหลาดกลางซากโบราณสถาน ยังไม่ทราบว่าเป็นเวทมนตร์หรือกลลวง",
+      effect:{knowledge:1,flag:"portal",value:true}
+    },
+    {
+      title:"ภัยแล้งสิ้นสุด",
+      text:"ฝนกลับมาตกในพื้นที่เพาะปลูก ผลผลิตคาดว่าจะฟื้นตัวในฤดูกาลถัดไป",
+      effect:{economy:8,stability:5,flag:"famine",value:false}
+    }
+  ];
+
+  let e=evtPick(events);
+
+  // ถ้าสถานการณ์เดิมดำเนินอยู่ ข่าวใหม่มีแนวโน้มเป็นผลสืบเนื่อง
+  if(w.flags.famine && Math.random()<0.45){
+    e={
+      title:"ขบวนข้าวช่วยเหลือมาถึง",
+      text:"พ่อค้าและชุมชนร่วมกันนำอาหารไปยังพื้นที่ขาดแคลน ราคาธัญพืชเริ่มทรงตัว",
+      effect:{economy:6,stability:5,flag:"famine",value:false}
+    };
+  }else if(w.flags.portal && Math.random()<0.35){
+    e={
+      title:"ผู้กล้ากลุ่มแรกเข้าสำรวจประตูมิติ",
+      text:"กิลด์ส่งทีมสำรวจเข้าไป แต่ยังไม่มีใครยืนยันได้ว่าปลายทางอยู่ที่ใด",
+      effect:{danger:5,knowledge:2}
+    };
+  }
+
+  evtFire("ข่าวโลก",e.title,e.text,e.effect,true);
+  return true;
+}
+
+function evtFantasy(){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(Math.random()*100>=evtChance(2.5,c))return false;
+
+  const events=[
+    {title:"แสงจากดาวตก",text:"ดาวตกสีม่วงทิ้งแสงไว้เหนือขอบฟ้า นักเวทเชื่อว่าเป็นลางของพลังโบราณ",effect:{knowledge:3,fame:1}},
+    {title:"เสียงกระซิบจากป่า",text:"เสียงที่ไม่มีที่มาเรียกชื่อคุณจากแนวไม้ เมื่อเข้าใกล้กลับพบเพียงรอยเท้าเรืองแสง",effect:{knowledge:2,energy:-3}},
+    {title:"พรจากผู้พิทักษ์",text:"วิญญาณผู้พิทักษ์ปรากฏชั่วครู่และมอบความสงบให้จิตใจ",effect:{hp:5,energy:8,trust:2}},
+    {title:"รอยแยกมิติเปิดขึ้น",text:"อากาศบิดเบี้ยวเป็นวงแสงประหลาด ก่อนจะปิดตัวลง ทิ้งเศษพลังงานไว้บนพื้น",effect:{knowledge:4,danger:6}},
+    {title:"มังกรบินผ่าน",text:"เงาขนาดมหึมาบดบังแสงอาทิตย์ ผู้คนในพื้นที่ต่างหยุดกิจกรรมและเฝ้ามองด้วยความหวาดหวั่น",effect:{fame:1,energy:-2,danger:4}},
+    {title:"คำทำนายที่ไม่สมบูรณ์",text:"ผู้พยากรณ์เอ่ยถึงการเปลี่ยนแปลงครั้งใหญ่ แต่ไม่สามารถระบุวันหรือสถานที่ได้",effect:{knowledge:2,social:1}}
+  ];
+
+  const e=evtPick(events);
+  evtFire("แฟนตาซี",e.title,e.text,e.effect,true);
+  return true;
+}
+
+function evtNewspaper(){
+  const w=evtWorld();
+  const today=evtDayNumber();
+
+  if(today<w.nextNews)return false;
+
+  w.nextNews=today+lcRandSafe(2,5);
+
+  // ข่าวเกิดจากสถานการณ์โลกที่มีอยู่จริง ไม่ใช่ข้อความลอย ๆ
+  if(w.flags.war){
+    evtFire("หนังสือพิมพ์","สงครามยังไม่ยุติ",
+      "รายงานล่าสุดระบุว่าการสู้รบยังดำเนินต่อ เส้นทางบางแห่งอาจไม่ปลอดภัย",
+      {danger:1},true);
+    return true;
+  }
+
+  if(w.flags.famine){
+    evtFire("หนังสือพิมพ์","อาหารเริ่มขาดแคลน",
+      "ตลาดหลายแห่งรายงานว่าธัญพืชมีน้อยลง ชาวบ้านเริ่มกักตุนเสบียง",
+      {economy:-1},true);
+    return true;
+  }
+
+  if(w.flags.plague){
+    evtFire("หนังสือพิมพ์","ประกาศเฝ้าระวังโรค",
+      "เมืองใกล้เคียงเพิ่มมาตรการตรวจคนเดินทางและขอให้ประชาชนหลีกเลี่ยงพื้นที่เสี่ยง",
+      {stability:-1},true);
+    return true;
+  }
+
+  // ถ้าไม่มีวิกฤต ให้รายงานเรื่องการเมือง การค้า หรือการค้นพบ
+  const headlines=[
+    ["สภาเมืองเตรียมเปลี่ยนกฎการค้า","พ่อค้าและช่างฝีมือกำลังรอฟังรายละเอียดของกฎใหม่",{economy:2}],
+    ["นักสำรวจพบซากโบราณสถาน","กิลด์กำลังรวบรวมข้อมูลและเปิดรับผู้สนใจร่วมสำรวจ",{knowledge:1}],
+    ["ตลาดจัดงานประจำฤดูกาล","ผู้ขายจากหลายพื้นที่นำสินค้ามาแลกเปลี่ยนกัน",{economy:3}],
+    ["ผู้ปกครองประกาศเดินทางตรวจเมือง","เจ้าหน้าที่เริ่มเตรียมงานต้อนรับและตรวจสอบปัญหาในชุมชน",{stability:2}],
+    ["มีการพบเห็นสัตว์เวทใกล้ชายป่า","ทางการแนะนำให้ผู้เดินทางใช้เส้นทางหลักในช่วงกลางคืน",{danger:2}],
+    ["โรงเรียนเวทมนตร์เปิดรับผู้เรียน","ผู้สมัครต้องผ่านการทดสอบความรู้และความสามารถพื้นฐาน",{knowledge:1}]
+  ];
+
+  const n=evtPick(headlines);
+  evtFire("หนังสือพิมพ์",n[0],n[1],n[2],true);
+  return true;
+}
+
+function evtProcessDay(dayOverride) {
+  if (!G || !G.c || G.c.dead) return;
+
+  const w = evtWorld();
+  const day = Number.isFinite(dayOverride)
+    ? dayOverride
+    : evtDayNumber();
+
+  if (w.processedDay === day) return;
+  w.processedDay = day;
+
+  evtFamily();
+  evtDailyLife();
+  evtWorldEvent();
+  evtFantasy();
+  evtNewspaper();
+
+  if (day % 7 === 0) {
+    if (w.flags.plague && Math.random() < 0.15) {
+      w.flags.plague = false;
+    }
+
+    if (w.danger > 0) w.danger = Math.max(0, w.danger - 1);
+    if (w.stability < 60 && !w.flags.war) w.stability++;
+  }
+}
+function evtPanelInit(){
+  if(document.getElementById("evtPanel"))return;
+
+  const panel=document.createElement("section");
+  panel.id="evtPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:14px;border:1px solid #7777;" +
+    "border-radius:12px;background:var(--panel,#20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>📰 ข่าวสารและเหตุการณ์โลก</h2>
+    <div id="evtWorldStatus"></div>
+    <div id="evtLatest"></div>
+  `;
+
+  const target=document.querySelector("main")||
+    document.querySelector(".container")||
+    document.body;
+  target.appendChild(panel);
+}
+
+function evtRender(){
+  if(!G || !G.world)return;
+  evtPanelInit();
+
+  const w=evtWorld();
+  const flags=w.flags;
+
+  document.getElementById("evtWorldStatus").innerHTML=
+    `<p>เศรษฐกิจโลก: ${w.economy}/100 · `+
+    `ความมั่นคง: ${w.stability}/100 · `+
+    `ระดับอันตราย: ${w.danger}/100</p>`+
+    `<p>สถานการณ์: `+
+    `${flags.war?"⚔️ สงคราม ":""}`+
+    `${flags.famine?"🌾 ขาดแคลนอาหาร ":""}`+
+    `${flags.plague?"☣️ โรคระบาด ":""}`+
+    `${flags.portal?"🌀 พบประตูมิติ ":""}`+
+    `${!flags.war&&!flags.famine&&!flags.plague&&!flags.portal?"สงบ ไม่มีวิกฤตใหญ่":""}</p>`;
+
+
+  const list=w.news.slice(0,6);
+  document.getElementById("evtLatest").innerHTML=list.length
+    ?list.map(n=>
+      `<article style="padding:8px 0;border-top:1px solid #7775">`+
+      `<b>ปี ${Math.floor((n.day-1)/360)+1} · ${n.title}</b><br>`+
+      `<span>${n.text}</span></article>`
+    ).join("")
+    :"<p>ยังไม่มีข่าวสำคัญ ข่าวจะปรากฏเมื่อเวลาในเกมเดินหน้า</p>";
+}
+
+function evtInit(){
+
+  if(!G)return;
+
+  evtPanelInit();
+  
+
+  // เชื่อมระบบอีเวนต์เข้ากับเวลาเดิมของเกม
+  if(!window.__evtAdvanceHook && typeof advance==="function"){
+    const oldAdvance=advance;
+
+    advance=function(minutes,allowEncounter=true){
+      const before=evtDayNumber();
+      const result=oldAdvance.apply(this,arguments);
+      const after=evtDayNumber();
+
+      if(G && G.world){
+        for(let day=before+1;day<=after;day++){
+          evtProcessDay();
+        }
+      }
+
+      evtRender();
+      return result;
+    };
+
+    window.__evtAdvanceHook=true;
+  }
+
+  if(!window.__evtRenderHook && typeof render==="function"){
+    const oldRender=render;
+
+    render=function(){
+      const result=oldRender.apply(this,arguments);
+      evtRender();
+      return result;
+    };
+
+    window.__evtRenderHook=true;
+  }
+
+  evtRender();
+}
+
+/* ===== END EVENT ENGINE ===== */
+
+  
+function evtPeriodName(minute) {
+  const hour = Math.floor(minute / 60) % 24;
+
+  if (hour >= 6 && hour < 9) return "เช้า";
+  if (hour >= 9 && hour < 12) return "สาย";
+  if (hour >= 12 && hour < 14) return "เที่ยง";
+  if (hour >= 14 && hour < 17) return "บ่าย";
+  if (hour >= 17 && hour < 20) return "เย็น";
+  if (hour >= 20 && hour < 23) return "ดึก";
+  return "กลางคืน";
+}
+
+function evtProcessPeriod() {
+  if (!G || !G.c || G.c.dead) return;
+
+  const c = G.c;
+  const period = evtPeriodName(G.world.minute);
+  const chance = {
+    "เช้า": 8,
+    "สาย": 5,
+    "เที่ยง": 7,
+    "บ่าย": 6,
+    "เย็น": 12,
+    "ดึก": 10,
+    "กลางคืน": 8
+  }[period] || 5;
+
+  if (Math.random() * 100 >= chance) return;
+
+  const events = {
+    "เช้า": [
+      ["เสียงเรียกจากหน้าบ้าน", "มีคนมาเรียกสมาชิกในครอบครัวก่อนออกไปทำงาน"],
+      ["ประกาศจากกิลด์", "กิลด์ติดประกาศภารกิจใหม่สำหรับผู้สนใจ"],
+      ["พ่อค้าเริ่มตั้งร้าน", "ตลาดเริ่มคึกคักและมีสินค้าจากต่างถิ่น"]
+    ],
+    "สาย": [
+      ["ครูพเนจร", "ครูผู้เดินทางผ่านเมืองกำลังมองหาผู้เรียนที่สนใจ"],
+      ["คนแปลกหน้าขอความช่วยเหลือ", "นักเดินทางถามหาคนช่วยตามหาสิ่งของที่หายไป"],
+      ["ข่าวจากคนงาน", "คนงานพูดถึงปัญหาที่เกิดขึ้นตามเส้นทางการค้า"]
+    ],
+    "เที่ยง": [
+      ["ข่าวลือในโรงเตี๊ยม", "ผู้คนกำลังพูดถึงเหตุการณ์ที่เกิดขึ้นในเมืองอื่น"],
+      ["มื้ออาหารร่วมกัน", "คนในชุมชนชวนกันกินอาหารและแลกเปลี่ยนเรื่องราว"],
+      ["ผู้ส่งสารมาถึง", "ผู้ส่งสารนำจดหมายมาส่งให้คนในพื้นที่"]
+    ],
+    "บ่าย": [
+      ["ร่องรอยในป่า", "พบร่องรอยที่อาจเป็นของสัตว์เวทใกล้เส้นทาง"],
+      ["ช่างฝีมือกำลังหาผู้ช่วย", "ช่างท้องถิ่นประกาศรับคนช่วยงานชั่วคราว"],
+      ["ฝนตั้งเค้า", "เมฆดำเริ่มปกคลุมท้องฟ้า การเดินทางกลางแจ้งอาจลำบาก"]
+    ],
+    "เย็น": [
+      ["สมาชิกครอบครัวกลับบ้าน", "คนในครอบครัวกลับจากงานและเล่าเรื่องที่พบเจอ"],
+      ["ข่าวจากตลาด", "พ่อค้าแจ้งว่าราคาสินค้าบางชนิดเริ่มเปลี่ยน"],
+      ["นักเดินทางเข้าพัก", "นักเดินทางจากเมืองไกลนำข่าวสารมาด้วย"]
+    ],
+    "ดึก": [
+      ["เสียงทะเลาะในโรงเตี๊ยม", "ผู้คนมีความเห็นไม่ตรงกัน คุณอาจเข้าไปไกล่เกลี่ย"],
+      ["ข้อเสนอที่ไม่เปิดเผย", "บุคคลลึกลับเสนอค่าจ้างสำหรับงานที่ไม่ต้องการเปิดเผย"],
+      ["เสียงฝีเท้าบนถนน", "มีคนเดินผ่านตรอกมืดอย่างเร่งรีบ"]
+    ],
+    "กลางคืน": [
+      ["เสียงร้องจากป่า", "เสียงประหลาดดังมาจากนอกชุมชน"],
+      ["ความฝันประหลาด", "คุณฝันเห็นสถานที่ที่ไม่เคยไปมาก่อน"],
+      ["แสงเหนือหลังภูเขา", "แสงสีแปลกตาปรากฏเหนือขอบฟ้าเพียงชั่วครู่"]
+    ]
+  };
+
+  const entry = events[period][
+    Math.floor(Math.random() * events[period].length)
+  ];
+
+  // ผลกระทบเล็กน้อย มีโอกาสได้รับข้อมูลหรือเสียพลังงาน
+  if (period === "กลางคืน" && Math.random() < 0.25) {
+    c.energy = Math.max(0, c.energy - 2);
+  }
+
+  if (period === "เช้า" && Math.random() < 0.25) {
+    c.social = (c.social || 0) + 1;
+  }
+
+  evtFire(
+    "เหตุการณ์ช่วง" + period,
+    entry[0],
+    entry[1],
+    {},
+    false
+  );
+}
+
+  
+/* ===== STATIC CHARACTER AVATAR ===== */
+
+function avatarInit(){
+  if(!G || !G.c) return;
+  if(document.getElementById("avatarPanel")) return;
+
+  // รองรับเซฟเก่าที่ไม่มีข้อมูลการสวมใส่
+  if(!G.c.wearing || Array.isArray(G.c.wearing)){
+    G.c.wearing={
+      head:null,
+      body:null,
+      legs:null,
+      weapon:null
+    };
+  }
+
+  const panel=document.createElement("section");
+  panel.id="avatarPanel";
+  panel.className="avatar-panel";
+
+  panel.innerHTML=
+    '<h2>CHARACTER · ตัวละคร</h2>'+
+    '<div class="avatar-layout">'+
+      '<div class="avatar-stage">'+
+        '<canvas id="avatarCanvas" width="24" height="32"></canvas>'+
+      '</div>'+
+      '<div class="avatar-info">'+
+        '<div>ชื่อ: <b id="avName"></b></div>'+
+        '<div>เผ่า: <b id="avRace"></b></div>'+
+        '<div>อายุ: <b id="avAge"></b></div>'+
+        '<div>ช่วงวัย: <b id="avStage"></b></div>'+
+        '<div>อาชีพ: <b id="avJob"></b></div>'+
+        '<div id="avGear"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="avatar-note">'+
+      'ภาพตัวละครแบบนิ่ง · รูปลักษณ์เปลี่ยนตามวัยและอุปกรณ์'+
+    '</div>';
+
+  const game=document.getElementById("game");
+  const scene=game ? game.querySelector(".panel") : null;
+
+  if(scene && scene.parentNode){
+    scene.parentNode.insertBefore(panel,scene.nextSibling);
+  }else if(game){
+    game.insertBefore(panel,game.firstChild);
+  }
+}
+
+function avatarEquipColor(item,fallback){
+  if(!item) return fallback;
+
+  const name=String(item.name||"");
+
+  if(/เหล็ก|เกราะ|โลหะ/.test(name)) return "#87949a";
+  if(/หนัง/.test(name)) return "#9a633c";
+  if(/เวท|เวทมนตร์|ผลึก/.test(name)) return "#8a72cc";
+  if(/ผ้า|คลุม|เสื้อ/.test(name)) return "#648c69";
+
+  return "#b28a54";
+}
+
+function avatarRender(){
+  if(!G || !G.c) return;
+
+  avatarInit();
+
+  const c=G.c;
+  const canvas=document.getElementById("avatarCanvas");
+  if(!canvas) return;
+
+  const ctx=canvas.getContext("2d");
+  if(!ctx) return;
+
+  ctx.clearRect(0,0,24,32);
+  ctx.imageSmoothingEnabled=false;
+
+  const age=Number(c.age)||0;
+  const rules=raceRules(c.race);
+  const child=age<rules.adultAge;
+  const elder=age>=rules.lifeExpectancy*0.75;
+
+  const skin="#e5b58d";
+  const hair=elder ? "#c3c4bb" :
+    (c.gender==="หญิง" ? "#57352d" : "#382920");
+
+  const wear=c.wearing||{};
+  const body=wear.body;
+  const legs=wear.legs;
+  const head=wear.head;
+  const weapon=wear.weapon;
+
+  const shirt=avatarEquipColor(body,
+    c.job==="นักผจญภัย" ? "#5478b8" :
+    c.job==="ผู้รักษา" ? "#e1e0ca" :
+    c.job==="ช่างฝีมือ" ? "#a36b43" : "#66875c");
+
+  const pants=avatarEquipColor(legs,"#34445a");
+
+  // พื้นเงา
+  ctx.fillStyle="#29352b";
+  ctx.fillRect(6,29,12,2);
+
+  // สัดส่วนตัวละครเปลี่ยนตามวัย
+  const headTop=child ? 7 : 4;
+  const headSize=child ? 10 : 9;
+  const bodyTop=child ? 17 : 15;
+  const bodyHeight=child ? 8 : 10;
+  const legTop=bodyTop+bodyHeight;
+
+  // ขาและกางเกง
+  ctx.fillStyle=pants;
+  ctx.fillRect(7,legTop,4,child?5:7);
+  ctx.fillRect(13,legTop,4,child?5:7);
+
+  // รองเท้า
+  ctx.fillStyle="#49352a";
+  ctx.fillRect(6,30,5,2);
+  ctx.fillRect(13,30,5,2);
+
+  // ลำตัว
+  ctx.fillStyle=shirt;
+  ctx.fillRect(6,bodyTop,12,bodyHeight);
+
+  // แขน
+  ctx.fillRect(4,bodyTop+2,3,bodyHeight-2);
+  ctx.fillRect(17,bodyTop+2,3,bodyHeight-2);
+
+  // คอ
+  ctx.fillStyle=skin;
+  ctx.fillRect(10,bodyTop-2,4,3);
+
+  // ศีรษะ
+  ctx.fillStyle=skin;
+  ctx.fillRect(7,headTop,10,10);
+
+  // หูเอลฟ์
+  if(String(c.race).includes("เอลฟ์")){
+    ctx.fillStyle=skin;
+    ctx.fillRect(4,headTop+3,4,2);
+    ctx.fillRect(16,headTop+3,4,2);
+    ctx.fillStyle="#d8a5b7";
+    ctx.fillRect(4,headTop+3,2,1);
+    ctx.fillRect(18,headTop+3,2,1);
+  }
+
+  // ผม
+  ctx.fillStyle=hair;
+  ctx.fillRect(7,headTop-1,10,4);
+  ctx.fillRect(6,headTop+1,3,5);
+
+  if(c.gender==="หญิง"){
+    ctx.fillRect(15,headTop+2,3,8);
+  }
+
+  // ดวงตา
+  ctx.fillStyle="#252525";
+  ctx.fillRect(9,headTop+5,2,2);
+  ctx.fillRect(14,headTop+5,2,2);
+
+  // หมวกหรือเครื่องสวมศีรษะ
+  if(head){
+    ctx.fillStyle=avatarEquipColor(head,"#8a633e");
+    ctx.fillRect(5,headTop-2,14,3);
+    ctx.fillRect(8,headTop-4,8,3);
+  }
+
+  // เกราะหรือเสื้อคลุมทับ
+  if(body){
+    ctx.fillStyle=avatarEquipColor(body,shirt);
+    ctx.fillRect(7,bodyTop+1,10,bodyHeight-2);
+
+    // ขอบเกราะ
+    ctx.fillStyle="#d7bd78";
+    ctx.fillRect(7,bodyTop+1,2,bodyHeight-2);
+    ctx.fillRect(15,bodyTop+1,2,bodyHeight-2);
+  }
+
+  // อาวุธ
+  if(weapon){
+    ctx.fillStyle="#b8c5ce";
+    ctx.fillRect(19,bodyTop+2,2,10);
+    ctx.fillStyle="#77502d";
+    ctx.fillRect(18,bodyTop+9,4,2);
+  }
+
+  // ข้อมูลตัวละคร
+  document.getElementById("avName").textContent=c.name||"-";
+  document.getElementById("avRace").textContent=c.race||"-";
+  document.getElementById("avAge").textContent=age+" ปี";
+  document.getElementById("avStage").textContent=ageStage(c);
+  document.getElementById("avJob").textContent=c.job||"-";
+
+  const slots=[
+    ["head","ศีรษะ"],
+    ["body","ลำตัว"],
+    ["legs","ขา"],
+    ["weapon","อาวุธ"]
+  ];
+
+  document.getElementById("avGear").innerHTML=
+    "<b>สวมใส่อยู่</b><br>"+
+    slots.map(([key,label])=>
+      label+": "+esc(wear[key]?.name||"ชุดพื้นฐาน")
+    ).join("<br>");
+}
+
+function equipSelectedGear(){
+  if(!G || !G.c) return;
+
+  const c=G.c;
+  const name=document.getElementById("itemSelect").value;
+  const item=c.inventory.find(i=>i.name===name);
+
+  if(!item){
+    log("อุปกรณ์","กรุณาเลือกไอเทมก่อน");
+    return;
+  }
+
+  if(item.type!=="gear" || !item.slot){
+    log("อุปกรณ์","ไอเทมนี้ไม่สามารถสวมใส่ได้");
+    return;
+  }
+
+  if(!c.wearing || Array.isArray(c.wearing)){
+    c.wearing={head:null,body:null,legs:null,weapon:null};
+  }
+
+  const slot=item.slot;
+  const previous=c.wearing[slot];
+
+  if(previous){
+    addItem(previous.name,1,"gear",previous.value,slot);
+  }
+
+  c.wearing[slot]={
+    name:item.name,
+    slot:item.slot,
+    value:item.value||0
+  };
+
+  item.qty--;
+  cleanInventory();
+
+  log("สวมใส่อุปกรณ์","สวม "+item.name+" เรียบร้อย");
+  render();
+}
+
+/* ===== ANOTHER LIFE PIXEL MAP ===== */
+
+function pixelInit(){
+  if(!G || !G.c) return;
+  if(document.getElementById("pixelPanel")) return;
+
+  const panel=document.createElement("div");
+  panel.id="pixelPanel";
+  panel.className="pixel-panel";
+
+  panel.innerHTML=
+    '<div class="pixel-heading">'+
+      '<h2>ANOTHER LIFE · FIELD MAP</h2>'+
+      '<span id="pixelLocation">หมู่บ้าน</span>'+
+    '</div>'+
+    '<div class="pixel-layout">'+
+      '<div>'+
+        '<div class="pixel-screen">'+
+          '<canvas id="pixelCanvas" width="576" height="352"></canvas>'+
+        '</div>'+
+        '<div class="pixel-controls">'+
+          '<span></span>'+
+          '<button onclick="pixelMove(0,-1)">▲</button>'+
+          '<span></span>'+
+          '<button onclick="pixelMove(-1,0)">◀</button>'+
+          '<button onclick="pixelMove(0,1)">▼</button>'+
+          '<button onclick="pixelMove(1,0)">▶</button>'+
+        '</div>'+
+        '<div class="pixel-actions">'+
+          '<button onclick="pixelInteract()">พบ/คุยกับ NPC</button>'+
+          '<button onclick="pixelResetPosition()">กลับจุดเริ่ม</button>'+
+        '</div>'+
+        '<p class="pixel-help">ใช้ WASD หรือปุ่มลูกศรเพื่อเดิน</p>'+
+      '</div>'+
+      '<aside class="pixel-side">'+
+        '<h3>PLAYER STATUS</h3>'+
+        '<div class="pixel-stat"><span>ชื่อ</span><b id="pxName">-</b></div>'+
+        '<div class="pixel-stat"><span>เผ่า</span><b id="pxRace">-</b></div>'+
+        '<div class="pixel-stat"><span>HP</span><b id="pxHp">-</b></div>'+
+        '<div class="pixel-stat"><span>พลังงาน</span><b id="pxEnergy">-</b></div>'+
+        '<div class="pixel-stat"><span>เงิน</span><b id="pxGold">-</b></div>'+
+        '<div class="pixel-stat"><span>NPC</span><b id="pxNpcs">0</b></div>'+
+        '<div class="pixel-stat"><span>ตำแหน่ง</span><b id="pxCoords">-</b></div>'+
+      '</aside>'+
+    '</div>';
+
+  const game=document.getElementById("game");
+  const scene=game ? game.querySelector(".panel") : null;
+
+  if(scene && scene.parentNode){
+    scene.parentNode.insertBefore(panel,scene.nextSibling);
+  }else if(game){
+    game.insertBefore(panel,game.firstChild);
+  }
+
+  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+
+  if(!window.pixelKeysBound){
+    window.pixelKeysBound=true;
+
+    document.addEventListener("keydown",function(e){
+      if(!G || G.c.dead) return;
+
+      const game=document.getElementById("game");
+      if(!game || game.style.display==="none") return;
+
+      if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+
+      const keys={
+        ArrowUp:[0,-1],w:[0,-1],
+        ArrowDown:[0,1],s:[0,1],
+        ArrowLeft:[-1,0],a:[-1,0],
+        ArrowRight:[1,0],d:[1,0]
+      };
+
+      const move=keys[e.key.length===1 ? e.key.toLowerCase() : e.key];
+
+      if(move){
+        e.preventDefault();
+        pixelMove(move[0],move[1]);
+      }
+    });
+  }
+
+  pixelRender();
+}
+
+function pixelMove(dx,dy){
+  if(!G || !G.c || G.c.dead) return;
+
+  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+
+  G.pixelMap.x=Math.max(1,Math.min(16,G.pixelMap.x+dx));
+  G.pixelMap.y=Math.max(1,Math.min(9,G.pixelMap.y+dy));
+
+  pixelRender();
+}
+
+function pixelResetPosition(){
+  if(!G) return;
+  G.pixelMap={x:8,y:7};
+  pixelRender();
+}
+
+function pxRect(ctx,x,y,w,h,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(x,y,w,h);
+}
+
+function pxPerson(ctx,x,y,shirt,skin,hair){
+  x*=32;
+  y*=32;
+
+  // เงา
+  pxRect(ctx,x+8,y+26,16,3,"#29352b");
+
+  // ขาและลำตัว
+  pxRect(ctx,x+10,y+20,5,7,"#34425b");
+  pxRect(ctx,x+18,y+20,5,7,"#34425b");
+  pxRect(ctx,x+7,y+11,18,11,shirt);
+  pxRect(ctx,x+4,y+14,4,7,shirt);
+  pxRect(ctx,x+24,y+14,4,7,shirt);
+
+  // ศีรษะและผม
+  pxRect(ctx,x+9,y+3,14,10,skin);
+  pxRect(ctx,x+8,y+1,16,5,hair);
+  pxRect(ctx,x+7,y+4,3,6,hair);
+
+  // ดวงตา
+  pxRect(ctx,x+12,y+7,2,2,"#171a20");
+  pxRect(ctx,x+19,y+7,2,2,"#171a20");
+}
+
+function pxTree(ctx,x,y){
+  x*=32;
+  y*=32;
+
+  pxRect(ctx,x+13,y+17,7,13,"#77502d");
+  pxRect(ctx,x+5,y+6,22,16,"#2b693e");
+  pxRect(ctx,x+9,y+2,15,13,"#3b8549");
+  pxRect(ctx,x+11,y+7,5,4,"#75b05a");
+}
+
+function pxHouse(ctx,x,y,roof,shop){
+  x*=32;
+  y*=32;
+
+  pxRect(ctx,x+3,y+13,27,17,"#b88755");
+  pxRect(ctx,x+1,y+8,30,7,roof);
+  pxRect(ctx,x+5,y+4,22,6,roof);
+  pxRect(ctx,x+12,y+19,8,11,"#513b2c");
+  pxRect(ctx,x+5,y+17,5,5,"#9dd7dc");
+  pxRect(ctx,x+23,y+17,5,5,"#9dd7dc");
+
+  if(shop){
+    pxRect(ctx,x+22,y+11,8,4,"#f2d68b");
+    pxRect(ctx,x+25,y+15,3,3,"#f2d68b");
+  }
+}
+
+function pixelRender(){
+  if(!G || !G.c) return;
+
+  if(!document.getElementById("pixelPanel")) pixelInit();
+
+  const canvas=document.getElementById("pixelCanvas");
+  if(!canvas) return;
+
+  const ctx=canvas.getContext("2d");
+  if(!ctx) return;
+
+  ctx.imageSmoothingEnabled=false;
+
+  const tile=32;
+  const cols=18;
+  const rows=11;
+
+  // พื้นหญ้า
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const grass=(x*7+y*11)%5===0 ? "#477b45" :
+        ((x+y)%4===0 ? "#51854a" : "#5a914e");
+
+      pxRect(ctx,x*tile,y*tile,tile,tile,grass);
+
+      if((x*3+y*5)%7===0){
+        pxRect(ctx,x*tile+7,y*tile+8,3,3,"#75a85a");
+      }
+    }
+  }
+
+  // ลำธาร
+  for(let x=0;x<cols;x++){
+    pxRect(ctx,x*tile,2*tile,tile,tile,"#367da4");
+    pxRect(ctx,x*tile,2*tile+5,tile,3,"#5aa6c7");
+
+    if(x%3===0){
+      pxRect(ctx,x*tile+12,2*tile+18,8,3,"#85c9d7");
+    }
+  }
+
+  // ถนนและสะพาน
+  pxRect(ctx,0,5*tile,cols*tile,tile,"#b59a67");
+  pxRect(ctx,8*tile,3*tile,tile,7*tile,"#b59a67");
+  pxRect(ctx,7*tile,2*tile,3*tile,tile,"#8a633e");
+  pxRect(ctx,0,5*tile+3,cols*tile,2,"#d7bf8b");
+
+  // บ้านและร้านค้า
+  pxHouse(ctx,3,3,"#9d4f42",false);
+  pxHouse(ctx,12,3,"#65508f",true);
+  pxHouse(ctx,13,7,"#9d4f42",false);
+
+  // แปลงเพาะปลูก
+  pxRect(ctx,2*tile,7*tile,2*tile,2*tile,"#795c37");
+
+  for(let x=2;x<4;x++){
+    for(let y=7;y<9;y++){
+      pxRect(ctx,x*tile+4,y*tile+4,24,24,"#4e8a43");
+      pxRect(ctx,x*tile+10,y*tile+9,4,4,"#e0c75f");
+      pxRect(ctx,x*tile+20,y*tile+18,4,4,"#e0c75f");
+    }
+  }
+
+  // ต้นไม้
+  [
+    [1,1],[3,1],[5,1],[15,1],[16,2],
+    [1,8],[5,9],[10,9],[15,9],[16,8],[5,7],[10,1]
+  ].forEach(function(p){
+    pxTree(ctx,p[0],p[1]);
+  });
+
+  // NPC ที่อยู่ในพื้นที่เดียวกับตัวละคร
+  const local=(G.world.npcs||[]).filter(function(n){
+    return n.location===G.location;
+  }).slice(0,8);
+
+  local.forEach(function(n){
+    const id=Number(n.id)||1;
+    const x=1+((id*5+3)%15);
+    const y=3+((id*3+Math.floor(id/2))%6);
+
+    pxPerson(ctx,x,y,"#bd7453","#e7b78d","#4a3028");
+
+    pxRect(ctx,x*tile+5,y*tile-4,22,7,"#202b27");
+    ctx.fillStyle="#fff1c4";
+    ctx.font="7px monospace";
+    ctx.fillText(String(n.name||"NPC").slice(0,8),x*tile+6,y*tile+1);
+  });
+
+  // ตัวละครผู้เล่น
+  const p=G.pixelMap || (G.pixelMap={x:8,y:7});
+
+  pxPerson(ctx,p.x,p.y,"#4d76c9","#f0c39b","#5a3727");
+
+  pxRect(ctx,p.x*tile+6,p.y*tile-5,20,6,"#25314a");
+  ctx.fillStyle="#ffffff";
+  ctx.font="bold 7px monospace";
+  ctx.fillText("YOU",p.x*tile+8,p.y*tile-1);
+
+  // หน้าต่างสถานะ
+  const c=G.c;
+  const values={
+    pxName:c.name,
+    pxRace:c.race,
+    pxHp:Math.max(0,c.hp)+"/"+c.maxHp,
+    pxEnergy:Math.round(c.energy)+"%",
+    pxGold:c.gold+" G",
+    pxNpcs:local.length,
+    pxCoords:p.x+","+p.y
+  };
+
+  Object.keys(values).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.textContent=values[id];
+  });
+
+  const loc=document.getElementById("pixelLocation");
+
+  if(loc){
+    loc.textContent=G.location+" · "+timeLabel();
+  }
+}
+
+function pixelInteract(){
+  if(!G || !G.c) return;
+
+  const p=G.pixelMap || (G.pixelMap={x:8,y:7});
+  const local=(G.world.npcs||[]).filter(function(n){
+    return n.location===G.location;
+  });
+
+  let nearest=null;
+  let distance=999;
+
+  local.forEach(function(n){
+    const id=Number(n.id)||1;
+    const x=1+((id*5+3)%15);
+    const y=3+((id*3+Math.floor(id/2))%6);
+    const d=Math.abs(x-p.x)+Math.abs(y-p.y);
+
+    if(d<distance){
+      distance=d;
+      nearest=n;
+    }
+  });
+
+  if(nearest && distance<=2){
+    const select=document.getElementById("npcSelect");
+
+    if(select){
+      select.value=String(nearest.id);
+    }
+
+    if(typeof talkNPC==="function"){
+      talkNPC();
+    }
+  }else{
+    if(typeof meetNPC==="function"){
+      meetNPC();
+    }
+
+    log("แผนที่","คุณมองหาผู้คนในบริเวณใกล้เคียง");
+  }
+
+  pixelRender();
+}
+
+/* ===== END PIXEL MAP ===== */
+
+
+function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
+lcInit();
+evtInit();
+escInit();
+</script>
+</body>
+</html>
