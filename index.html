@@ -1243,9 +1243,9 @@ function setAIPreference(key, value) {
   render();
 }
 
-function runAIDecision(manual = false) {
-  if (!G || G.c.dead) return;
 
+function runAIDecision(manual = false) {
+  if (!G || !G.c || G.c.dead) return;
   G.auto = G.auto || {
     enabled: true, goal: "balanced", risk: "low", minutes: 0
   };
@@ -1254,99 +1254,207 @@ function runAIDecision(manual = false) {
   const c = G.c;
   const goal = G.auto.goal || "balanced";
   const risk = G.auto.risk || "low";
-  let action = "";
+  const race = String(c.race || "");
+  const personality = String(c.personality || "");
+  const talent = String(c.talent || "");
+  const flaw = String(c.flaw || "");
+  const origin = String(c.origin || "");
+  const hpRate = c.hp / Math.max(1, c.maxHp);
+  const energy = c.energy ?? 50;
+  const hunger = c.hunger ?? 0;
+  const thirst = c.thirst ?? 0;
+  const inventory = c.inventory || [];
 
-  // ความต้องการพื้นฐานต้องมาก่อนเป้าหมายอื่น
-  if (c.thirst >= 50 &&
-      c.inventory.some(i => i.type === "drink" && i.qty > 0)) {
-    consumeType("drink");
-    c.thirst = clamp(c.thirst - 45, 0, 100);
-    action = "ดื่มน้ำเพื่อลดความกระหาย";
+  // ตรวจสอบทรัพยากรที่มีอยู่จริง
+  const hasItem = type =>
+    inventory.some(i => i.type === type && i.qty > 0);
 
-  } else if (c.hunger >= 50 &&
-      c.inventory.some(i => i.type === "food" && i.qty > 0)) {
-    consumeType("food");
-    c.hunger = clamp(c.hunger - 35, 0, 100);
-    action = "กินอาหารเพื่อบรรเทาความหิว";
+  // ค่าความชอบจากนิสัย ความสามารถ และประสบการณ์
+  const has = (text, words) =>
+    words.some(w => text.includes(w));
 
-  } else if (c.energy <= 25 || c.stamina <= 5) {
-    c.energy = clamp(c.energy + 20, 0, 100);
-    c.stamina = clamp(c.stamina + 10, 0, c.maxStamina);
-    action = "พักเพื่อฟื้นฟูร่างกาย";
+  const brave = has(personality, ["กล้าหาญ", "ห้าวหาญ", "ใจกล้า"]);
+  const kind = has(personality, ["ใจดี", "เมตตา", "เห็นอกเห็นใจ"]);
+  const cautious = has(personality, ["ระแวง", "ขี้กลัว", "รอบคอบ"]);
+  const cunning = has(personality, ["เจ้าเล่ห์", "ฉลาดแกมโกง"]);
+  const curious = has(personality, ["อยากรู้อยากเห็น", "ช่างสงสัย"]);
+  const greedy = has(personality + flaw, ["โลภ", "เห็นแก่ตัว"]);
+  const observant = has(talent, ["ช่างสังเกต", "สังเกต"]);
+  const weakBody = has(flaw, ["ร่างกายอ่อนแอ", "อ่อนแอ"]);
 
-  } else if (currentMonster &&
-      (risk === "low" || c.hp < c.maxHp * 0.4)) {
-    const monsterName = currentMonster.name;
-    currentMonster = null;
-    action = "หลีกเลี่ยง " + monsterName
-      + " เพราะประเมินว่าอันตรายเกินไป";
+  // แต่ละกิจกรรมจะได้รับคะแนนตามสถานการณ์
+  const actions = [];
+  const add = (name, score, reason, run) => {
+    actions.push({ name, score, reason, run });
+  };
 
-  } else if (c.age < 12) {
-    if (goal === "social") {
-      c.social++;
-      c.fame += 1;
-      action = "ช่วยเหลือผู้คนในชุมชน";
-    } else {
-      c.knowledge++;
-      c.skill++;
-      action = "เรียนรู้ทักษะพื้นฐานตามวัย";
-    }
-
-  } else if (goal === "wealth") {
-    const income = rand(3, 8) + (c.jobLevel || 1);
-    c.gold += income;
-    c.energy = Math.max(0, c.energy - 5);
-    action = "ทำงานหาเงิน ได้ " + income + " เหรียญ";
-
-  } else if (goal === "skill") {
-    const skill = pick(["skill", "knowledge", "craft", "survival"]);
-    c[skill] = (c[skill] || 0) + 1;
-    c.energy = Math.max(0, c.energy - 5);
-    action = "ฝึกฝนทักษะ " + skill;
-
-  } else if (goal === "explore") {
-    if (risk === "low" && danger() >= 3) {
-      c.knowledge++;
-      action = "ศึกษาข้อมูลพื้นที่อันตรายจากจุดปลอดภัย";
-    } else {
-      const item = pick(["สมุนไพรป่า", "แร่ดิบ", "เห็ดเรืองแสง"]);
-      addItem(item, 1, "material", 5);
-      c.survival++;
-      c.energy = Math.max(0, c.energy - 5);
-      action = "สำรวจพื้นที่และเก็บ " + item;
-    }
-
-  } else if (goal === "social") {
-    c.social++;
-    c.trust++;
-    action = "พูดคุยและสร้างความสัมพันธ์";
-
-  } else if (goal === "peaceful") {
-    c.knowledge++;
-    c.energy = clamp(c.energy + 3, 0, 100);
-    action = "ใช้ชีวิตอย่างสงบและเรียนรู้สิ่งใหม่";
-
-  } else {
-    const choice = pick(["train", "work", "social"]);
-    if (choice === "train") {
-      c.skill++;
-      c.energy = Math.max(0, c.energy - 5);
-      action = "ฝึกทักษะ";
-    } else if (choice === "work") {
-      const income = rand(2, 6);
-      c.gold += income;
-      c.energy = Math.max(0, c.energy - 5);
-      action = "ทำงานเล็กน้อย ได้ " + income + " เหรียญ";
-    } else {
-      c.social++;
-      action = "พบปะผู้คนในชุมชน";
-    }
+  // 1. ความต้องการพื้นฐานต้องมีน้ำหนักสูง
+  if (thirst >= 35 && hasItem("drink")) {
+    add("drink", 45 + thirst * 0.8,
+      "เลือกดื่มน้ำเพราะร่างกายเริ่มขาดน้ำ", () => {
+        consumeType("drink");
+        c.thirst = clamp(c.thirst - 45, 0, 100);
+      });
   }
 
-  G.auto.last = action;
-  log("การตัดสินใจ", action);
+  if (hunger >= 35 && hasItem("food")) {
+    add("eat", 42 + hunger * 0.8,
+      "เลือกกินอาหารเพราะเริ่มหิว", () => {
+        consumeType("food");
+        c.hunger = clamp(c.hunger - 35, 0, 100);
+      });
+  }
+
+  if (energy <= 45 || c.stamina <= 10 || hpRate <= 0.4) {
+    let score = 25 + (100 - energy) * 0.45;
+    if (c.stamina <= 10) score += 20;
+    if (hpRate <= 0.4) score += 35;
+    if (weakBody) score += 12;
+
+    add("rest", score, "พักฟื้นเพื่อรักษากำลังและลดความเสี่ยง", () => {
+      c.energy = clamp(energy + 25, 0, 100);
+      c.stamina = clamp(c.stamina + 15, 0, c.maxStamina);
+    });
+  }
+
+  // 2. ประเมินภัยคุกคามก่อนทำกิจกรรมอื่น
+  if (currentMonster) {
+    let fleeScore = risk === "low" ? 65 : 25;
+    if (hpRate < 0.6) fleeScore += 25;
+    if (c.stamina < 10) fleeScore += 15;
+    if (cautious) fleeScore += 18;
+    if (brave) fleeScore -= 15;
+
+    add("flee", fleeScore,
+      "หลีกเลี่ยง " + currentMonster.name +
+      " หลังประเมินกำลังและความเสี่ยง", () => {
+        currentMonster = null;
+      });
+  }
+
+  // 3. เป้าหมายระยะยาว
+  let workScore = 20;
+  if (goal === "wealth") workScore += 30;
+  if (greedy) workScore += 12;
+  if (cunning) workScore += 5;
+  if (c.gold < 10) workScore += 18;
+  if (energy < 25) workScore -= 20;
+
+  add("work", workScore, "ทำงานเพื่อสร้างรายได้", () => {
+    const income = rand(3, 8) + (c.jobLevel || 1);
+    c.gold += income;
+    c.energy = clamp(c.energy - 6, 0, 100);
+  });
+
+  let trainScore = 20;
+  if (goal === "skill") trainScore += 30;
+  if (brave) trainScore += 8;
+  if (race.includes("มังกร") || race.includes("นักรบ")) {
+    trainScore += 5;
+  }
+  if (energy < 30) trainScore -= 20;
+
+  add("train", trainScore, "ฝึกฝนเพื่อพัฒนาความสามารถ", () => {
+    const skill = pick(["skill", "knowledge", "craft", "survival"]);
+    c[skill] = (c[skill] || 0) + 1;
+    c.energy = clamp(c.energy - 6, 0, 100);
+    c.stamina = clamp(c.stamina - 2, 0, c.maxStamina);
+  });
+
+  let exploreScore = 18;
+  if (goal === "explore") exploreScore += 32;
+  if (curious) exploreScore += 12;
+  if (observant) exploreScore += 8;
+  if (risk === "high") exploreScore += 10;
+  if (cautious) exploreScore -= 10;
+  if (hpRate < 0.5) exploreScore -= 25;
+  if (energy < 25) exploreScore -= 18;
+
+  // ความสามารถเฉพาะเผ่าช่วยเปลี่ยนการตัดสินใจ
+  if (race.includes("เอลฟ์")) exploreScore += 14;
+  if (race.includes("สัตว์")) exploreScore += 8;
+  if (race.includes("วิญญาณ")) exploreScore += 8;
+
+  add("explore", exploreScore, "สำรวจพื้นที่ตามความสนใจและความพร้อม", () => {
+    const item = race.includes("เอลฟ์")
+      ? pick(["สมุนไพรป่า", "เห็ดเรืองแสง", "สมุนไพรป่า"])
+      : race.includes("คนแคระ")
+        ? pick(["แร่ดิบ", "แร่ดิบ", "สมุนไพรป่า"])
+        : race.includes("วิญญาณ")
+          ? pick(["เห็ดเรืองแสง", "สมุนไพรป่า", "แร่ดิบ"])
+          : pick(["สมุนไพรป่า", "แร่ดิบ", "เห็ดเรืองแสง"]);
+
+    addItem(item, 1, "material", 5);
+    c.survival = (c.survival || 0) + 1;
+    c.energy = clamp(c.energy - 6, 0, 100);
+    c.knowledge = (c.knowledge || 0) + (curious ? 2 : 1);
+  });
+
+  let socialScore = 20;
+  if (goal === "social") socialScore += 30;
+  if (kind) socialScore += 15;
+  if (cunning) socialScore += 4;
+  if (origin.includes("พ่อค้า")) socialScore += 5;
+
+  add("social", socialScore, "พูดคุยและสร้างความสัมพันธ์กับผู้คน", () => {
+    c.social = (c.social || 0) + 1;
+    c.trust = (c.trust || 0) + (kind ? 2 : 1);
+    c.fame = (c.fame || 0) + 1;
+    c.energy = clamp(c.energy - 2, 0, 100);
+  });
+
+  let learnScore = 20;
+  if (goal === "skill") learnScore += 10;
+  if (goal === "peaceful") learnScore += 12;
+  if (curious) learnScore += 12;
+  if (observant) learnScore += 8;
+
+  // เด็กควรเน้นการเรียนรู้และพัฒนาตัวเอง
+  if (c.age < 12) learnScore += 35;
+
+  add("learn", learnScore, "เรียนรู้จากสิ่งรอบตัว", () => {
+    c.knowledge = (c.knowledge || 0) + 1;
+    c.skill = (c.skill || 0) + 1;
+    c.energy = clamp(energy - 2, 0, 100);
+  });
+
+  add("peaceful",
+    goal === "peaceful" ? 48 : 15,
+    "ใช้ชีวิตอย่างสงบและฟื้นฟูจิตใจ", () => {
+      c.knowledge = (c.knowledge || 0) + 1;
+      c.energy = clamp(energy + 5, 0, 100);
+    });
+
+  // 4. เลือกทางเลือกคะแนนสูงสุด พร้อมความแปรผันเล็กน้อย
+  // เพื่อไม่ให้ตัวละครทำสิ่งเดิมซ้ำทุกครั้ง
+  for (const a of actions) {
+    a.score += Math.random() * 7;
+
+    if (a.name === "work" && goal === "explore") a.score -= 5;
+    if (a.name === "explore" && goal === "wealth") a.score -= 5;
+    if (a.name === "social" && goal === "peaceful") a.score -= 3;
+  }
+
+  actions.sort((a, b) => b.score - a.score);
+  const chosen = actions[0];
+
+  if (!chosen) return;
+
+  chosen.run();
+
+  // เก็บผลการตัดสินใจไว้ให้ผู้เล่นเข้าใจพฤติกรรม AI
+  G.auto.last = chosen.reason;
+  c.lastAction = chosen.reason;
+
+  if (Array.isArray(c.lifeHistory)) {
+    c.lifeHistory.push(chosen.reason);
+    if (c.lifeHistory.length > 100) c.lifeHistory.shift();
+  }
+
+  log("การตัดสินใจ", chosen.reason);
   render();
 }
+
 
 function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
 escInit();
