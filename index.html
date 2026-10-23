@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Another Life — ชีวิตหนึ่งในต่างโลก</title>
+<style>
+:root{color-scheme:dark;--bg:#10151d;--panel:#1b2531;--panel2:#222f3d;--text:#edf2f7;--muted:#a9b7c6;--gold:#e7c17b;--line:#354658;--green:#8bd5ad;--red:#e99797}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#293b4c 0,#10151d 64%);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:auto;padding:22px 15px 55px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.brand{font-weight:900;font-size:1.5rem;color:var(--gold);letter-spacing:.04em}.subtitle,.muted,small{color:var(--muted)}button,select,input{font:inherit;color:var(--text);background:#304256;border:1px solid #4c6279;border-radius:10px;padding:10px 13px}button{cursor:pointer}button:hover{filter:brightness(1.13)}.soft{background:#263441}.danger{background:#512f38}.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(270px,.75fr);gap:15px}.panel{background:linear-gradient(145deg,#1c2733,#17202a);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 35px #0002}.panel h2,.panel h3{margin:0 0 9px}.eyebrow{font-size:.75rem;letter-spacing:.12em;color:var(--gold);text-transform:uppercase}.story{white-space:pre-line;font-size:1.04rem}.choices{display:grid;gap:9px;margin-top:16px}.choice{text-align:left;background:#263443;padding:12px 14px;border-color:#3b4e61}.choice b{display:block;color:var(--gold)}.choice span{display:block;color:#d1dce7;font-size:.9rem}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{background:#111a23;border:1px solid #2d3a49;padding:9px 10px;border-radius:10px}.stat small{display:block}.stat strong{font-size:1.05rem}.meter{height:5px;background:#334150;border-radius:8px;overflow:hidden;margin-top:5px}.meter span{display:block;height:100%;background:var(--green)}.log{max-height:230px;overflow:auto;padding-left:20px;color:var(--muted);font-size:.9rem}.grave{border-left:3px solid var(--gold);padding-left:12px;margin:10px 0}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tag{display:inline-block;border:1px solid #526477;border-radius:999px;padding:2px 8px;font-size:.78rem;color:#c6d3df;margin:2px}.footer{color:var(--muted);font-size:.8rem;margin-top:18px}.notice{color:var(--green)}.hidden{display:none!important}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding:13px 9px 35px}.panel{padding:15px}}
+</style>
+</head>
+<body><main>
+<header class="top"><div><div class="brand">✦ ANOTHER LIFE</div><div class="subtitle">ชีวิตหนึ่งในต่างโลก · ไม่มีผู้ถูกเลือก มีเพียงคนที่ใช้ชีวิต</div></div><div class="row"><button id="saveBtn" class="soft">บันทึกเกม</button><button id="loadBtn" class="soft">โหลดเกม</button><button id="resetBtn" class="danger">เริ่มโลกใหม่</button></div></header>
+<div class="grid">
+<section class="panel"><div class="eyebrow" id="chapter">บทที่ 1</div><h2 id="eventTitle">กำลังเริ่มต้นชีวิต…</h2><div class="story" id="story"></div><div id="choices" class="choices"></div><div id="afterlife" class="hidden"></div><div id="message" class="notice"></div></section>
+<aside class="panel"><h3>คนธรรมดาคนหนึ่ง</h3><div id="identity"></div><div class="stats" id="stats" style="margin-top:12px"></div><h3 style="margin-top:18px">คนที่รู้จัก</h3><div id="relations" class="muted">ความสัมพันธ์จะเกิดขึ้นระหว่างทาง</div><h3 style="margin-top:18px">ความทรงจำ</h3><ul class="log" id="log"></ul></aside>
+</div>
+<section class="panel" style="margin-top:15px"><div class="eyebrow">โลกที่ยังดำเนินต่อ</div><h3>เหตุการณ์ที่โลกจดจำ</h3><div id="world" class="muted"></div><div class="footer">ต้นแบบเกมเล่นในเบราว์เซอร์ · บันทึกไว้ในเครื่องนี้ · การตายไม่จำเป็นต้องเป็นจุดจบของโลก</div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const names=["อาริน","มีรา","โทวิน","เซเรน","นารา","เคล","อีวาน","ลูเซีย","เรน","ไอริส","ดารัน","เฟย์","คีรัน","เอลลา"];
+const places=["หมู่บ้านริมธาร","เมืองท่าลูเมน","ชายแดนป่าสน","นครอัสตรา","ชุมชนเหมืองเงิน","ทุ่งหญ้าตะวันตก"];
+const jobs=["ชาวนา","ช่างฝึกหัด","คนส่งสาร","ผู้ช่วยหมอ","ทหารยาม","พ่อค้าเร่","คนเลี้ยงสัตว์","นักคัดลอก","ช่างตีเหล็ก","คนทำขนม"];
+const traits=["ช่างสงสัย","ใจเย็น","ดื้อเงียบ","ใจดี","ระแวดระวัง","พูดเก่ง","รักอิสระ","ทะเยอทะยาน"];
+const pick=a=>a[Math.floor(Math.random()*a.length)],rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a,clamp=(n,a=0,b=100)=>Math.max(a,Math.min(b,n));
+let state;
+function fresh(){return {generation:1,year:0,age:0,alive:true,person:{name:pick(names),place:pick(places),job:pick(jobs),trait:pick(traits),parent:"",partner:"",child:""},stats:{health:82,mood:58,money:20,skill:12,standing:5},relations:[],log:[],world:["ศักราช 412 — ข่าวความขัดแย้งระหว่างนครเริ่มแพร่ไปตามถนน"],eventCount:0}}
+function log(s){state.log.unshift("ปี "+(412+state.year)+" · "+s);state.log=state.log.slice(0,12)}
+function world(s){state.world.push("ศักราช "+(412+state.year)+" — "+s);state.world=state.world.slice(-10)}
+function change(k,n){state.stats[k]=clamp(state.stats[k]+n)}
+function meet(name,type,note){if(!state.relations.some(r=>r.name===name))state.relations.push({name,type,note});state.relations=state.relations.slice(-6);log("ได้รู้จัก "+name)}
+function render(){let p=state.person,s=state.stats;
+$("identity").innerHTML="<b>"+p.name+"</b> · "+p.trait+"<div class='muted'>"+p.job+" · "+p.place+"</div><div class='muted'>รุ่นที่ "+state.generation+" · อายุ "+state.age+" ปี · ศักราช "+(412+state.year)+"</div>"+(p.parent?"<div class='muted'>สืบสายมาจาก "+p.parent+"</div>":"")+(p.partner?"<div class='muted'>คู่ชีวิต: "+p.partner+"</div>":"")+(p.child?"<div class='muted'>บุตร/ธิดา: "+p.child+"</div>":"");
+$("stats").innerHTML=[["สุขภาพ","health"],["ความสุข","mood"],["เงิน","money"],["ทักษะ","skill"],["ชื่อเสียง","standing"]].map(([t,k])=>"<div class='stat'><small>"+t+"</small><strong>"+s[k]+(k==="money"?" เหรียญ":"")+"</strong><div class='meter'><span style='width:"+clamp(s[k])+"%'></span></div></div>").join("");
+$("relations").innerHTML=state.relations.length?state.relations.map(r=>"<div class='grave'><b>"+r.name+"</b> · "+r.type+"<div class='muted'>"+r.note+"</div></div>").join(""):"ยังไม่มีใครสำคัญเป็นพิเศษ และนั่นก็เป็นชีวิตแบบหนึ่ง";
+$("log").innerHTML=state.log.map(x=>"<li>"+x+"</li>").join("");$("world").innerHTML=state.world.slice(-6).map(x=>"<div class='grave'>"+x+"</div>").join("");
+}
+const events=[
+{title:"คนแปลกหน้าข้างบ่อน้ำ",text:"ระหว่างกลับจากงาน คุณพบคนเดินทางบาดเจ็บ เขาบอกว่ามีโจรอยู่บนถนนอีกฟาก สัมภาระของเขามีตรากิลด์พ่อค้า คุณไม่รู้ว่าเขาพูดจริงทั้งหมดหรือไม่",opts:[
+["ช่วยทำแผล","เสียเงิน แต่สร้างความไว้ใจ",()=>{change("money",-4);change("mood",5);meet(pick(names),"คนรู้จัก","คุณเคยช่วยเขาไว้ในวันที่ลำบาก")}],
+["ถามข่าวแล้วกลับ","เก็บข้อมูลโดยไม่เสี่ยงมาก",()=>{change("skill",3);change("mood",-1)}],
+["แจ้งยามประจำหมู่บ้าน","อาจช่วยคนอื่น แต่เสียเวลา",()=>{change("standing",5);change("money",-2);world("ยามเพิ่มการตรวจตราบนถนนสายเหนือ")}]]},
+{title:"ข้อเสนอจากนายจ้าง",text:"นายจ้างเสนอค่าจ้างเพิ่ม หากคุณทำงานล่วงเวลาในช่วงเก็บเกี่ยว ร่างกายเริ่มล้า แต่เงินเก็บยังไม่พอสำหรับวันที่เจ็บป่วย",opts:[
+["รับงานเพิ่ม","ได้เงิน แต่สุขภาพและความสุขลดลง",()=>{change("money",12);change("health",-9);change("mood",-4)}],
+["ปฏิเสธและพัก","รักษาร่างกายไว้ก่อน",()=>{change("health",7);change("mood",4)}],
+["ลองต่อรอง","ใช้ทักษะและความสัมพันธ์",()=>{change("skill",3);if(Math.random()<.55){change("money",6);change("mood",4)}else change("standing",2)}]]},
+{title:"เทศกาลประจำฤดู",text:"ลานกลางหมู่บ้านเต็มไปด้วยเสียงดนตรี ผู้คนแลกเปลี่ยนข่าวและของมือสอง คุณไม่จำเป็นต้องเข้าร่วม แต่คืนนี้อาจเป็นโอกาสได้รู้จักใครสักคน",opts:[
+["ไปร่วมงาน","ใช้เงินเล็กน้อย พบผู้คน",()=>{change("money",-3);change("mood",12);if(Math.random()<.75)meet(pick(names),"มิตรใหม่","พบกันในเทศกาลและยังไม่รู้ว่าจะสนิทกันแค่ไหน")}],
+["ขายของที่ทำไว้","เปลี่ยนเวลาว่างเป็นรายได้",()=>{change("money",8);change("skill",2)}],
+["อยู่บ้านเงียบ ๆ","พักจากความวุ่นวาย",()=>{change("health",4);change("mood",3)}]]},
+{title:"ข่าวจากนครหลวง",text:"ข่าวลือเรื่องการเกณฑ์แรงงานแพร่ไปทั่วตลาด บางคนเชื่อว่าจะเกิดสงคราม บางคนว่าเป็นเพียงการเมืองของขุนนาง คุณมีชีวิตของตัวเองที่ต้องดูแล",opts:[
+["สมัครเป็นอาสาสมัคร","เสี่ยงแต่ได้ค่าตอบแทนและประสบการณ์",()=>{change("money",10);change("skill",7);change("health",-rnd(0,15));change("standing",4)}],
+["ย้ายไปเมืองอื่น","เริ่มต้นใหม่โดยไม่รู้ว่าจะดีขึ้นไหม",()=>{state.person.place=pick(places);change("money",-5);change("mood",5);world(state.person.name+" ย้ายไปยัง"+state.person.place)}],
+["ไม่เข้าไปยุ่ง","ใช้ชีวิตต่อไปตามปกติ",()=>{change("mood",2);change("skill",1)}]]},
+{title:"ความรู้สึกที่ยังไม่กล้าพูด",text:"คนที่คุณรู้จักเริ่มแวะมาหาบ่อยขึ้น คุณไม่แน่ใจว่าเป็นความสนิทใจหรือเพียงความเหงาของทั้งสองฝ่าย",opts:[
+["ชวนคุยอย่างตรงไปตรงมา","ยอมรับความไม่แน่นอน",()=>{if(state.relations.length){let r=state.relations[0];r.note="ความสัมพันธ์ใกล้ชิดขึ้นหลังได้คุยกัน";state.person.partner=r.name;change("mood",12);log("เริ่มต้นความสัมพันธ์กับ "+r.name)}else{let n=pick(names);meet(n,"คนรู้จัก","เริ่มจากบทสนทนาธรรมดา");change("mood",4)}}],
+["รักษาระยะห่าง","ไม่ฝืนความรู้สึก",()=>{change("mood",2);change("skill",1)}],
+["ทุ่มเทกับงานก่อน","อนาคตยังต้องสร้าง",()=>{change("money",7);change("skill",4);change("mood",-2)}]]},
+{title:"วันที่ร่างกายประท้วง",text:"ไข้ขึ้นและปวดตามข้อ คุณอาจฝืนไปทำงานหรือเสียรายได้เพื่อพัก หากปล่อยไว้อาการอาจแย่ลง",opts:[
+["พักและซื้อยา","ใช้เงินเพื่อรักษาตัว",()=>{change("money",-8);change("health",17);change("mood",2)}],
+["ฝืนทำงาน","รายได้สำคัญ แต่มีความเสี่ยง",()=>{change("money",5);change("health",-rnd(8,20))}],
+["ขอความช่วยเหลือ","พึ่งพาคนรอบตัว",()=>{if(state.relations.length){change("health",10);change("mood",7)}else{change("health",3);change("money",-2)}}]]},
+{title:"โอกาสที่ไม่ได้วางแผน",text:"มีคนต้องการผู้ช่วยเดินทางไปอีกเมืองเพื่อส่งเอกสาร ไม่มีใครรับประกันความปลอดภัย แต่ค่าจ้างดีและอาจเปิดประตูสู่ชีวิตใหม่",opts:[
+["ออกเดินทาง","รับความเสี่ยงและโอกาส",()=>{state.person.place=pick(places);change("money",rnd(5,15));change("skill",6);change("health",-rnd(0,8));world(state.person.name+" เดินทางถึง"+state.person.place+" พร้อมข่าวจากแดนไกล")}],
+["ปฏิเสธอย่างสุภาพ","สิ่งที่มีอยู่ก็มีค่า",()=>{change("mood",3);change("standing",1)}],
+["ขอรายละเอียดเพิ่ม","ตัดสินใจเมื่อรู้มากพอ",()=>{change("skill",3);if(Math.random()<.5)change("money",5)}]]},
+{title:"คนในบ้านเริ่มแก่ตัว",text:"คนที่เลี้ยงดูคุณมาหรือญาติผู้ใหญ่เริ่มต้องการความช่วยเหลือมากขึ้น คุณมีเงินและเวลาไม่มากพอจะทำทุกอย่างได้",opts:[
+["ช่วยดูแลเท่าที่ทำได้","เสียเวลาและเงิน แต่รักษาความผูกพัน",()=>{change("money",-5);change("mood",5);change("standing",2)}],
+["จ้างคนช่วยบางส่วน","ใช้เงินเพื่อแบ่งเบาภาระ",()=>{change("money",-9);change("health",3)}],
+["บอกความจริงเรื่องข้อจำกัด","อาจไม่สวยงาม แต่ซื่อตรง",()=>{change("mood",-2);change("skill",2)}]]},
+{title:"ทางเลือกเรื่องครอบครัว",text:"วันเวลาผ่านไป คุณเริ่มคิดถึงสิ่งที่จะทิ้งไว้ให้คนรุ่นหลัง แต่การมีครอบครัวไม่ใช่หน้าที่ที่ทุกคนต้องเลือก",opts:[
+["สร้างครอบครัว","เปิดโอกาสให้มีผู้สืบทอด",()=>{if(!state.person.child){state.person.child=pick(names.filter(n=>n!==state.person.name));change("money",-7);change("mood",8);log("มีบุตร/ธิดาชื่อ "+state.person.child);world(state.person.name+" มีลูกชื่อ "+state.person.child)}else{change("mood",4);change("money",-3)}}],
+["ใช้ชีวิตอิสระต่อไป","ไม่จำเป็นต้องทิ้งทายาท",()=>{change("mood",5);change("skill",2)}],
+["เก็บเงินสร้างมรดก","ฝากสิ่งที่เป็นรูปธรรมไว้",()=>{change("money",6);change("skill",2)}]]},
+{title:"ความเปลี่ยนแปลงของเมือง",text:"ผู้ปกครองท้องถิ่นขึ้นภาษีเพื่อซ่อมกำแพงเมือง ร้านค้าบางร้านเริ่มปิด ขณะที่ช่างก่อสร้างมีงานมากขึ้น ผลกระทบนี้จะอยู่ต่อแม้คุณไม่ได้ทำอะไร",opts:[
+["ร่วมประชุมชาวบ้าน","ส่งเสียงแทนคนธรรมดา",()=>{change("standing",6);if(Math.random()<.5){change("money",-3);world("ชาวบ้านรวมตัวเรียกร้องให้ลดภาษี")}else world("สภาเมืองยืนยันนโยบายภาษีใหม่")}],
+["หางานในโครงการซ่อมเมือง","ใช้สถานการณ์หาโอกาส",()=>{change("money",9);change("skill",3)}],
+["ลดรายจ่ายและรอดู","หลีกเลี่ยงความเสี่ยง",()=>{change("money",2);change("mood",-1)}]]}
+];
+function showEvent(){if(!state.alive)return;let e=pick(events);$("chapter").textContent="บทที่ "+(state.eventCount+1)+" · ศักราช "+(412+state.year);$("eventTitle").textContent=e.title;$("story").textContent=e.text;$("choices").innerHTML="";$("afterlife").classList.add("hidden");$("message").textContent="";e.opts.forEach(([title,desc,fn])=>{let b=document.createElement("button");b.className="choice";b.innerHTML="<b>"+title+"</b><span>"+desc+"</span>";b.onclick=()=>{fn();advance();};$("choices").appendChild(b)});if(state.eventCount%3===2){let b=document.createElement("button");b.className="choice";b.innerHTML="<b>ใช้ชีวิตธรรมดาไปอีกหนึ่งปี</b><span>ทำงาน พักผ่อน และปล่อยให้โลกเดินต่อ</span>";b.onclick=()=>{change("money",rnd(1,6));change("health",rnd(-2,5));change("mood",rnd(-3,5));log("ผ่านปีธรรมดาโดยไม่มีเหตุการณ์ใหญ่");advance()};$("choices").appendChild(b)}}
+function advance(){state.age++;state.year++;state.eventCount++;if(state.age%5===0){change("skill",2);log("ประสบการณ์หลายปีทำให้ทักษะเพิ่มขึ้น")}if(state.age>45)change("health",-rnd(1,4));if(state.age>60)change("health",-rnd(2,6));if(state.age>75)change("health",-rnd(3,8));if(state.stats.health<=0||state.age>=100){die();render();return}render();showEvent()}
+function die(){state.alive=false;world(state.person.name+" เสียชีวิตเมื่ออายุ "+state.age+" ปี โลกยังดำเนินต่อไป");log(state.person.name+" เสียชีวิตเมื่ออายุ "+state.age+" ปี");$("eventTitle").textContent="ชีวิตหนึ่งได้สิ้นสุดลง";$("story").textContent=state.person.name+" ใช้ชีวิต "+state.age+" ปีในโลกนี้ การจากไปไม่ได้หยุดโลกไว้ สิ่งที่เขาทำอาจยังส่งผลต่อคนอื่น";$("choices").innerHTML="";$("afterlife").classList.remove("hidden");$("afterlife").innerHTML="<div class='grave'><b>สิ่งที่เหลือไว้</b><p>เงิน "+state.stats.money+" เหรียญ · ทักษะ "+state.stats.skill+" · คนรู้จัก "+state.relations.length+" คน · "+(state.person.child?"มีผู้สืบทอด "+state.person.child:"ไม่มีทายาทที่ระบุไว้")+"</p></div>"+(state.person.child?"<button id='heirBtn'>เล่นเป็น "+state.person.child+" รุ่นถัดไป →</button> ":"")+"<button id='nextBtn' class='soft'>เริ่มชีวิตคนใหม่ในโลกเดิม</button>";if(state.person.child)$("heirBtn").onclick=()=>heir(true);$("nextBtn").onclick=()=>heir(false);render()}
+function heir(isChild){let old=state.person,oldStats={...state.stats},oldRelations=state.relations.slice(),oldLog=state.log.slice(),oldWorld=state.world.slice(),oldYear=state.year;let name=isChild?old.child:pick(names.filter(n=>n!==old.name));state={generation:state.generation+1,year:oldYear+1,age:0,alive:true,person:{name,place:old.place,job:pick(jobs),trait:pick(traits),parent:old.name,partner:"",child:""},stats:{health:85,mood:55,money:Math.max(3,Math.floor(oldStats.money*.3)),skill:Math.floor(oldStats.skill*.25),standing:Math.floor(oldStats.standing*.25)},relations:oldRelations.slice(0,2),log:oldLog,world:oldWorld,eventCount:0};log(name+" เริ่มต้นชีวิตรุ่นที่ "+state.generation รับมรดกบางส่วนจาก "+old.name);world(name+" เริ่มต้นชีวิตใน"+old.place+" หลัง "+old.name+" จากไป");render();showEvent()}
+function newWorld(){state=fresh();render();showEvent()}
+$("saveBtn").onclick=()=>{try{localStorage.setItem("anotherLifeSave",JSON.stringify(state));$("message").textContent="บันทึกเกมไว้ในเบราว์เซอร์นี้แล้ว";}catch(e){$("message").textContent="บันทึกไม่สำเร็จในเบราว์เซอร์นี้"}};
+$("loadBtn").onclick=()=>{try{let x=localStorage.getItem("anotherLifeSave");if(!x){$("message").textContent="ยังไม่มีข้อมูลบันทึก";return}state=JSON.parse(x);render();if(state.alive)showEvent();else die();$("message").textContent="โหลดเกมแล้ว"}catch(e){$("message").textContent="โหลดเกมไม่สำเร็จ"}};
+$("resetBtn").onclick=()=>{if(confirm("เริ่มโลกใหม่หรือไม่? ถ้าไม่ได้บันทึก ความคืบหน้าเดิมจะหายไป"))newWorld()};
+try{state=JSON.parse(localStorage.getItem("anotherLifeSave"))||fresh()}catch(e){state=fresh()}render();if(state.alive)showEvent();else die();
+</script></body></html>
