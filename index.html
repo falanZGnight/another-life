@@ -550,7 +550,7 @@ return c;
 function startGame(){
 G={world:freshWorld(),c:makeCharacter($("cName").value,$("cRace").value,$("cTalent").value,$("cFlaw").value,$("cPersonality").value,$("cOrigin").value,$("cSpawn").value,$("cJob").value,$("cLife").value),location:$("cSpawn").value,deathReason:"",eventPending:false};
 G.auto = {   enabled: true,   goal: "balanced",   risk: "low",   minutes: 0,   last: "เริ่มต้นชีวิต" }; G.world.lifeCount=1;G.world.visited.push(G.location);
-applyOrigin();ensureMerchant();$("creation").style.display="none";$("game").style.display="block";
+applyOrigin();ensureMerchant();evtInit();$("creation").style.display="none";$("game").style.display="block";
 log("ชีวิตใหม่เริ่มต้น","คุณเกิดใน"+G.location+" เมื่ออายุ 8 ปี อาชีพหลักคือ"+G.c.job+" เส้นทางในอนาคตยังเปิดกว้าง");
 log("โลก",""+LOCATIONS[G.location].desc);
 if(G.c.job!=="ผู้ฝึกหัด")log("อาชีพ","คุณเริ่มต้นเป็น"+G.c.job+" แต่ต้องพัฒนาทักษะเพื่อเลื่อนระดับ");
@@ -3059,29 +3059,6 @@ function evtProcessDay(dayOverride) {
     if (w.danger > 0) w.danger = Math.max(0, w.danger - 1);
     if (w.stability < 60 && !w.flags.war) w.stability++;
   }
-}
-  if(!G || !G.c || G.c.dead)return;
-
-  const w=evtWorld();
-  const day=evtDayNumber();
-
-  if(w.processedDay===day)return;
-  w.processedDay=day;
-
-  // แต่ละหมวดสุ่มแยกกัน มีโอกาสเกิดได้มากกว่าหนึ่งเรื่องในวันเดียว
-  evtFamily();
-  evtDailyLife();
-  evtWorldEvent();
-  evtFantasy();
-  evtNewspaper();
-
-  // โลกค่อย ๆ ฟื้นจากวิกฤต ไม่ค้างตลอดไปโดยไม่มีเหตุผล
-  if(day%7===0){
-    if(w.flags.plague && Math.random()<0.15)w.flags.plague=false;
-    if(w.danger>0)w.danger=Math.max(0,w.danger-1);
-    if(w.stability<60 && !w.flags.war)w.stability++;
-  }
-}
 
 function evtPanelInit(){
   if(document.getElementById("evtPanel"))return;
