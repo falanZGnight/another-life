@@ -269,7 +269,7 @@ const events = [
  text:"มีของมือสองวางขาย ทั้งอาวุธ เกราะ และยาราคาถูก คุณอาจซื้อของได้หากมีเงินพอ",
  opts:[
  ["ทำงานช่วยร้านก่อน","หาเงินเล็กน้อย",()=>{change("money",rnd(4,9));change("skill",2)}],
- ["ซื้อสมุนไพร","ใช้เงิน 3 เหรียญ",()=>{if(state.stats.money>=3){change("money",-3);addItem("herb")}else $("message").textContent="เงินไม่พอซื้อสมุนไพร"],
+ ["ซื้อสมุนไพร","ใช้เงิน 3 เหรียญ",()=>{if(state.stats.money>=3){change("money",-3);addItem("herb")}else $("message").textContent="เงินไม่พอซื้อสมุนไพร"}],
  ["เดินดูเฉย ๆ","ไม่เสียเงิน",()=>{change("knowledge",1);change("mood",2)}]
  ]
 },
