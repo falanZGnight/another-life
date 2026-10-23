@@ -3800,15 +3800,13 @@ function pixelInit(){
   } else if (game) {
     game.insertBefore(panel, game.firstChild);
   }
+if (!G.pixelMap) G.pixelMap = { x: 8, y: 7 };
 
-  if (!G.pixelMap) G.pixelMap = { x: 8, y: 7 };
-
-
-  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+pixelRender();
+pixelStartLoop();
+}
 
 function pxRect(ctx,x,y,w,h,color){
-  ctx.fillStyle=color;
-  ctx.fillRect(x,y,w,h);
 }
 
 function pxPerson(ctx,x,y,shirt,skin,hair){
@@ -3983,101 +3981,6 @@ function pixelStartLoop() {
 }
 /* ===== END LIVING SCENE ===== */
 
-/* ===== LIVING SCENE ANIMATION ===== */
-  
-let pixelFrame = 0;
-let pixelEffects = [];
-let pixelLoopRunning = false;
-
-function pixelShowAction(kind, label) {
-  const canvas = document.getElementById("pixelCanvas");
-  if (!canvas) return;
-
-  const p = G && G.pixelMap ? G.pixelMap : { x: 8, y: 7 };
-
-  pixelEffects.push({
-    kind: kind || "skill",
-    label: label || "ใช้ความสามารถ",
-    x: p.x * 32 + 16,
-    y: p.y * 32 + 10,
-    start: performance.now(),
-    duration: 1200
-  });
-
-  const text = document.getElementById("pixelEffectText");
-  if (text) text.textContent = label || "เกิดพลังงานบางอย่างขึ้น!";
-
-  if (pixelEffects.length > 12) pixelEffects.shift();
-}
-
-function pixelDrawEffects(ctx, now) {
-  pixelEffects = pixelEffects.filter(
-    fx => now - fx.start < fx.duration
-  );
-
-  pixelEffects.forEach(fx => {
-    const progress = (now - fx.start) / fx.duration;
-    const rise = progress * 28;
-    const alpha = Math.max(0, 1 - progress);
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    if (fx.kind === "heal" || fx.kind === "item") {
-      ctx.fillStyle = "#7dffb0";
-      ctx.font = "bold 18px monospace";
-      ctx.fillText("+", fx.x - 5, fx.y - rise);
-      ctx.fillStyle = "#caffdd";
-      ctx.font = "bold 10px monospace";
-      ctx.fillText("HEAL", fx.x - 15, fx.y - 18 - rise);
-    } else if (fx.kind === "skill") {
-      ctx.strokeStyle = "#8bd8ff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(
-        fx.x, fx.y,
-        8 + progress * 24,
-        0, Math.PI * 2
-      );
-      ctx.stroke();
-
-      ctx.fillStyle = "#d4f4ff";
-      ctx.font = "bold 10px monospace";
-      ctx.fillText("SKILL", fx.x - 15, fx.y - 20 - rise);
-    } else {
-      ctx.fillStyle = "#ffe18a";
-      ctx.font = "bold 12px monospace";
-      ctx.fillText("*", fx.x, fx.y - rise);
-    }
-
-    ctx.restore();
-  });
-}
-
-function pixelStartLoop() {
-  if (pixelLoopRunning) return;
-  pixelLoopRunning = true;
-
-  function frame(now) {
-    const panel = document.getElementById("pixelPanel");
-
-    if (!panel || !panel.isConnected) {
-      pixelLoopRunning = false;
-      return;
-    }
-
-    pixelFrame++;
-
-    if (G && G.c) {
-      pixelRender(now);
-    }
-
-    requestAnimationFrame(frame);
-  }
-
-  requestAnimationFrame(frame);
-}
-
 function pixelRender(now = performance.now()){
   if(!G || !G.c) return;
 
@@ -4249,11 +4152,7 @@ function pixelInteract(){
     log("แผนที่","คุณมองหาผู้คนในบริเวณใกล้เคียง");
   }
 
-  pixelRender(); pixelStartLoop();;pixelDrawEffects(ctx, p.x, p.y, now);
-}
-
 /* ===== END PIXEL MAP ===== */
-
 
 function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
 lcInit();
