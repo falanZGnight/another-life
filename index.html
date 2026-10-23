@@ -192,6 +192,241 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   }
 }
 
+/* ===== ANOTHER LIFE: READABLE UI LAYOUT ===== */
+
+/* พื้นที่หลัก */
+main {
+  width: min(100%, 1480px);
+  margin: 0 auto;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* ป้องกันเนื้อหาดันหน้าจอให้กว้างเกิน */
+main > aside,
+main > section {
+  min-width: 0;
+}
+
+/* แผงข้อมูล */
+.panel {
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* หัวข้อแบ่งส่วนให้ชัด */
+.panel h2 {
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.45;
+}
+
+.panel h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+/* ช่องว่างระหว่างคอลัมน์ของระบบต่าง ๆ */
+.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+/* ปุ่มจัดกลุ่มและตัดบรรทัดอัตโนมัติ */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.actions button {
+  margin: 0;
+  min-height: 36px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ช่องเลือกและช่องกรอก */
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+label {
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+/* แสดงค่าสถานะให้อ่านเร็ว */
+.stat {
+  align-items: baseline;
+  padding: 7px 0;
+  gap: 12px;
+}
+
+.stat span {
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+}
+
+.stat b {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* การ์ดข้อมูลและข้อความแจ้งเตือน */
+.card {
+  min-width: 0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.notice {
+  border-radius: 0 8px 8px 0;
+  line-height: 1.65;
+}
+
+/* บันทึกเหตุการณ์ */
+#log {
+  height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+}
+
+/* พื้นที่เกมไม่ให้ลูกล้นขอบ */
+#game {
+  min-width: 0;
+}
+
+#game > .panel,
+#game > .two {
+  min-width: 0;
+}
+
+/* ตาราง/ข้อความยาว/รายการไอเทม */
+#inventory,
+#merchantInfo,
+#professionInfo,
+#locationInfo,
+#politicsInfo,
+#sceneText,
+#sceneActions {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+/* หน้าจอขนาดกลาง */
+@media (max-width: 1000px) {
+  main {
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .two {
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 13px;
+  }
+}
+
+/* แท็บเล็ตและมือถือ */
+@media (max-width: 780px) {
+  main {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px;
+    gap: 12px;
+  }
+
+  main > aside,
+  main > section {
+    width: 100%;
+  }
+
+  .two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  header {
+    padding: 16px 12px;
+  }
+
+  h1 {
+    font-size: 23px;
+  }
+
+  #log {
+    height: 240px;
+  }
+}
+
+/* มือถือจอแคบ */
+@media (max-width: 420px) {
+  main {
+    padding: 7px;
+  }
+
+  .panel {
+    padding: 11px;
+    margin-bottom: 11px;
+  }
+
+  .three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  button {
+    padding: 8px 9px;
+  }
+
+  .pixel-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ลดเอฟเฟกต์สำหรับผู้ที่ตั้งค่าลดการเคลื่อนไหว */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 </style>
 </head>
 <body>
