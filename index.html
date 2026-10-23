@@ -6617,6 +6617,534 @@ function findFood() {
   };
 })();
 
+/* =====================================================
+   ANOTHER LIFE — OPTIONAL EXPANSION
+   1. NPC dialogue / family data
+   2. Primary + secondary professions
+   3. Natural water discoveries
+   4. Special event popups
+   5. Pixel-style race portraits
+   วางก่อน </script> ตัวสุดท้าย
+   ===================================================== */
+(function () {
+  "use strict";
+
+  const PREFIX = "alx-";
+
+  const JOBS = {
+    "นักเก็บสมุนไพร": "ค้นหาสมุนไพรและวัตถุดิบ",
+    "นักตกปลา": "หาอาหารจากแหล่งน้ำ",
+    "นักสำรวจ": "สำรวจพื้นที่และค้นพบสถานที่",
+    "ช่างตีเหล็ก": "ผลิตและซ่อมอุปกรณ์",
+    "นักปรุงยา": "ปรุงยาและสารสกัด",
+    "พ่อครัว": "ทำอาหารและเสบียง",
+    "พ่อค้า": "ซื้อขายและต่อรอง",
+    "เกษตรกร": "เพาะปลูกและจัดการทรัพยากร",
+    "ผู้รักษา": "รักษาบาดแผลและอาการเจ็บป่วย",
+    "นักเจรจา": "เจรจาและไกล่เกลี่ย"
+  };
+
+  const WATERS = [
+    { name: "ตาน้ำ", chance: 0.22 },
+    { name: "ลำธาร", chance: 0.27 },
+    { name: "แอ่งน้ำฝน", chance: 0.22 },
+    { name: "บ่อน้ำซ่อนเร้น", chance: 0.09, rare: true },
+    { name: "ลำธารเรืองแสง", chance: 0.035, rare: true }
+  ];
+
+  const RACE_COLORS = {
+    "มนุษย์": "#e7bd91",
+    "เอลฟ์": "#78d39c",
+    "คนแคระ": "#d69b65",
+    "เผ่าสัตว์": "#e7b46e",
+    "เผ่ามังกรสายเลือดเจือจาง": "#e47e70",
+    "เผ่าวิญญาณ": "#8cdcff"
+  };
+
+  const STYLE = `
+    #alx-panel{margin:14px 0;padding:14px;border:1px solid #40556a;
+      border-radius:12px;background:#17222e;color:#e8f0f8}
+    #alx-panel h3{margin:0 0 8px}
+    .alx-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .alx-buttons button,.alx-modal button{padding:9px 12px;border-radius:8px;
+      border:1px solid #536d85;background:#263b50;color:#fff;cursor:pointer}
+    .alx-small{font-size:12px;color:#adbdce;margin-top:8px}
+    #alx-family{margin-top:10px;line-height:1.7}
+    #alx-overlay{position:fixed;inset:0;z-index:99999;background:#000b;
+      display:flex;align-items:center;justify-content:center;padding:16px}
+    .alx-modal{width:min(520px,100%);max-height:85vh;overflow:auto;
+      background:#17222e;color:#f2f6fc;border:1px solid #7890aa;
+      border-radius:14px;padding:18px;box-shadow:0 15px 60px #0009}
+    .alx-modal h3{margin-top:0}
+    .alx-modal button{display:block;width:100%;margin-top:8px;text-align:left}
+    .alx-pixel{display:inline-grid;grid-template-columns:repeat(8,5px);
+      grid-template-rows:repeat(8,5px);gap:1px;vertical-align:middle;
+      margin-right:10px;image-rendering:pixelated}
+    .alx-pixel i{width:5px;height:5px;background:transparent}
+    .alx-pixel i.on{background:var(--alx-color)}
+  `;
+
+  function getGame() {
+    if (typeof G === "undefined" || !G || !G.c || !G.world) {
+      return null;
+    }
+    return G;
+  }
+
+  function safeLog(category, message) {
+    if (typeof log === "function") {
+      log(category, message);
+    } else if (typeof logEvent === "function") {
+      logEvent(category, message);
+    } else {
+      console.log("[" + category + "] " + message);
+    }
+  }
+
+  function popup(title, message, options = []) {
+    document.getElementById("alx-overlay")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "alx-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "alx-modal";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const text = document.createElement("p");
+    text.textContent = message;
+
+    modal.append(heading, text);
+
+    options.forEach(option => {
+      const button = document.createElement("button");
+      button.textContent = option.label;
+      button.onclick = () => {
+        overlay.remove();
+        try {
+          option.run?.();
+        } catch (error) {
+          console.error("ALX option error:", error);
+        }
+        refreshPanel();
+      };
+      modal.appendChild(button);
+    });
+
+    const close = document.createElement("button");
+    close.textContent = "ปิด";
+    close.onclick = () => overlay.remove();
+    modal.appendChild(close);
+
+    overlay.appendChild(modal);
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+  }
+
+  function getNPC() {
+    const game = getGame();
+    if (!game || !Array.isArray(game.world.npcs)) return null;
+
+    const select = document.getElementById("npcSelect");
+    if (select) {
+      const found = game.world.npcs.find(
+        npc => npc.id === Number(select.value)
+      );
+      if (found) return found;
+    }
+
+    const selectedId = typeof selectedNPC !== "undefined"
+      ? selectedNPC
+      : null;
+
+    return game.world.npcs.find(npc => npc.id === selectedId) || null;
+  }
+
+  function prepareNPC(npc) {
+    npc.gender ||= "ไม่ระบุ";
+    npc.memory = Array.isArray(npc.memory) ? npc.memory : [];
+    npc.family ||= {
+      parents: [],
+      siblings: [],
+      partner: null,
+      children: []
+    };
+
+    for (const key of ["like", "trust", "respect", "fear", "intimacy"]) {
+      if (!Number.isFinite(npc[key])) npc[key] = 0;
+    }
+    return npc;
+  }
+
+  function prepareGame() {
+    const game = getGame();
+    if (!game) return null;
+
+    game.world.npcs ||= [];
+    game.world.naturalWater ||= [];
+    game.world.specialMaterials ||= [];
+
+    game.c.professions ||= {
+      primary: "",
+      secondary: [],
+      skill: {}
+    };
+
+    const jobs = game.c.professions;
+    jobs.secondary = Array.isArray(jobs.secondary)
+      ? jobs.secondary
+      : [];
+    jobs.skill ||= {};
+
+    game.world.npcs.forEach(prepareNPC);
+    return game;
+  }
+
+  function pixelPortrait(race) {
+    const color = RACE_COLORS[race] || RACE_COLORS["มนุษย์"];
+
+    // ภาพพิกเซลขนาดเล็กแบบสร้างจาก CSS
+    const pixels = [
+      0,0,1,1,1,1,0,0,
+      0,1,1,1,1,1,1,0,
+      1,1,2,1,1,2,1,1,
+      1,1,1,1,1,1,1,1,
+      0,1,1,1,1,1,1,0,
+      0,0,1,1,1,1,0,0,
+      0,1,1,1,1,1,1,0,
+      1,1,1,0,0,1,1,1
+    ];
+
+    return '<span class="alx-pixel" style="--alx-color:' +
+      color + '">' +
+      pixels.map(pixel =>
+        '<i class="' + (pixel ? "on" : "") + '"></i>'
+      ).join("") +
+      '</span>';
+  }
+
+  function dialogueMenu() {
+    const npc = getNPC();
+
+    if (!npc) {
+      popup("ยังไม่มี NPC", "ให้ใช้คำสั่งพบปะผู้คนก่อน");
+      return;
+    }
+
+    prepareNPC(npc);
+
+    const options = [
+      {
+        label: "คุยเล่น",
+        text: "เริ่มบทสนทนาทั่วไป",
+        effect: () => { npc.like += 1; }
+      },
+      {
+        label: "ถามสารทุกข์สุขดิบ",
+        text: "แสดงความใส่ใจ",
+        effect: () => { npc.trust += 1; npc.like += 1; }
+      },
+      {
+        label: "ถามเรื่องครอบครัว",
+        text: "ถามถึงพ่อแม่ พี่น้อง หรือคนสำคัญ",
+        effect: () => {
+          npc.trust += 1;
+          npc.memory.push("ถามเรื่องครอบครัว");
+        }
+      },
+      {
+        label: "ชมเชย",
+        text: "ชื่นชมความสามารถของอีกฝ่าย",
+        effect: () => { npc.like += 2; }
+      },
+      {
+        label: "ขอคำแนะนำ",
+        text: "ให้เกียรติประสบการณ์ของ NPC",
+        effect: () => { npc.respect += 1; npc.trust += 1; }
+      },
+      {
+        label: "เปิดใจเรื่องส่วนตัว",
+        text: "ต้องมีความไว้ใจอย่างน้อย 2",
+        effect: () => {
+          if (npc.trust < 2) {
+            popup("ยังไม่สนิทพอ",
+              npc.name + " ยังไม่ไว้ใจพอที่จะเปิดใจ");
+            return false;
+          }
+          npc.intimacy += 1;
+          npc.trust += 1;
+        }
+      },
+      {
+        label: "หยอกล้อ",
+        text: "อาจทำให้สนิทขึ้นหรืออึดอัดกว่าเดิม",
+        effect: () => {
+          if (Math.random() < 0.3) npc.fear += 1;
+          else npc.like += 2;
+        }
+      }
+    ];
+
+    popup(
+      "บทสนทนากับ " + npc.name,
+      "เพศ: " + npc.gender +
+      " · ความชอบ " + npc.like +
+      " · ไว้ใจ " + npc.trust +
+      " · เคารพ " + npc.respect +
+      " · สนิท " + npc.intimacy,
+      options.map(option => ({
+        label: option.label + " — " + option.text,
+        run: () => {
+          const result = option.effect();
+          if (result === false) return;
+
+          npc.memory.push("บทสนทนา: " + option.label);
+          safeLog("ความสัมพันธ์",
+            "พูดคุยกับ " + npc.name + " ในหัวข้อ" + option.label);
+
+          if (typeof actionTime === "function") actionTime(10);
+          if (typeof render === "function") render();
+        }
+      }))
+    );
+  }
+
+  function professionMenu() {
+    const game = prepareGame();
+    if (!game) return;
+
+    const data = game.c.professions;
+    const options = [];
+
+    Object.keys(JOBS).forEach(job => {
+      options.push({
+        label: (data.primary === job ? "✓ " : "") +
+          "ตั้งเป็นอาชีพหลัก: " + job,
+        run: () => {
+          data.primary = job;
+          safeLog("อาชีพ", "อาชีพหลัก: " + job);
+        }
+      });
+    });
+
+    Object.keys(JOBS).forEach(job => {
+      if (job === data.primary) return;
+
+      const active = data.secondary.includes(job);
+      options.push({
+        label: (active ? "นำออกจากอาชีพรอง: " : "เพิ่มอาชีพรอง: ") + job,
+        run: () => {
+          if (data.secondary.includes(job)) {
+            data.secondary = data.secondary.filter(item => item !== job);
+          } else if (data.secondary.length >= 2) {
+            popup("สล็อตอาชีพรองเต็ม",
+              "อาชีพรองมีได้สูงสุด 2 สาย กรุณาถอดสายเดิมก่อน");
+            return;
+          } else {
+            data.secondary.push(job);
+            data.skill[job] ||= 0;
+          }
+
+          safeLog("อาชีพ",
+            "หลัก: " + (data.primary || "ยังไม่เลือก") +
+            " / รอง: " + (data.secondary.join(", ") || "ยังไม่มี"));
+        }
+      });
+    });
+
+    popup(
+      "จัดการอาชีพ",
+      "อาชีพหลัก 1 สล็อต · อาชีพรองสูงสุด 2 สล็อต\n" +
+      "อาชีพเหล่านี้แยกจากคลาสต่อสู้เดิม",
+      options
+    );
+  }
+
+  function searchWater() {
+    const game = prepareGame();
+    if (!game) return;
+
+    if (typeof spendActivity === "function" &&
+        !spendActivity(35, 5)) return;
+
+    const place = String(game.location || "พื้นที่ปัจจุบัน");
+    const explorerBonus =
+      game.c.professions.primary === "นักสำรวจ" ? 0.08 : 0;
+
+    const found = WATERS.filter(water =>
+      Math.random() < Math.min(0.95, water.chance + explorerBonus)
+    );
+
+    if (!found.length) {
+      safeLog("สำรวจ", "ยังไม่พบแหล่งน้ำธรรมชาติที่ " + place);
+      if (typeof render === "function") render();
+      return;
+    }
+
+    const water = found[0];
+    const clean = Math.random() >= 0.25;
+
+    game.world.naturalWater.push({
+      id: "water-" + Date.now() + "-" + Math.floor(Math.random() * 10000),
+      name: water.name,
+      location: place,
+      clean,
+      discovered: true
+    });
+
+    if (water.name === "บ่อน้ำซ่อนเร้น") {
+      game.world.specialMaterials.push("หยดน้ำพุวิญญาณ");
+    }
+    if (water.name === "ลำธารเรืองแสง") {
+      game.world.specialMaterials.push("ผลึกธารา");
+    }
+
+    popup(
+      "ค้นพบแหล่งน้ำธรรมชาติ!",
+      water.name + " ณ " + place + "\n" +
+      (clean
+        ? "น้ำดูใส แต่ควรทำให้สะอาดก่อนดื่ม"
+        : "อาจมีสิ่งปนเปื้อน ควรต้มหรือทำให้บริสุทธิ์") +
+      (water.rare ? "\nพบร่องรอยวัตถุดิบพิเศษด้วย" : ""),
+      [
+        {
+          label: "บันทึกแหล่งน้ำ",
+          run: () => safeLog("สำรวจ",
+            "บันทึก " + water.name + " ที่ " + place)
+        },
+        {
+          label: "เก็บตัวอย่างน้ำ",
+          run: () => {
+            if (typeof addItem === "function") {
+              addItem(water.name + " (ตัวอย่าง)", 1, "material", 5);
+            }
+            safeLog("วัตถุดิบ", "เก็บตัวอย่างจาก " + water.name);
+          }
+        }
+      ]
+    );
+
+    if (typeof render === "function") render();
+  }
+
+  function checkSpecial() {
+    const game = prepareGame();
+    if (!game) return;
+
+    const conditions = [];
+    const materials = game.world.specialMaterials;
+    const npc = getNPC();
+
+    if (materials.includes("หยดน้ำพุวิญญาณ")) {
+      conditions.push("พบหยดน้ำพุวิญญาณ");
+    }
+    if (materials.includes("ผลึกธารา")) {
+      conditions.push("พบผลึกธารา");
+    }
+    if (npc && npc.trust >= 5) {
+      conditions.push("NPC ที่เลือกมีความไว้ใจตั้งแต่ 5 ขึ้นไป");
+    }
+    if (game.c.professions.primary &&
+        game.c.professions.secondary.length) {
+      conditions.push("มีทั้งอาชีพหลักและอาชีพรอง");
+    }
+
+    if (!conditions.length) {
+      popup("ยังไม่มีเงื่อนไขพิเศษ",
+        "สำรวจพื้นที่ สร้างความสัมพันธ์ และค้นหาวัตถุดิบหายากเพื่อปลดล็อกเงื่อนไข");
+      return;
+    }
+
+    popup("ตรวจพบเงื่อนไขพิเศษ", conditions.join("\n"));
+  }
+
+  function ensurePanel() {
+    if (document.getElementById("alx-panel")) return;
+
+    const style = document.createElement("style");
+    style.textContent = STYLE;
+    document.head.appendChild(style);
+
+    const panel = document.createElement("section");
+    panel.id = "alx-panel";
+    panel.innerHTML = `
+      <h3>ระบบเสริม Another Life</h3>
+      <div class="alx-small">
+        บทสนทนา · อาชีพ · แหล่งน้ำ · เงื่อนไขพิเศษ · ภาพพิกเซล
+      </div>
+      <div class="alx-buttons">
+        <button id="alx-dialogue">คุยกับ NPC</button>
+        <button id="alx-profession">จัดการอาชีพ</button>
+        <button id="alx-water">ค้นหาแหล่งน้ำ</button>
+        <button id="alx-special">ตรวจเงื่อนไขพิเศษ</button>
+      </div>
+      <div id="alx-family"></div>
+    `;
+
+    const anchor = document.getElementById("identity");
+    if (anchor && anchor.parentElement) {
+      anchor.parentElement.insertAdjacentElement("afterend", panel);
+    } else {
+      document.body.appendChild(panel);
+    }
+
+    document.getElementById("alx-dialogue").onclick = dialogueMenu;
+    document.getElementById("alx-profession").onclick = professionMenu;
+    document.getElementById("alx-water").onclick = searchWater;
+    document.getElementById("alx-special").onclick = checkSpecial;
+  }
+
+  function refreshPanel() {
+    const game = prepareGame();
+    const panel = document.getElementById("alx-family");
+    if (!game || !panel) return;
+
+    const npc = getNPC();
+    const jobs = game.c.professions;
+
+    panel.innerHTML =
+      "<p><b>อาชีพหลัก:</b> " +
+      (jobs.primary || "ยังไม่เลือก") + "</p>" +
+      "<p><b>อาชีพรอง:</b> " +
+      (jobs.secondary.join(", ") || "ยังไม่มี") + "</p>" +
+      "<p><b>แหล่งน้ำที่ค้นพบ:</b> " +
+      game.world.naturalWater.length + " แห่ง</p>" +
+      (npc
+        ? "<p>" + pixelPortrait(npc.race) +
+          "<b>" + npc.name + "</b> · " + npc.race +
+          " · เพศ " + npc.gender +
+          "<br>ชอบ " + npc.like +
+          " / ไว้ใจ " + npc.trust +
+          " / สนิท " + npc.intimacy + "</p>"
+        : "<p>เลือก NPC เพื่อดูความสัมพันธ์</p>");
+  }
+
+  function init() {
+    ensurePanel();
+    prepareGame();
+    refreshPanel();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // ไม่แทนที่ render() เดิม เพื่อหลีกเลี่ยงการทับซ้อนระบบหลัก
+  document.addEventListener("change", event => {
+    if (event.target?.id === "npcSelect") refreshPanel();
+  });
+
+  window.addEventListener("load", () => {
+    init();
+  });
+
+})();
+
 </script>
 </body>
 </html>
