@@ -30,6 +30,105 @@ button:hover{filter:brightness(1.18)}button:disabled{opacity:.4;cursor:not-allow
 #deathOverlay .panel{max-width:520px;width:100%;border-color:#a65c63}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 @media(max-width:780px){main{grid-template-columns:1fr}.two{grid-template-columns:1fr}#log{height:240px}}
+
+/* ===== 16-BIT PIXEL RPG ===== */
+.pixel-panel {
+  padding: 12px;
+  margin-bottom: 14px;
+  background: #17221d;
+  border: 3px solid #6d5638;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #26392b;
+}
+.pixel-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pixel-heading h2 {
+  color: #f4d58a;
+  font-family: monospace;
+  margin: 0 0 10px;
+}
+.pixel-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+}
+.pixel-screen {
+  overflow: hidden;
+  border: 4px solid #3c4935;
+  background: #101a16;
+}
+#pixelCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: manipulation;
+}
+.pixel-side {
+  padding: 10px;
+  color: #e8edcf;
+  background: #101a16;
+  border: 2px solid #3c4935;
+  font: 13px monospace;
+}
+.pixel-side h3 {
+  margin: 0 0 8px;
+  color: #f4d58a;
+}
+.pixel-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 5px 0;
+  border-bottom: 1px solid #314133;
+}
+.pixel-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 8px;
+}
+.pixel-controls button,
+.pixel-actions button {
+  margin: 0;
+  border: 2px solid #6d5638;
+  border-radius: 2px;
+  background: #3b4b35;
+  font-family: monospace;
+}
+.pixel-controls button {
+  min-height: 38px;
+  padding: 6px;
+}
+.pixel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.pixel-help {
+  color: #b8c6ae;
+  font-size: 12px;
+}
+@media(max-width:650px) {
+  .pixel-layout {
+    grid-template-columns: 1fr;
+  }
+  .pixel-side {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 10px;
+  }
+  .pixel-side h3 {
+    grid-column: 1/-1;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -116,6 +215,13 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div class="two">
 <div>
 <label>ชื่อตัวละคร</label><input id="cName" value="เรน">
+<label>เพศตัวละคร</label>
+<select id="cGender">
+  <option value="ชาย">ชาย</option>
+  <option value="หญิง">หญิง</option>
+  <option value="ไม่ระบุ">ไม่ระบุ</option>
+</select>
+
 <label>เผ่าพันธุ์</label>
 <select id="cRace">
 <option value="มนุษย์">มนุษย์ — ปรับตัวได้ดี</option>
@@ -322,14 +428,90 @@ const LOCATIONS={
 "เขตชายแดน":{danger:4,desc:"ด่านชายแดนที่มีทหาร ผู้ลี้ภัย และการปะทะระหว่างกลุ่มอำนาจ",jobs:["นักผจญภัย","ผู้ลาดตระเวน","ผู้รักษา"]},
 "ชุมชนเอลฟ์":{danger:2,desc:"ชุมชนในป่าลึกที่เชี่ยวชาญสมุนไพรและเวทมนตร์",jobs:["นักวิจัย","ผู้รักษา","ผู้ลาดตระเวน"]}
 };
+
 const RACES={
-"มนุษย์":{hp:0,atk:0,magic:0,skill:"ปรับตัว"},
-"เอลฟ์":{hp:-2,atk:0,magic:3,skill:"สัมผัสธรรมชาติ"},
-"คนแคระ":{hp:5,atk:1,magic:-1,skill:"ช่างโลหะ"},
-"เผ่าสัตว์":{hp:1,atk:2,magic:0,skill:"ประสาทสัมผัส"},
-"เผ่ามังกรสายเลือดเจือจาง":{hp:6,atk:3,magic:2,skill:"สายเลือดมังกร"},
-"เผ่าวิญญาณ":{hp:-4,atk:0,magic:5,skill:"สัมผัสวิญญาณ"}
+  "มนุษย์":{hp:0,atk:0,magic:0,skill:"ปรับตัว",adultAge:15,lifeExpectancy:80,maxAge:110},
+  "เอลฟ์":{hp:-2,atk:0,magic:3,skill:"สัมผัสธรรมชาติ",adultAge:30,lifeExpectancy:750,maxAge:1200},
+  "คนแคระ":{hp:5,atk:1,magic:-1,skill:"ช่างโลหะ",adultAge:20,lifeExpectancy:250,maxAge:400},
+  "เผ่าสัตว์":{hp:1,atk:2,magic:0,skill:"ประสาทสัมผัส",adultAge:15,lifeExpectancy:100,maxAge:150},
+  "เผ่ามังกรสายเลือดเจือจาง":{hp:6,atk:3,magic:2,skill:"สายเลือดมังกร",adultAge:25,lifeExpectancy:180,maxAge:300},
+  "เผ่าวิญญาณ":{hp:-4,atk:0,magic:5,skill:"สัมผัสวิญญาณ",adultAge:18,lifeExpectancy:500,maxAge:1000}
 };
+
+  
+const AGE_RULES = {
+  "มนุษย์": {
+    adult: 15,
+    elder: 60,
+    lifespan: 80
+  },
+  "เอลฟ์": {
+    adult: 30,
+    elder: 350,
+    lifespan: 500
+  },
+  "คนแคระ": {
+    adult: 20,
+    elder: 140,
+    lifespan: 200
+  },
+  "เผ่าสัตว์": {
+    adult: 15,
+    elder: 65,
+    lifespan: 90
+  },
+  "เผ่ามังกรสายเลือดเจือจาง": {
+    adult: 50,
+    elder: 700,
+    lifespan: 1000
+  },
+  "เผ่าวิญญาณ": {
+    adult: 18,
+    elder: 250,
+    lifespan: 400
+  }
+};
+
+function ageRule(race) {
+  return AGE_RULES[race] || AGE_RULES["มนุษย์"];
+}
+
+function maturityStage(age, race) {
+  const rule = ageRule(race);
+
+  if (age < rule.adult * 0.6) return "เด็ก";
+  if (age < rule.adult) return "วัยกำลังเติบโต";
+  if (age >= rule.lifespan) return "สิ้นอายุขัยตามธรรมชาติ";
+  if (age >= rule.elder) return "ผู้สูงวัย";
+  return "ผู้ใหญ่";
+}
+
+function raceRules(race){
+  const r=RACES[race]||RACES["มนุษย์"];
+  return {
+    adultAge:r.adultAge||15,
+    lifeExpectancy:r.lifeExpectancy||80,
+    maxAge:r.maxAge||110
+  };
+}
+
+function ageStage(person){
+  const rules=raceRules(person.race);
+  const age=Number(person.age)||0;
+
+  if(age<3) return "ทารก";
+  if(age<10) return "เด็กเล็ก";
+  if(age<rules.adultAge-3) return "เด็ก";
+  if(age<rules.adultAge) return "วัยรุ่น";
+  if(age<rules.lifeExpectancy*0.75) return "ผู้ใหญ่";
+  if(age<rules.maxAge) return "สูงวัย";
+  return "ชรามาก";
+}
+
+function isAdult(person){
+  return Number(person.age)>=raceRules(person.race).adultAge;
+}
+
 const JOBS={
 "ผู้ฝึกหัด":"ฝึกทักษะได้กว้าง แต่ยังไม่มีรายได้เฉพาะทาง",
 "นักผจญภัย":"รับงานสำรวจ ต่อสู้ และกำจัดภัยคุกคาม",
@@ -348,7 +530,13 @@ return {year:1,minute:8*60,day:1,month:0,events:[],history:[],politics:35,trade:
 }
 function makeCharacter(name,race,talent,flaw,personality,origin,spawn,job,life){
 const rr=RACES[race]||RACES["มนุษย์"];
-let c={name:name||"เรน",race,talent,flaw,personality,origin,spawn,job,lifePath:life,age:8,
+let c={
+name:name||"เรน",
+race,
+gender:$("cGender") ? $("cGender").value : "ไม่ระบุ",
+talent,flaw,personality,origin,spawn,job,
+lifePath:life,
+age:8,
 hp:30+rr.hp+(talent==="ร่างกายแข็งแกร่ง"?8:0)+(flaw==="ร่างกายอ่อนแอ"?-8:0),
 maxHp:30+rr.hp+(talent==="ร่างกายแข็งแกร่ง"?8:0)+(flaw==="ร่างกายอ่อนแอ"?-8:0),
 stamina:30,maxStamina:30,mana:12+rr.magic*2-(flaw==="พลังเวทต่ำ"?6:0),maxMana:12+rr.magic*2-(flaw==="พลังเวทต่ำ"?6:0),
@@ -795,7 +983,18 @@ function randomNPC(){
 let names=["อาริน","ลูเซีย","โทเรน","มีรา","เซฟ","คาเอล","นารา","เอลเวน","ดาเรน","ฟีรา","ออร์น","เวส"];
 let roles=["ช่างฝีมือ","นักเดินทาง","พ่อค้า","ผู้รักษา","ทหารยาม","นักเรียน","นักวิจัย","ชาวนา"];
 let races=Object.keys(RACES);
-let n={id:G.world.nextNPC++,name:pick(names)+rand(1,99),race:pick(races),role:pick(roles),personality:pick(["สุขุม","ใจดี","ระแวง","กล้าหาญ","เจ้าเล่ห์"]),location:G.location,
+
+let race=pick(races);
+let n={
+id:G.world.nextNPC++,
+name:pick(names)+rand(1,99),
+race,
+gender:pick(["ชาย","หญิง","ไม่ระบุ"]),
+age:rand(5,Math.min(60,raceRules(race).maxAge)),
+role:pick(roles),
+personality:pick(["สุขุม","ใจดี","ระแวง","กล้าหาญ","เจ้าเล่ห์"]),
+location:G.location,
+
 like:0,trust:0,fear:0,respect:0,intimacy:0,friend:false,party:false,inviteUntil:0,memory:[],known:true};
 G.world.npcs.push(n);return n;
 }
@@ -842,7 +1041,35 @@ let s=$("npcSelect"),old=s.value;s.innerHTML="";
 G.world.npcs.filter(n=>n.known).forEach(n=>{let o=document.createElement("option");o.value=n.id;o.textContent=n.name+" — "+n.role+" ("+n.location+")";s.appendChild(o);});
 if(old)s.value=old;
 }
+
+
 function ageTick(){
+  if(!G||!G.c) return;
+
+  let c=G.c;
+  let totalDays=(G.world.year-1)*360+
+    G.world.month*30+G.world.day;
+
+  if(!Number.isFinite(Number(c.age))) c.age=8;
+
+  if(!c.lastAgeDay) c.lastAgeDay=totalDays;
+
+  if(totalDays-c.lastAgeDay>=360){
+    let years=Math.floor((totalDays-c.lastAgeDay)/360);
+    let oldAge=c.age;
+    c.age+=years;
+    c.lastAgeDay+=years*360;
+
+    log("เติบโต",c.name+" มีอายุ "+c.age+" ปีแล้ว");
+
+    if(oldAge<raceRules(c.race).adultAge &&
+       c.age>=raceRules(c.race).adultAge){
+      log("เติบโต",c.name+" เติบโตเป็นผู้ใหญ่ตามธรรมเนียมของเผ่า"+c.race);
+    }
+  }
+}
+
+  
 let c=G.c;
 let totalDays=(G.world.year-1)*360+G.world.month*30+G.world.day;
 if(!c.lastAgeDay)c.lastAgeDay=totalDays;
@@ -992,9 +1219,20 @@ function newLife(){
 
 function render(){
 if(!G)return;
+
+pixelInit();
+pixelRender();
+  
 ageTick();
 let c=G.c,w=G.world;
-$("identity").innerHTML=`<b>${esc(c.name)}</b> · ${esc(c.race)}<br>อายุ ${c.age} ปี · ${esc(c.personality)}<br><span class="muted">${esc(c.origin)} / ${esc(c.talent)}</span>`;
+
+const rules=raceRules(c.race);
+$("identity").innerHTML=
+  `<b>${esc(c.name)}</b> · ${esc(c.race)}<br>`+
+  `เพศ ${esc(c.gender||"ไม่ระบุ")} · อายุ ${c.age} ปี<br>`+
+  `${ageStage(c)} · วัยผู้ใหญ่ตั้งแต่อายุ ${rules.adultAge} ปี<br>`+
+  `<span class="muted">${esc(c.personality)} · ${esc(c.origin)} / ${esc(c.talent)}</span>`;
+
 $("stats").innerHTML=`<div class="stat"><span>HP</span><b>${Math.max(0,c.hp)}/${c.maxHp}</b></div><div class="bar"><span style="width:${clamp(c.hp/c.maxHp*100,0,100)}%"></span></div>
 <div class="stat"><span>พลังงาน</span><b>${Math.round(c.energy)}%</b></div><div class="bar"><span style="width:${c.energy}%"></span></div>
 <div class="stat"><span>แรงกาย</span><b>${c.stamina}/${c.maxStamina}</b></div>
@@ -3036,6 +3274,336 @@ function evtProcessPeriod() {
     false
   );
 }
+
+  
+/* ===== ANOTHER LIFE PIXEL MAP ===== */
+
+function pixelInit(){
+  if(!G || !G.c) return;
+  if(document.getElementById("pixelPanel")) return;
+
+  const panel=document.createElement("div");
+  panel.id="pixelPanel";
+  panel.className="pixel-panel";
+
+  panel.innerHTML=
+    '<div class="pixel-heading">'+
+      '<h2>ANOTHER LIFE · FIELD MAP</h2>'+
+      '<span id="pixelLocation">หมู่บ้าน</span>'+
+    '</div>'+
+    '<div class="pixel-layout">'+
+      '<div>'+
+        '<div class="pixel-screen">'+
+          '<canvas id="pixelCanvas" width="576" height="352"></canvas>'+
+        '</div>'+
+        '<div class="pixel-controls">'+
+          '<span></span>'+
+          '<button onclick="pixelMove(0,-1)">▲</button>'+
+          '<span></span>'+
+          '<button onclick="pixelMove(-1,0)">◀</button>'+
+          '<button onclick="pixelMove(0,1)">▼</button>'+
+          '<button onclick="pixelMove(1,0)">▶</button>'+
+        '</div>'+
+        '<div class="pixel-actions">'+
+          '<button onclick="pixelInteract()">พบ/คุยกับ NPC</button>'+
+          '<button onclick="pixelResetPosition()">กลับจุดเริ่ม</button>'+
+        '</div>'+
+        '<p class="pixel-help">ใช้ WASD หรือปุ่มลูกศรเพื่อเดิน</p>'+
+      '</div>'+
+      '<aside class="pixel-side">'+
+        '<h3>PLAYER STATUS</h3>'+
+        '<div class="pixel-stat"><span>ชื่อ</span><b id="pxName">-</b></div>'+
+        '<div class="pixel-stat"><span>เผ่า</span><b id="pxRace">-</b></div>'+
+        '<div class="pixel-stat"><span>HP</span><b id="pxHp">-</b></div>'+
+        '<div class="pixel-stat"><span>พลังงาน</span><b id="pxEnergy">-</b></div>'+
+        '<div class="pixel-stat"><span>เงิน</span><b id="pxGold">-</b></div>'+
+        '<div class="pixel-stat"><span>NPC</span><b id="pxNpcs">0</b></div>'+
+        '<div class="pixel-stat"><span>ตำแหน่ง</span><b id="pxCoords">-</b></div>'+
+      '</aside>'+
+    '</div>';
+
+  const game=document.getElementById("game");
+  const scene=game ? game.querySelector(".panel") : null;
+
+  if(scene && scene.parentNode){
+    scene.parentNode.insertBefore(panel,scene.nextSibling);
+  }else if(game){
+    game.insertBefore(panel,game.firstChild);
+  }
+
+  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+
+  if(!window.pixelKeysBound){
+    window.pixelKeysBound=true;
+
+    document.addEventListener("keydown",function(e){
+      if(!G || G.c.dead) return;
+
+      const game=document.getElementById("game");
+      if(!game || game.style.display==="none") return;
+
+      if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+
+      const keys={
+        ArrowUp:[0,-1],w:[0,-1],
+        ArrowDown:[0,1],s:[0,1],
+        ArrowLeft:[-1,0],a:[-1,0],
+        ArrowRight:[1,0],d:[1,0]
+      };
+
+      const move=keys[e.key.length===1 ? e.key.toLowerCase() : e.key];
+
+      if(move){
+        e.preventDefault();
+        pixelMove(move[0],move[1]);
+      }
+    });
+  }
+
+  pixelRender();
+}
+
+function pixelMove(dx,dy){
+  if(!G || !G.c || G.c.dead) return;
+
+  if(!G.pixelMap) G.pixelMap={x:8,y:7};
+
+  G.pixelMap.x=Math.max(1,Math.min(16,G.pixelMap.x+dx));
+  G.pixelMap.y=Math.max(1,Math.min(9,G.pixelMap.y+dy));
+
+  pixelRender();
+}
+
+function pixelResetPosition(){
+  if(!G) return;
+  G.pixelMap={x:8,y:7};
+  pixelRender();
+}
+
+function pxRect(ctx,x,y,w,h,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(x,y,w,h);
+}
+
+function pxPerson(ctx,x,y,shirt,skin,hair){
+  x*=32;
+  y*=32;
+
+  // เงา
+  pxRect(ctx,x+8,y+26,16,3,"#29352b");
+
+  // ขาและลำตัว
+  pxRect(ctx,x+10,y+20,5,7,"#34425b");
+  pxRect(ctx,x+18,y+20,5,7,"#34425b");
+  pxRect(ctx,x+7,y+11,18,11,shirt);
+  pxRect(ctx,x+4,y+14,4,7,shirt);
+  pxRect(ctx,x+24,y+14,4,7,shirt);
+
+  // ศีรษะและผม
+  pxRect(ctx,x+9,y+3,14,10,skin);
+  pxRect(ctx,x+8,y+1,16,5,hair);
+  pxRect(ctx,x+7,y+4,3,6,hair);
+
+  // ดวงตา
+  pxRect(ctx,x+12,y+7,2,2,"#171a20");
+  pxRect(ctx,x+19,y+7,2,2,"#171a20");
+}
+
+function pxTree(ctx,x,y){
+  x*=32;
+  y*=32;
+
+  pxRect(ctx,x+13,y+17,7,13,"#77502d");
+  pxRect(ctx,x+5,y+6,22,16,"#2b693e");
+  pxRect(ctx,x+9,y+2,15,13,"#3b8549");
+  pxRect(ctx,x+11,y+7,5,4,"#75b05a");
+}
+
+function pxHouse(ctx,x,y,roof,shop){
+  x*=32;
+  y*=32;
+
+  pxRect(ctx,x+3,y+13,27,17,"#b88755");
+  pxRect(ctx,x+1,y+8,30,7,roof);
+  pxRect(ctx,x+5,y+4,22,6,roof);
+  pxRect(ctx,x+12,y+19,8,11,"#513b2c");
+  pxRect(ctx,x+5,y+17,5,5,"#9dd7dc");
+  pxRect(ctx,x+23,y+17,5,5,"#9dd7dc");
+
+  if(shop){
+    pxRect(ctx,x+22,y+11,8,4,"#f2d68b");
+    pxRect(ctx,x+25,y+15,3,3,"#f2d68b");
+  }
+}
+
+function pixelRender(){
+  if(!G || !G.c) return;
+
+  if(!document.getElementById("pixelPanel")) pixelInit();
+
+  const canvas=document.getElementById("pixelCanvas");
+  if(!canvas) return;
+
+  const ctx=canvas.getContext("2d");
+  if(!ctx) return;
+
+  ctx.imageSmoothingEnabled=false;
+
+  const tile=32;
+  const cols=18;
+  const rows=11;
+
+  // พื้นหญ้า
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const grass=(x*7+y*11)%5===0 ? "#477b45" :
+        ((x+y)%4===0 ? "#51854a" : "#5a914e");
+
+      pxRect(ctx,x*tile,y*tile,tile,tile,grass);
+
+      if((x*3+y*5)%7===0){
+        pxRect(ctx,x*tile+7,y*tile+8,3,3,"#75a85a");
+      }
+    }
+  }
+
+  // ลำธาร
+  for(let x=0;x<cols;x++){
+    pxRect(ctx,x*tile,2*tile,tile,tile,"#367da4");
+    pxRect(ctx,x*tile,2*tile+5,tile,3,"#5aa6c7");
+
+    if(x%3===0){
+      pxRect(ctx,x*tile+12,2*tile+18,8,3,"#85c9d7");
+    }
+  }
+
+  // ถนนและสะพาน
+  pxRect(ctx,0,5*tile,cols*tile,tile,"#b59a67");
+  pxRect(ctx,8*tile,3*tile,tile,7*tile,"#b59a67");
+  pxRect(ctx,7*tile,2*tile,3*tile,tile,"#8a633e");
+  pxRect(ctx,0,5*tile+3,cols*tile,2,"#d7bf8b");
+
+  // บ้านและร้านค้า
+  pxHouse(ctx,3,3,"#9d4f42",false);
+  pxHouse(ctx,12,3,"#65508f",true);
+  pxHouse(ctx,13,7,"#9d4f42",false);
+
+  // แปลงเพาะปลูก
+  pxRect(ctx,2*tile,7*tile,2*tile,2*tile,"#795c37");
+
+  for(let x=2;x<4;x++){
+    for(let y=7;y<9;y++){
+      pxRect(ctx,x*tile+4,y*tile+4,24,24,"#4e8a43");
+      pxRect(ctx,x*tile+10,y*tile+9,4,4,"#e0c75f");
+      pxRect(ctx,x*tile+20,y*tile+18,4,4,"#e0c75f");
+    }
+  }
+
+  // ต้นไม้
+  [
+    [1,1],[3,1],[5,1],[15,1],[16,2],
+    [1,8],[5,9],[10,9],[15,9],[16,8],[5,7],[10,1]
+  ].forEach(function(p){
+    pxTree(ctx,p[0],p[1]);
+  });
+
+  // NPC ที่อยู่ในพื้นที่เดียวกับตัวละคร
+  const local=(G.world.npcs||[]).filter(function(n){
+    return n.location===G.location;
+  }).slice(0,8);
+
+  local.forEach(function(n){
+    const id=Number(n.id)||1;
+    const x=1+((id*5+3)%15);
+    const y=3+((id*3+Math.floor(id/2))%6);
+
+    pxPerson(ctx,x,y,"#bd7453","#e7b78d","#4a3028");
+
+    pxRect(ctx,x*tile+5,y*tile-4,22,7,"#202b27");
+    ctx.fillStyle="#fff1c4";
+    ctx.font="7px monospace";
+    ctx.fillText(String(n.name||"NPC").slice(0,8),x*tile+6,y*tile+1);
+  });
+
+  // ตัวละครผู้เล่น
+  const p=G.pixelMap || (G.pixelMap={x:8,y:7});
+
+  pxPerson(ctx,p.x,p.y,"#4d76c9","#f0c39b","#5a3727");
+
+  pxRect(ctx,p.x*tile+6,p.y*tile-5,20,6,"#25314a");
+  ctx.fillStyle="#ffffff";
+  ctx.font="bold 7px monospace";
+  ctx.fillText("YOU",p.x*tile+8,p.y*tile-1);
+
+  // หน้าต่างสถานะ
+  const c=G.c;
+  const values={
+    pxName:c.name,
+    pxRace:c.race,
+    pxHp:Math.max(0,c.hp)+"/"+c.maxHp,
+    pxEnergy:Math.round(c.energy)+"%",
+    pxGold:c.gold+" G",
+    pxNpcs:local.length,
+    pxCoords:p.x+","+p.y
+  };
+
+  Object.keys(values).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.textContent=values[id];
+  });
+
+  const loc=document.getElementById("pixelLocation");
+
+  if(loc){
+    loc.textContent=G.location+" · "+timeLabel();
+  }
+}
+
+function pixelInteract(){
+  if(!G || !G.c) return;
+
+  const p=G.pixelMap || (G.pixelMap={x:8,y:7});
+  const local=(G.world.npcs||[]).filter(function(n){
+    return n.location===G.location;
+  });
+
+  let nearest=null;
+  let distance=999;
+
+  local.forEach(function(n){
+    const id=Number(n.id)||1;
+    const x=1+((id*5+3)%15);
+    const y=3+((id*3+Math.floor(id/2))%6);
+    const d=Math.abs(x-p.x)+Math.abs(y-p.y);
+
+    if(d<distance){
+      distance=d;
+      nearest=n;
+    }
+  });
+
+  if(nearest && distance<=2){
+    const select=document.getElementById("npcSelect");
+
+    if(select){
+      select.value=String(nearest.id);
+    }
+
+    if(typeof talkNPC==="function"){
+      talkNPC();
+    }
+  }else{
+    if(typeof meetNPC==="function"){
+      meetNPC();
+    }
+
+    log("แผนที่","คุณมองหาผู้คนในบริเวณใกล้เคียง");
+  }
+
+  pixelRender();
+}
+
+/* ===== END PIXEL MAP ===== */
 
 
 function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
