@@ -1161,22 +1161,24 @@ const ITEM_CATALOG = (() => {
 /* ===== END ITEM DATABASE ===== */
 
 function refreshMerchant(silent=false){
-let pool = ITEM_CATALOG.filter(item => item.type !== "quest");
-  {name:"ขนมปัง",type:"food",value:3},
-  {name:"น้ำสะอาด",type:"drink",value:2},
-  {name:"ผ้าพันแผล",type:"heal",value:8},
-  {name:"สมุนไพรป่า",type:"material",value:5},
-  {name:"แร่ดิบ",type:"material",value:7},
-  {name:"ยาชุบชีวิต",type:"revive",value:180},
-  {name:"ยาฟื้นพลัง",type:"heal",value:18},
-  {name:"ชุดเครื่องมือ",type:"tool",value:14},
-  {name:"ผลึกเวท",type:"material",value:22},
-  {name:"หมวกผ้า",type:"gear",slot:"head",value:8},
-  {name:"เสื้อเกราะหนัง",type:"gear",slot:"body",value:25},
-  {name:"กางเกงเดินทาง",type:"gear",slot:"legs",value:12},
-  {name:"ดาบเหล็ก",type:"gear",slot:"weapon",value:35},
-  {name:"เสื้อคลุมเวท",type:"gear",slot:"body",value:40}
-];
+  let pool = ITEM_CATALOG.filter(item => item.type !== "quest");
+
+    let defaultItems = [
+    {name:"ขนมปัง",type:"food",value:3},
+    {name:"น้ำสะอาด",type:"drink",value:2},
+    {name:"ผ้าพันแผล",type:"heal",value:8},
+    {name:"สมุนไพรป่า",type:"material",value:5},
+    {name:"แร่ดิบ",type:"material",value:7},
+    {name:"ยาชุบชีวิต",type:"revive",value:180},
+    {name:"ยาฟื้นพลัง",type:"heal",value:18},
+    {name:"ชุดเครื่องมือ",type:"tool",value:14},
+    {name:"ผลึกเวท",type:"material",value:22},
+    {name:"หมวกผ้า",type:"gear",slot:"head",value:8},
+    {name:"เสื้อเกราะหนัง",type:"gear",slot:"body",value:25},
+    {name:"กางเกงเดินทาง",type:"gear",slot:"legs",value:12},
+    {name:"ดาบเหล็ก",type:"gear",slot:"weapon",value:35},
+    {name:"เสื้อคลุมเวท",type:"gear",slot:"body",value:40}
+  ];
 
 G.world.merchant=[];
 let count=rand(4,6);
