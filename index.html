@@ -4534,23 +4534,50 @@ function findWater() {
   logEvent("น้ำ", "พบน้ำจากธรรมชาติ 1 หน่วย");
   render();
 }
-  function findFood() {
-    const island = currentIsland();
-    const res = G.world.archipelago.resources[island.id];
-
-    if (!spendActivity(45, 6)) return;
-
-    if (res.food <= 0) {
-      logEvent("อาหาร","อาหารธรรมชาติบนเกาะนี้เริ่มขาดแคลน");
-      render();
-      return;
-    }
-
-    res.food--;
-    addItem("ผลไม้ป่า",1,"food",3);
-    logEvent("อาหาร","พบผลไม้ป่า 1 หน่วย");
-    render();
+  
+function findFood() {
+  // ตรวจสอบและซ่อมข้อมูลโลกก่อนเข้าถึงทรัพยากร
+  if (!initData()) {
+    console.error("findFood: ข้อมูลโลกหรือผู้เล่นยังไม่พร้อม");
+    return;
   }
+
+  const island = currentIsland();
+  const archipelago = G.world.archipelago;
+
+  // ป้องกันข้อมูลทรัพยากรหายจากเซฟเก่า
+  archipelago.resources ||= {};
+
+  if (!archipelago.resources[island.id]) {
+    archipelago.resources[island.id] = {
+      water: island.water ?? 0,
+      food: island.food ?? 0,
+      wood: island.wood ?? 0,
+      ore: island.ore ?? 0
+    };
+  }
+
+  const res = archipelago.resources[island.id];
+
+  // ซ่อมค่าทรัพยากรที่ไม่ถูกต้อง
+  if (typeof res.food !== "number" || !Number.isFinite(res.food)) {
+    res.food = island.food ?? 0;
+  }
+
+  if (!spendActivity(45, 6)) return;
+
+  if (res.food <= 0) {
+    logEvent("อาหาร", "อาหารธรรมชาติบนเกาะนี้เริ่มขาดแคลน");
+    render();
+    return;
+  }
+
+  res.food--;
+  addItem("ผลไม้ป่า", 1, "food", 3);
+  logEvent("อาหาร", "พบผลไม้ป่า 1 หน่วย");
+  render();
+}
+
 
   function cookMeat() {
     const meat = G.c.inventory.find(i =>
