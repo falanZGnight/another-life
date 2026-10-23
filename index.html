@@ -4457,38 +4457,83 @@ escInit();
     render();
   }
 
-  function findWater() {
-    const island = currentIsland();
-    const res = G.world.archipelago.resources[island.id];
-
-    if (!spendActivity(30, 4)) return;
-
-    if (res.water <= 0) {
-      decision("ไม่พบแหล่งน้ำ",
-        "บริเวณนี้แห้งแล้ง คุณต้องเลือกว่าจะเดินทางต่อหรือเสี่ยงค้นหาน้ำ",
-        [
-          {label:"เดินทางไปพื้นที่อื่น",detail:"ใช้เวลาและพลังงาน",
-            run:() => logEvent("น้ำ","คุณเลือกหาแหล่งน้ำที่อื่น")},
-          {label:"ค้นหาต่อ",detail:"อาจเสียเวลาโดยไม่ได้อะไร",
-            run:() => {
-              advance(60, false);
-              if (Math.random() < 0.2) {
-                addItem("น้ำจากธรรมชาติ",1,"drink",1);
-                logEvent("น้ำ","พบแอ่งน้ำเล็ก ๆ");
-              } else {
-                G.c.thirst = Math.min(100,G.c.thirst+10);
-                logEvent("น้ำ","ค้นหาไม่สำเร็จ ความกระหายเพิ่มขึ้น");
-              }
-            }}
-        ]);
-      return;
-    }
-
-    res.water--;
-    addItem("น้ำจากธรรมชาติ",1,"drink",1);
-    logEvent("น้ำ","พบน้ำจากธรรมชาติ 1 หน่วย");
-    render();
+function findWater() {
+  // ตรวจสอบข้อมูลเกมก่อนเข้าถึงทรัพยากร
+  if (!initData()) {
+    console.error("findWater: ข้อมูลโลกหรือผู้เล่นยังไม่พร้อม");
+    return;
   }
+
+  // ใช้ระบบเวลาและพลังงานเดิม
+  if (!spendActivity(30, 4)) return;
+
+  const island = currentIsland();
+  const archipelago = G.world.archipelago;
+
+  if (!archipelago.resources) {
+    archipelago.resources = {};
+  }
+
+  // ซ่อมข้อมูลทรัพยากรของเกาะที่ยังไม่มีในเซฟ
+  if (!archipelago.resources[island.id]) {
+    archipelago.resources[island.id] = {
+      water: island.water ?? 0,
+      food: island.food ?? 0,
+      wood: island.wood ?? 0,
+      ore: island.ore ?? 0
+    };
+  }
+
+  const res = archipelago.resources[island.id];
+
+  if (typeof res.water !== "number") {
+    res.water = island.water ?? 0;
+  }
+
+  if (res.water <= 0) {
+    decision(
+      "ไม่พบแหล่งน้ำ",
+      "บริเวณนี้แห้งแล้ง คุณต้องเลือกว่าจะเดินทางต่อหรือเสี่ยงค้นหาน้ำ",
+      [
+        {
+          label: "เดินทางไปพื้นที่อื่น",
+          detail: "ใช้เวลาและพลังงาน",
+          run: () => {
+            logEvent("น้ำ", "คุณเลือกหาแหล่งน้ำที่อื่น");
+          }
+        },
+        {
+          label: "ค้นหาต่อ",
+          detail: "อาจเสียเวลาโดยไม่ได้อะไร",
+          run: () => {
+            advance(60, false);
+
+            if (Math.random() < 0.2) {
+              addItem("น้ำจากธรรมชาติ", 1, "drink", 1);
+              logEvent("น้ำ", "พบแอ่งน้ำเล็ก ๆ");
+            } else {
+              G.c.thirst = Math.min(
+                100, (G.c.thirst || 0) + 10
+              );
+              logEvent(
+                "น้ำ",
+                "ค้นหาไม่สำเร็จ ความกระหายเพิ่มขึ้น"
+              );
+            }
+
+            render();
+          }
+        }
+      ]
+    );
+    return;
+  }
+
+  res.water--;
+  addItem("น้ำจากธรรมชาติ", 1, "drink", 1);
+  logEvent("น้ำ", "พบน้ำจากธรรมชาติ 1 หน่วย");
+  render();
+}
 
   function findFood() {
     const island = currentIsland();
