@@ -1455,8 +1455,1397 @@ function runAIDecision(manual = false) {
   render();
 }
 
+/* ===== ANOTHER LIFE: LIFE & CRAFTING SYSTEM ===== */
+
+function lcState(){
+  const c = G.c;
+  if(!c.lifeCraft){
+    c.lifeCraft = {
+      wood: 0,
+      stone: 0,
+      ore: 0,
+      herbs: 0,
+      seeds: 0,
+      food: 0,
+      water: 0,
+      farm: 0,
+      planted: [],
+      house: 0,
+      well: false,
+      furnace: false,
+      tools: 0,
+      family: null
+    };
+  }
+  return c.lifeCraft;
+}
+
+function lcRand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
+
+function lcLog(title,msg){
+  if(typeof log === "function") log(title,msg);
+}
+
+function lcSpendTime(minutes){
+  if(typeof actionTime === "function") actionTime(minutes);
+  lcRender();
+}
+
+function lcItem(name,qty,type,value=1){
+  if(typeof addItem === "function"){
+    addItem(name,qty,type,value);
+  }else{
+    const c=G.c;
+    c.inventory=c.inventory||[];
+    const old=c.inventory.find(x=>x.name===name && x.type===type);
+    if(old) old.qty+=qty;
+    else c.inventory.push({name,qty,type,value});
+  }
+}
+
+function lcHas(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  return !!it && it.qty>=qty;
+}
+
+function lcTake(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  if(!it || it.qty<qty) return false;
+  it.qty-=qty;
+  c.inventory=c.inventory.filter(x=>x.qty>0);
+  return true;
+}
+
+function lcNeed(items){
+  return items.every(([name,qty])=>lcHas(name,qty));
+}
+
+function lcPay(items){
+  if(!lcNeed(items)){
+    lcLog("งานช่าง","วัตถุดิบไม่เพียงพอ");
+    return false;
+  }
+  items.forEach(([name,qty])=>lcTake(name,qty));
+  return true;
+}
+
+function lcInit(){
+  if(document.getElementById("lifeCraftPanel")) return;
+
+  const panel=document.createElement("section");
+  panel.id="lifeCraftPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:16px;border:1px solid #7775;" +
+    "border-radius:12px;background:var(--panel, #20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>🏡 ชีวิตและงานช่าง</h2>
+    <div id="lcFamily"></div>
+    <div id="lcResources"></div>
+    <div id="lcStatus"></div>
+    <div id="lcActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
+    <div id="lcMessage" style="margin-top:10px"></div>
+  `;
+
+  const target=document.querySelector("main") ||
+    document.querySelector(".container") ||
+    document.body;
+
+  target.appendChild(panel);
+
+  lcRender();
+}
+
+function lcEnsureFamily(){
+  const c=G.c;
+  const s=lcState();
+
+  if(s.family) return s.family;
+
+  const names=["อาริน","มีรา","โทมัส","ลูเซีย","เรน","เอลนา","คีรัน","นารา"];
+  const parentName=()=>names[lcRand(0,names.length-1)];
+
+  s.family={
+    status:Math.random()<0.12 ? "เด็กกำพร้า" : "มีครอบครัว",
+    parent1:parentName(),
+    parent2:parentName(),
+    care:lcRand(45,90),
+    wealth:lcRand(10,70),
+    relationship:lcRand(45,75)
+  };
+
+  return s.family;
+}
+
+function lcFamilyCare(){
+  const c=G.c;
+  const f=lcEnsureFamily();
+
+  if(c.age>=16){
+    lcLog("ครอบครัว","คุณโตพอที่จะดูแลตัวเองได้มากขึ้น");
+    return;
+  }
+
+  if(f.status==="เด็กกำพร้า"){
+    c.energy=Math.min(100,(c.energy||0)+3);
+    lcLog("ชีวิตวัยเด็ก","คุณต้องพึ่งพาตัวเอง บางครั้งคนในชุมชนก็ช่วยเหลือ");
+  }else{
+    c.hunger=Math.max(0,(c.hunger||0)-10);
+    c.thirst=Math.max(0,(c.thirst||0)-10);
+    c.energy=Math.min(100,(c.energy||0)+5);
+    f.relationship=Math.min(100,f.relationship+1);
+    lcLog("ครอบครัว",f.parent1+" และ "+f.parent2+" ช่วยดูแลคุณในวัยเด็ก");
+  }
+
+  lcSpendTime(30);
+}
+
+function lcGather(){
+  const s=lcState();
+  const c=G.c;
+  const roll=lcRand(1,100);
+
+  if(roll<=35){
+    const n=lcRand(2,4);
+    s.wood+=n;
+    lcLog("เก็บทรัพยากร","เก็บไม้ได้ "+n+" ชิ้น");
+  }else if(roll<=60){
+    const n=lcRand(1,3);
+    s.stone+=n;
+    lcLog("เก็บทรัพยากร","เก็บหินได้ "+n+" ก้อน");
+  }else if(roll<=78){
+    s.herbs+=lcRand(1,3);
+    lcItem("สมุนไพรป่า",1,"material",3);
+    lcLog("เก็บทรัพยากร","พบสมุนไพรป่าระหว่างทาง");
+  }else if(roll<=90){
+    s.seeds+=lcRand(1,2);
+    lcLog("เก็บทรัพยากร","พบเมล็ดพันธุ์ที่อาจนำไปปลูกได้");
+  }else{
+    s.ore+=1;
+    lcLog("เก็บทรัพยากร","พบเศษแร่ดิบในพื้นที่");
+  }
+
+  c.survival=(c.survival||0)+1;
+  c.energy=Math.max(0,(c.energy||0)-5);
+  lcSpendTime(60);
+}
+
+function lcHunt(){
+  const c=G.c;
+  const s=lcState();
+
+  if(c.age<10){
+    lcLog("ล่าสัตว์","ยังเด็กเกินไปที่จะล่าสัตว์ด้วยตัวเอง ลองเก็บทรัพยากรแทน");
+    return;
+  }
+
+  if((c.stamina||0)<5 || (c.energy||0)<10){
+    lcLog("ล่าสัตว์","คุณเหนื่อยเกินไป ควรพักก่อน");
+    return;
+  }
+
+  c.stamina=Math.max(0,c.stamina-5);
+  c.energy=Math.max(0,c.energy-8);
+
+  if(Math.random()<0.65){
+    const meat=lcRand(1,3);
+    s.food+=meat;
+    lcItem("เนื้อดิบ",meat,"material",3);
+    lcLog("ล่าสัตว์","ล่าสำเร็จ ได้เนื้อดิบ "+meat+" ชิ้น");
+  }else{
+    lcLog("ล่าสัตว์","สัตว์หนีไปได้ คุณเสียเวลาแต่ได้เรียนรู้ร่องรอยของมัน");
+    c.survival=(c.survival||0)+1;
+  }
+
+  lcSpendTime(90);
+}
+
+function lcCook(){
+  const c=G.c;
+  const s=lcState();
+
+  if(!lcTake("เนื้อดิบ",1)){
+    lcLog("ทำอาหาร","ต้องมีเนื้อดิบอย่างน้อย 1 ชิ้น");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("เนื้อดิบ",1,"material",3);
+    lcLog("ทำอาหาร","ต้องมีไม้ 1 ชิ้นเพื่อก่อไฟ");
+    return;
+  }
+
+  s.wood--;
+  s.food++;
+  lcItem("เนื้อย่าง",1,"food",6);
+  c.craft=(c.craft||0)+1;
+  lcLog("ทำอาหาร","ปรุงเนื้อย่างสำเร็จ ได้อาหารพร้อมกิน 1 ชิ้น");
+  lcSpendTime(30);
+}
+
+function lcSmelt(){
+  const s=lcState();
+
+  if(s.ore<2 || s.wood<1){
+    lcLog("ถลุงแร่","ต้องมีแร่ดิบ 2 หน่วยและไม้ 1 ชิ้น");
+    return;
+  }
+
+  s.ore-=2;
+  s.wood--;
+  lcItem("แท่งโลหะ",1,"material",12);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("ถลุงแร่","ใช้แร่และเชื้อเพลิงถลุงเป็นแท่งโลหะ 1 แท่ง");
+  lcSpendTime(120);
+}
+
+function lcBuildFurnace(){
+  const s=lcState();
+  if(s.furnace){
+    lcLog("เตาถลุง","คุณมีเตาถลุงอยู่แล้ว");
+    return;
+  }
+  if(s.stone<5 || s.wood<2){
+    lcLog("เตาถลุง","ต้องใช้หิน 5 ก้อนและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.stone-=5;
+  s.wood-=2;
+  s.furnace=true;
+  lcLog("ก่อสร้าง","สร้างเตาถลุงแบบง่ายเรียบร้อย");
+  lcSpendTime(180);
+}
+
+function lcBuildWell(){
+  const s=lcState();
+  if(s.well){
+    lcLog("บ่อน้ำ","มีบ่อน้ำอยู่แล้ว");
+    return;
+  }
+  if(s.wood<3 || s.stone<4){
+    lcLog("บ่อน้ำ","ต้องใช้ไม้ 3 ชิ้นและหิน 4 ก้อน");
+    return;
+  }
+
+  s.wood-=3;
+  s.stone-=4;
+  s.well=true;
+  lcLog("ก่อสร้าง","สร้างบ่อน้ำพื้นฐาน ช่วยให้เข้าถึงน้ำได้ง่ายขึ้น");
+  lcSpendTime(240);
+}
+
+function lcDrawWater(){
+  const s=lcState();
+  if(!s.well){
+    lcLog("น้ำดื่ม","ต้องสร้างบ่อน้ำก่อน");
+    return;
+  }
+
+  lcItem("น้ำสะอาด",2,"drink",2);
+  lcLog("บ่อน้ำ","ตักน้ำสะอาดได้ 2 หน่วย");
+  lcSpendTime(10);
+}
+
+function lcBuildFarm(){
+  const s=lcState();
+
+  if(s.seeds<1 || s.wood<2){
+    lcLog("ฟาร์ม","ต้องมีเมล็ดพันธุ์อย่างน้อย 1 หน่วยและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.seeds--;
+  s.wood-=2;
+  s.farm++;
+  s.planted.push({days:0});
+  lcLog("เพาะปลูก","ทำแปลงเพาะปลูกใหม่ พืชต้องใช้เวลาเติบโต");
+  lcSpendTime(60);
+}
+
+function lcHarvest(){
+  const s=lcState();
+  const ready=s.planted.filter(p=>p.days>=3);
+
+  if(!ready.length){
+    lcLog("เก็บเกี่ยว","พืชยังไม่โต ต้องผ่านเวลาในเกมอีก");
+    return;
+  }
+
+  const amount=ready.length;
+  s.planted=s.planted.filter(p=>p.days<3);
+  s.food+=amount*2;
+  s.seeds+=amount;
+
+  for(let i=0;i<amount*2;i++){
+    lcItem("ผลผลิตจากฟาร์ม",1,"food",4);
+  }
+
+  lcLog("เก็บเกี่ยว","เก็บผลผลิตได้ "+amount*2+" หน่วย และได้เมล็ดพันธุ์คืน");
+  lcRender();
+}
+
+function lcBuildHouse(){
+  const s=lcState();
+
+  if(s.house>=3){
+    lcLog("บ้าน","บ้านของคุณอยู่ในระดับสูงสุดของระบบนี้แล้ว");
+    return;
+  }
+
+  const costs=[
+    [["ไม้",s.wood,5],["หิน",s.stone,2]],
+    [["ไม้",s.wood,8],["หิน",s.stone,6]],
+    [["ไม้",s.wood,12],["หิน",s.stone,10]]
+  ][s.house];
+
+  const woodNeed=costs[0][2];
+  const stoneNeed=costs[1][2];
+
+  if(s.wood<woodNeed || s.stone<stoneNeed){
+    lcLog("บ้าน","ต้องใช้ไม้ "+woodNeed+" ชิ้นและหิน "+stoneNeed+" ก้อน");
+    return;
+  }
+
+  s.wood-=woodNeed;
+  s.stone-=stoneNeed;
+  s.house++;
+
+  const labels=["","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  lcLog("ก่อสร้าง","สร้างสำเร็จ: "+labels[s.house]);
+  lcSpendTime(240);
+}
+
+function lcCraftWeapon(){
+  const s=lcState();
+
+  if(!lcTake("แท่งโลหะ",1)){
+    lcLog("งานช่าง","ต้องมีแท่งโลหะ 1 แท่ง");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("แท่งโลหะ",1,"material",12);
+    lcLog("งานช่าง","ต้องใช้ไม้ 1 ชิ้นทำด้ามอาวุธ");
+    return;
+  }
+
+  s.wood--;
+  lcItem("ดาบเหล็กทำมือ",1,"weapon",15);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("งานช่าง","สร้างดาบเหล็กทำมือสำเร็จ");
+  lcSpendTime(120);
+}
+
+function lcSleep(){
+  const c=G.c;
+  const s=lcState();
+
+  const bonus=s.house>0 ? 10*s.house : 0;
+  c.energy=Math.min(100,(c.energy||0)+35+bonus);
+  c.stamina=Math.min(c.maxStamina,c.stamina+15);
+  c.hp=Math.min(c.maxHp,c.hp+Math.floor(2+s.house));
+
+  lcLog("พักผ่อน",s.house>0
+    ?"นอนพักในบ้าน ช่วยฟื้นกำลังได้ดีขึ้น"
+    :"พักผ่อนกลางแจ้ง ฟื้นกำลังได้บางส่วน");
+
+  lcSpendTime(360);
+}
+
+function lcNewDay(){
+  const s=lcState();
+
+  s.planted.forEach(p=>p.days++);
+
+  if(s.farm>0 && s.planted.length===0 && s.seeds>0){
+    // ไม่ปลูกอัตโนมัติ ผู้เล่นเลือกจัดการฟาร์มเอง
+  }
+}
+
+function lcRender(){
+  if(!G || !G.c) return;
+
+  const panel=document.getElementById("lifeCraftPanel");
+  if(!panel) return;
+
+  const c=G.c;
+  const s=lcState();
+  const f=lcEnsureFamily();
+
+  document.getElementById("lcFamily").innerHTML=
+    `<p><b>ครอบครัว:</b> ${f.status==="เด็กกำพริ"?"เด็กกำพร้า":f.status}`+
+    ` · ผู้ดูแล: ${f.status==="เด็กกำพร้า"?"ไม่มีผู้ปกครองประจำ":f.parent1+" และ "+f.parent2}`+
+    `<br>ความเป็นอยู่ ${f.wealth}/100 · ความสัมพันธ์ ${f.relationship}/100</p>`;
+
+  document.getElementById("lcResources").innerHTML=
+    `<p><b>ทรัพยากร</b><br>`+
+    `🪵 ไม้ ${s.wood} · 🪨 หิน ${s.stone} · ⛏️ แร่ ${s.ore}<br>`+
+    `🌿 สมุนไพร ${s.herbs} · 🌱 เมล็ดพันธุ์ ${s.seeds} · 🍲 อาหารสำรอง ${s.food}<br>`+
+    `🌾 แปลงปลูก ${s.farm} · พืชที่กำลังโต ${s.planted.length}</p>`;
+
+  const houseNames=["ไม่มีบ้าน","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  document.getElementById("lcStatus").innerHTML=
+    `<p><b>ที่พัก:</b> ${houseNames[s.house]} · `+
+    `บ่อน้ำ: ${s.well?"มีแล้ว":"ยังไม่มี"} · `+
+    `เตาถลุง: ${s.furnace?"มีแล้ว":"ยังไม่มี"}</p>`;
+
+  const actions=[
+    ["เก็บทรัพยากร","lcGather()"],
+    ["ล่าสัตว์หาเนื้อ","lcHunt()"],
+    ["ปรุงเนื้อย่าง","lcCook()"],
+    ["ถลุงแร่","lcSmelt()"],
+    ["สร้างเตาถลุง","lcBuildFurnace()"],
+    ["ขุดสร้างบ่อน้ำ","lcBuildWell()"],
+    ["ตักน้ำ","lcDrawWater()"],
+    ["ทำแปลงฟาร์ม","lcBuildFarm()"],
+    ["เก็บเกี่ยว","lcHarvest()"],
+    ["สร้าง/อัปเกรดบ้าน","lcBuildHouse()"],
+    ["ทำดาบ","lcCraftWeapon()"],
+    ["พักผ่อน/นอน","lcSleep()"],
+    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"]
+  ];
+
+  document.getElementById("lcActions").innerHTML=actions.map(([label,fn])=>
+    `<button type="button" onclick="${fn}" style="padding:8px 10px;border-radius:8px;cursor:pointer">${label}</button>`
+  ).join("");
+}
+
+/* ===== END LIFE & CRAFTING SYSTEM ===== */
+
+
+/* ===== ANOTHER LIFE: LIFE & CRAFTING SYSTEM ===== */
+
+function lcState(){
+  const c = G.c;
+  if(!c.lifeCraft){
+    c.lifeCraft = {
+      wood: 0,
+      stone: 0,
+      ore: 0,
+      herbs: 0,
+      seeds: 0,
+      food: 0,
+      water: 0,
+      farm: 0,
+      planted: [],
+      house: 0,
+      well: false,
+      furnace: false,
+      tools: 0,
+      family: null
+    };
+  }
+  return c.lifeCraft;
+}
+
+function lcRand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
+
+function lcLog(title,msg){
+  if(typeof log === "function") log(title,msg);
+}
+
+function lcSpendTime(minutes){
+  if(typeof actionTime === "function") actionTime(minutes);
+  lcRender();
+}
+
+function lcItem(name,qty,type,value=1){
+  if(typeof addItem === "function"){
+    addItem(name,qty,type,value);
+  }else{
+    const c=G.c;
+    c.inventory=c.inventory||[];
+    const old=c.inventory.find(x=>x.name===name && x.type===type);
+    if(old) old.qty+=qty;
+    else c.inventory.push({name,qty,type,value});
+  }
+}
+
+function lcHas(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  return !!it && it.qty>=qty;
+}
+
+function lcTake(name,qty=1){
+  const c=G.c;
+  const it=(c.inventory||[]).find(x=>x.name===name);
+  if(!it || it.qty<qty) return false;
+  it.qty-=qty;
+  c.inventory=c.inventory.filter(x=>x.qty>0);
+  return true;
+}
+
+function lcNeed(items){
+  return items.every(([name,qty])=>lcHas(name,qty));
+}
+
+function lcPay(items){
+  if(!lcNeed(items)){
+    lcLog("งานช่าง","วัตถุดิบไม่เพียงพอ");
+    return false;
+  }
+  items.forEach(([name,qty])=>lcTake(name,qty));
+  return true;
+}
+
+function lcInit(){
+  if(document.getElementById("lifeCraftPanel")) return;
+
+  const panel=document.createElement("section");
+  panel.id="lifeCraftPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:16px;border:1px solid #7775;" +
+    "border-radius:12px;background:var(--panel, #20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>🏡 ชีวิตและงานช่าง</h2>
+    <div id="lcFamily"></div>
+    <div id="lcResources"></div>
+    <div id="lcStatus"></div>
+    <div id="lcActions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
+    <div id="lcMessage" style="margin-top:10px"></div>
+  `;
+
+  const target=document.querySelector("main") ||
+    document.querySelector(".container") ||
+    document.body;
+
+  target.appendChild(panel);
+
+  lcRender();
+}
+
+function lcEnsureFamily(){
+  const c=G.c;
+  const s=lcState();
+
+  if(s.family) return s.family;
+
+  const names=["อาริน","มีรา","โทมัส","ลูเซีย","เรน","เอลนา","คีรัน","นารา"];
+  const parentName=()=>names[lcRand(0,names.length-1)];
+
+  s.family={
+    status:Math.random()<0.12 ? "เด็กกำพร้า" : "มีครอบครัว",
+    parent1:parentName(),
+    parent2:parentName(),
+    care:lcRand(45,90),
+    wealth:lcRand(10,70),
+    relationship:lcRand(45,75)
+  };
+
+  return s.family;
+}
+
+function lcFamilyCare(){
+  const c=G.c;
+  const f=lcEnsureFamily();
+
+  if(c.age>=16){
+    lcLog("ครอบครัว","คุณโตพอที่จะดูแลตัวเองได้มากขึ้น");
+    return;
+  }
+
+  if(f.status==="เด็กกำพร้า"){
+    c.energy=Math.min(100,(c.energy||0)+3);
+    lcLog("ชีวิตวัยเด็ก","คุณต้องพึ่งพาตัวเอง บางครั้งคนในชุมชนก็ช่วยเหลือ");
+  }else{
+    c.hunger=Math.max(0,(c.hunger||0)-10);
+    c.thirst=Math.max(0,(c.thirst||0)-10);
+    c.energy=Math.min(100,(c.energy||0)+5);
+    f.relationship=Math.min(100,f.relationship+1);
+    lcLog("ครอบครัว",f.parent1+" และ "+f.parent2+" ช่วยดูแลคุณในวัยเด็ก");
+  }
+
+  lcSpendTime(30);
+}
+
+function lcGather(){
+  const s=lcState();
+  const c=G.c;
+  const roll=lcRand(1,100);
+
+  if(roll<=35){
+    const n=lcRand(2,4);
+    s.wood+=n;
+    lcLog("เก็บทรัพยากร","เก็บไม้ได้ "+n+" ชิ้น");
+  }else if(roll<=60){
+    const n=lcRand(1,3);
+    s.stone+=n;
+    lcLog("เก็บทรัพยากร","เก็บหินได้ "+n+" ก้อน");
+  }else if(roll<=78){
+    s.herbs+=lcRand(1,3);
+    lcItem("สมุนไพรป่า",1,"material",3);
+    lcLog("เก็บทรัพยากร","พบสมุนไพรป่าระหว่างทาง");
+  }else if(roll<=90){
+    s.seeds+=lcRand(1,2);
+    lcLog("เก็บทรัพยากร","พบเมล็ดพันธุ์ที่อาจนำไปปลูกได้");
+  }else{
+    s.ore+=1;
+    lcLog("เก็บทรัพยากร","พบเศษแร่ดิบในพื้นที่");
+  }
+
+  c.survival=(c.survival||0)+1;
+  c.energy=Math.max(0,(c.energy||0)-5);
+  lcSpendTime(60);
+}
+
+function lcHunt(){
+  const c=G.c;
+  const s=lcState();
+
+  if(c.age<10){
+    lcLog("ล่าสัตว์","ยังเด็กเกินไปที่จะล่าสัตว์ด้วยตัวเอง ลองเก็บทรัพยากรแทน");
+    return;
+  }
+
+  if((c.stamina||0)<5 || (c.energy||0)<10){
+    lcLog("ล่าสัตว์","คุณเหนื่อยเกินไป ควรพักก่อน");
+    return;
+  }
+
+  c.stamina=Math.max(0,c.stamina-5);
+  c.energy=Math.max(0,c.energy-8);
+
+  if(Math.random()<0.65){
+    const meat=lcRand(1,3);
+    s.food+=meat;
+    lcItem("เนื้อดิบ",meat,"material",3);
+    lcLog("ล่าสัตว์","ล่าสำเร็จ ได้เนื้อดิบ "+meat+" ชิ้น");
+  }else{
+    lcLog("ล่าสัตว์","สัตว์หนีไปได้ คุณเสียเวลาแต่ได้เรียนรู้ร่องรอยของมัน");
+    c.survival=(c.survival||0)+1;
+  }
+
+  lcSpendTime(90);
+}
+
+function lcCook(){
+  const c=G.c;
+  const s=lcState();
+
+  if(!lcTake("เนื้อดิบ",1)){
+    lcLog("ทำอาหาร","ต้องมีเนื้อดิบอย่างน้อย 1 ชิ้น");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("เนื้อดิบ",1,"material",3);
+    lcLog("ทำอาหาร","ต้องมีไม้ 1 ชิ้นเพื่อก่อไฟ");
+    return;
+  }
+
+  s.wood--;
+  s.food++;
+  lcItem("เนื้อย่าง",1,"food",6);
+  c.craft=(c.craft||0)+1;
+  lcLog("ทำอาหาร","ปรุงเนื้อย่างสำเร็จ ได้อาหารพร้อมกิน 1 ชิ้น");
+  lcSpendTime(30);
+}
+
+function lcSmelt(){
+  const s=lcState();
+
+  if(s.ore<2 || s.wood<1){
+    lcLog("ถลุงแร่","ต้องมีแร่ดิบ 2 หน่วยและไม้ 1 ชิ้น");
+    return;
+  }
+
+  s.ore-=2;
+  s.wood--;
+  lcItem("แท่งโลหะ",1,"material",12);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("ถลุงแร่","ใช้แร่และเชื้อเพลิงถลุงเป็นแท่งโลหะ 1 แท่ง");
+  lcSpendTime(120);
+}
+
+function lcBuildFurnace(){
+  const s=lcState();
+  if(s.furnace){
+    lcLog("เตาถลุง","คุณมีเตาถลุงอยู่แล้ว");
+    return;
+  }
+  if(s.stone<5 || s.wood<2){
+    lcLog("เตาถลุง","ต้องใช้หิน 5 ก้อนและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.stone-=5;
+  s.wood-=2;
+  s.furnace=true;
+  lcLog("ก่อสร้าง","สร้างเตาถลุงแบบง่ายเรียบร้อย");
+  lcSpendTime(180);
+}
+
+function lcBuildWell(){
+  const s=lcState();
+  if(s.well){
+    lcLog("บ่อน้ำ","มีบ่อน้ำอยู่แล้ว");
+    return;
+  }
+  if(s.wood<3 || s.stone<4){
+    lcLog("บ่อน้ำ","ต้องใช้ไม้ 3 ชิ้นและหิน 4 ก้อน");
+    return;
+  }
+
+  s.wood-=3;
+  s.stone-=4;
+  s.well=true;
+  lcLog("ก่อสร้าง","สร้างบ่อน้ำพื้นฐาน ช่วยให้เข้าถึงน้ำได้ง่ายขึ้น");
+  lcSpendTime(240);
+}
+
+function lcDrawWater(){
+  const s=lcState();
+  if(!s.well){
+    lcLog("น้ำดื่ม","ต้องสร้างบ่อน้ำก่อน");
+    return;
+  }
+
+  lcItem("น้ำสะอาด",2,"drink",2);
+  lcLog("บ่อน้ำ","ตักน้ำสะอาดได้ 2 หน่วย");
+  lcSpendTime(10);
+}
+
+function lcBuildFarm(){
+  const s=lcState();
+
+  if(s.seeds<1 || s.wood<2){
+    lcLog("ฟาร์ม","ต้องมีเมล็ดพันธุ์อย่างน้อย 1 หน่วยและไม้ 2 ชิ้น");
+    return;
+  }
+
+  s.seeds--;
+  s.wood-=2;
+  s.farm++;
+  s.planted.push({days:0});
+  lcLog("เพาะปลูก","ทำแปลงเพาะปลูกใหม่ พืชต้องใช้เวลาเติบโต");
+  lcSpendTime(60);
+}
+
+function lcHarvest(){
+  const s=lcState();
+  const ready=s.planted.filter(p=>p.days>=3);
+
+  if(!ready.length){
+    lcLog("เก็บเกี่ยว","พืชยังไม่โต ต้องผ่านเวลาในเกมอีก");
+    return;
+  }
+
+  const amount=ready.length;
+  s.planted=s.planted.filter(p=>p.days<3);
+  s.food+=amount*2;
+  s.seeds+=amount;
+
+  for(let i=0;i<amount*2;i++){
+    lcItem("ผลผลิตจากฟาร์ม",1,"food",4);
+  }
+
+  lcLog("เก็บเกี่ยว","เก็บผลผลิตได้ "+amount*2+" หน่วย และได้เมล็ดพันธุ์คืน");
+  lcRender();
+}
+
+function lcBuildHouse(){
+  const s=lcState();
+
+  if(s.house>=3){
+    lcLog("บ้าน","บ้านของคุณอยู่ในระดับสูงสุดของระบบนี้แล้ว");
+    return;
+  }
+
+  const costs=[
+    [["ไม้",s.wood,5],["หิน",s.stone,2]],
+    [["ไม้",s.wood,8],["หิน",s.stone,6]],
+    [["ไม้",s.wood,12],["หิน",s.stone,10]]
+  ][s.house];
+
+  const woodNeed=costs[0][2];
+  const stoneNeed=costs[1][2];
+
+  if(s.wood<woodNeed || s.stone<stoneNeed){
+    lcLog("บ้าน","ต้องใช้ไม้ "+woodNeed+" ชิ้นและหิน "+stoneNeed+" ก้อน");
+    return;
+  }
+
+  s.wood-=woodNeed;
+  s.stone-=stoneNeed;
+  s.house++;
+
+  const labels=["","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  lcLog("ก่อสร้าง","สร้างสำเร็จ: "+labels[s.house]);
+  lcSpendTime(240);
+}
+
+function lcCraftWeapon(){
+  const s=lcState();
+
+  if(!lcTake("แท่งโลหะ",1)){
+    lcLog("งานช่าง","ต้องมีแท่งโลหะ 1 แท่ง");
+    return;
+  }
+
+  if(s.wood<1){
+    lcItem("แท่งโลหะ",1,"material",12);
+    lcLog("งานช่าง","ต้องใช้ไม้ 1 ชิ้นทำด้ามอาวุธ");
+    return;
+  }
+
+  s.wood--;
+  lcItem("ดาบเหล็กทำมือ",1,"weapon",15);
+  G.c.craft=(G.c.craft||0)+2;
+
+  lcLog("งานช่าง","สร้างดาบเหล็กทำมือสำเร็จ");
+  lcSpendTime(120);
+}
+
+function lcSleep(){
+  const c=G.c;
+  const s=lcState();
+
+  const bonus=s.house>0 ? 10*s.house : 0;
+  c.energy=Math.min(100,(c.energy||0)+35+bonus);
+  c.stamina=Math.min(c.maxStamina,c.stamina+15);
+  c.hp=Math.min(c.maxHp,c.hp+Math.floor(2+s.house));
+
+  lcLog("พักผ่อน",s.house>0
+    ?"นอนพักในบ้าน ช่วยฟื้นกำลังได้ดีขึ้น"
+    :"พักผ่อนกลางแจ้ง ฟื้นกำลังได้บางส่วน");
+
+  lcSpendTime(360);
+}
+
+function lcNewDay(){
+  const s=lcState();
+
+  s.planted.forEach(p=>p.days++);
+
+  if(s.farm>0 && s.planted.length===0 && s.seeds>0){
+    // ไม่ปลูกอัตโนมัติ ผู้เล่นเลือกจัดการฟาร์มเอง
+  }
+}
+
+function lcRender(){
+  if(!G || !G.c) return;
+
+  const panel=document.getElementById("lifeCraftPanel");
+  if(!panel) return;
+
+  const c=G.c;
+  const s=lcState();
+  const f=lcEnsureFamily();
+
+  document.getElementById("lcFamily").innerHTML=
+    `<p><b>ครอบครัว:</b> ${f.status==="เด็กกำพริ"?"เด็กกำพร้า":f.status}`+
+    ` · ผู้ดูแล: ${f.status==="เด็กกำพร้า"?"ไม่มีผู้ปกครองประจำ":f.parent1+" และ "+f.parent2}`+
+    `<br>ความเป็นอยู่ ${f.wealth}/100 · ความสัมพันธ์ ${f.relationship}/100</p>`;
+
+  document.getElementById("lcResources").innerHTML=
+    `<p><b>ทรัพยากร</b><br>`+
+    `🪵 ไม้ ${s.wood} · 🪨 หิน ${s.stone} · ⛏️ แร่ ${s.ore}<br>`+
+    `🌿 สมุนไพร ${s.herbs} · 🌱 เมล็ดพันธุ์ ${s.seeds} · 🍲 อาหารสำรอง ${s.food}<br>`+
+    `🌾 แปลงปลูก ${s.farm} · พืชที่กำลังโต ${s.planted.length}</p>`;
+
+  const houseNames=["ไม่มีบ้าน","กระท่อม","บ้านไม้","บ้านแข็งแรง"];
+  document.getElementById("lcStatus").innerHTML=
+    `<p><b>ที่พัก:</b> ${houseNames[s.house]} · `+
+    `บ่อน้ำ: ${s.well?"มีแล้ว":"ยังไม่มี"} · `+
+    `เตาถลุง: ${s.furnace?"มีแล้ว":"ยังไม่มี"}</p>`;
+
+  const actions=[
+    ["เก็บทรัพยากร","lcGather()"],
+    ["ล่าสัตว์หาเนื้อ","lcHunt()"],
+    ["ปรุงเนื้อย่าง","lcCook()"],
+    ["ถลุงแร่","lcSmelt()"],
+    ["สร้างเตาถลุง","lcBuildFurnace()"],
+    ["ขุดสร้างบ่อน้ำ","lcBuildWell()"],
+    ["ตักน้ำ","lcDrawWater()"],
+    ["ทำแปลงฟาร์ม","lcBuildFarm()"],
+    ["เก็บเกี่ยว","lcHarvest()"],
+    ["สร้าง/อัปเกรดบ้าน","lcBuildHouse()"],
+    ["ทำดาบ","lcCraftWeapon()"],
+    ["พักผ่อน/นอน","lcSleep()"],
+    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"]
+  ];
+
+  document.getElementById("lcActions").innerHTML=actions.map(([label,fn])=>
+    `<button type="button" onclick="${fn}" style="padding:8px 10px;border-radius:8px;cursor:pointer">${label}</button>`
+  ).join("");
+}
+
+/* ===== END LIFE & CRAFTING SYSTEM ===== */
+
+  
+/* ===== ANOTHER LIFE: LIVING WORLD EVENT ENGINE ===== */
+
+function evtWorld(){
+  if(!G.world.chronicle){
+    G.world.chronicle={
+      news:[],
+      flags:{war:false,famine:false,plague:false,portal:false},
+      economy:100,
+      danger:0,
+      stability:60,
+      nextNews:0,
+      processedDay:0
+    };
+  }
+  return G.world.chronicle;
+}
+
+function evtDayNumber(){
+  const w=G.world;
+  return (w.year-1)*360+(w.month||0)*30+w.day;
+}
+
+function evtChance(base,c){
+  let p=base;
+  if(!c)return Math.max(0,Math.min(95,p));
+
+  // ตัวละครเด็กต้องพึ่งพาครอบครัวมากกว่า
+  if(c.age<12)p+=5;
+  if(c.age>=60)p+=2;
+
+  // นิสัยเปลี่ยนแนวโน้มของเหตุการณ์ ไม่ได้บังคับผลลัพธ์
+  const personality=String(c.personality||"");
+  if(/กล้าหาญ|ใจกล้า/.test(personality))p+=2;
+  if(/ระแวง|รอบคอบ/.test(personality))p-=1;
+
+  const world=evtWorld();
+  if(world.flags.war)p+=3;
+  if(world.flags.famine)p+=2;
+  if(world.flags.plague)p+=2;
+
+  return Math.max(1,Math.min(85,p));
+}
+
+function evtPick(list){
+  return list[Math.floor(Math.random()*list.length)];
+}
+
+function evtLog(title,description){
+  if(typeof log==="function")log(title,description);
+  else{
+    G.world.events=G.world.events||[];
+    G.world.events.unshift({date:"",type:title,text:description});
+  }
+}
+
+function evtRemember(title,text){
+  const w=evtWorld();
+  w.news.unshift({
+    day:evtDayNumber(),
+    title,
+    text
+  });
+  w.news=w.news.slice(0,30);
+}
+
+function evtEffect(effect){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(effect.gold)c.gold=Math.max(0,(c.gold||0)+effect.gold);
+  if(effect.energy)c.energy=Math.max(0,Math.min(100,c.energy+effect.energy));
+  if(effect.hp)c.hp=Math.max(0,Math.min(c.maxHp,c.hp+effect.hp));
+  if(effect.hunger)c.hunger=Math.max(0,Math.min(100,c.hunger+effect.hunger));
+  if(effect.thirst)c.thirst=Math.max(0,Math.min(100,c.thirst+effect.thirst));
+  if(effect.knowledge)c.knowledge=(c.knowledge||0)+effect.knowledge;
+  if(effect.social)c.social=(c.social||0)+effect.social;
+  if(effect.trust)c.trust=(c.trust||0)+effect.trust;
+  if(effect.fame)c.fame=(c.fame||0)+effect.fame;
+
+  if(effect.economy)w.economy=Math.max(50,Math.min(160,w.economy+effect.economy));
+  if(effect.danger)w.danger=Math.max(0,Math.min(100,w.danger+effect.danger));
+  if(effect.stability)w.stability=Math.max(0,Math.min(100,w.stability+effect.stability));
+
+  if(effect.flag){
+    w.flags[effect.flag]=effect.value;
+  }
+}
+
+function evtFire(category,title,text,effect={},isNews=false){
+  evtEffect(effect);
+  evtLog(category,title+" — "+text);
+
+  if(isNews){
+    evtRemember(title,text);
+  }
+
+  const c=G.c;
+  c.lastAction="เหตุการณ์: "+title;
+  c.lifeHistory=c.lifeHistory||[];
+  c.lifeHistory.push(title+" — "+text);
+  if(c.lifeHistory.length>100)c.lifeHistory.shift();
+}
+
+function evtFamily(){
+  const c=G.c;
+  const w=evtWorld();
+
+  // เหตุการณ์ครอบครัวจะเกิดบ่อยขึ้นในวัยเด็ก
+  const chance=c.age<16?14:5;
+  if(Math.random()*100>=evtChance(chance,c))return false;
+
+  const events=[
+    {
+      title:"ผู้ปกครองกลับบ้านช้า",
+      text:"พ่อหรือแม่กลับจากงานช้ากว่าปกติ คุณเริ่มกังวล แต่สุดท้ายพวกเขากลับมาอย่างปลอดภัย",
+      effect:{energy:-2,trust:1}
+    },
+    {
+      title:"รายได้พิเศษของครอบครัว",
+      text:"สมาชิกในครอบครัวได้รับค่าจ้างพิเศษ ทำให้มีเงินเหลือสำหรับอาหารและของใช้",
+      effect:{gold:lcRandSafe(2,8),trust:1}
+    },
+    {
+      title:"คนในบ้านไม่สบาย",
+      text:"สมาชิกในครอบครัวล้มป่วย ทุกคนต้องแบ่งเวลาและทรัพยากรมาดูแลกัน",
+      effect:{gold:-lcRandSafe(1,5),trust:2}
+    },
+    {
+      title:"เพื่อนบ้านนำอาหารมาแบ่ง",
+      text:"เพื่อนบ้านแบ่งอาหารให้ครอบครัวในวันที่ลำบาก ทำให้ความสัมพันธ์ในชุมชนดีขึ้น",
+      effect:{hunger:-8,social:1,trust:2}
+    },
+    {
+      title:"ข่าวร้ายจากที่ทำงาน",
+      text:"มีการลดค่าจ้างหรือหยุดงานชั่วคราว ครอบครัวต้องประหยัดเงินมากขึ้น",
+      effect:{gold:-lcRandSafe(2,7),energy:-2}
+    },
+    {
+      title:"ผู้ปกครองสอนทักษะชีวิต",
+      text:"ผู้ใหญ่สอนวิธีอ่านสถานการณ์ ดูแลตัวเอง และหลีกเลี่ยงอันตราย",
+      effect:{knowledge:1,trust:2}
+    },
+    {
+      title:"ของขวัญชิ้นเล็ก",
+      text:"สมาชิกในครอบครัวนำของใช้ชิ้นเล็กกลับมาให้ แม้ไม่แพงแต่ทำให้วันนั้นดีขึ้น",
+      effect:{trust:2,energy:3}
+    }
+  ];
+
+  let event=evtPick(events);
+
+  // ภาวะสงครามและภัยพิบัติเพิ่มความเสี่ยงของข่าวร้าย
+  if(w.flags.war && Math.random()<0.20){
+    event={
+      title:"ครอบครัวได้รับข่าวจากแนวหน้า",
+      text:"มีข่าวความสูญเสียจากพื้นที่ขัดแย้ง คนในบ้านเป็นห่วงญาติและคนรู้จัก",
+      effect:{energy:-8,trust:2,danger:2}
+    };
+  }
+
+  evtFire("ครอบครัว",event.title,event.text,event.effect);
+  return true;
+}
+
+function lcRandSafe(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+function evtDailyLife(){
+  const c=G.c;
+  if(Math.random()*100>=evtChance(24,c))return false;
+
+  const events=[
+    {title:"พบคนเดินทางหลงทาง",text:"คนแปลกหน้าขอถามเส้นทาง คุณช่วยบอกทางและได้เรียนรู้เรื่องเมืองใกล้เคียง",effect:{social:1,knowledge:1,trust:1}},
+    {title:"ฝนตกกะทันหัน",text:"ฝนทำให้กิจกรรมกลางแจ้งล่าช้า คุณต้องหาที่หลบฝน",effect:{energy:-2}},
+    {title:"พบเหรียญตกอยู่",text:"คุณพบเงินจำนวนเล็กน้อย ไม่มีใครอยู่ใกล้พอจะยืนยันว่าเป็นของใคร",effect:{gold:lcRandSafe(1,4)}},
+    {title:"ได้ยินข่าวลือในโรงเตี๊ยม",text:"มีคนพูดถึงซากโบราณสถานนอกเส้นทางหลัก แต่ยังไม่มีหลักฐานยืนยัน",effect:{knowledge:1}},
+    {title:"ชาวบ้านต้องการแรงงาน",text:"ชาวบ้านจ้างให้ช่วยยกของและซ่อมรั้ว ได้ค่าจ้างเล็กน้อย",effect:{gold:lcRandSafe(2,6),energy:-4}},
+    {title:"พบร่องรอยสัตว์ประหลาด",text:"รอยเท้าขนาดใหญ่ปรากฏใกล้เส้นทางเดินทาง ผู้คนเริ่มระมัดระวังตัว",effect:{knowledge:1,danger:2}},
+    {title:"นักดนตรีเร่เดินทางมา",text:"เสียงเพลงจากนักดนตรีเร่ช่วยให้ผู้คนคลายความเครียด คุณได้ฟังเรื่องราวจากแดนไกล",effect:{energy:3,social:1}},
+    {title:"การค้าคึกคัก",text:"มีขบวนพ่อค้าเข้ามาในพื้นที่ ผู้คนมีโอกาสซื้อขายและแลกเปลี่ยนข่าวสาร",effect:{economy:2,social:1}},
+    {title:"ความเข้าใจผิด",text:"คุณถูกเข้าใจผิดจากคำพูดเล็กน้อย หากไม่อธิบาย ความสัมพันธ์อาจเสียหายภายหลัง",effect:{trust:-1}},
+    {title:"ค้นพบเส้นทางลัด",text:"คุณสังเกตเห็นเส้นทางที่คนส่วนใหญ่ไม่ใช้ อาจช่วยประหยัดเวลาในการเดินทางครั้งต่อไป",effect:{knowledge:2,survival:1}}
+  ];
+
+  const e=evtPick(events);
+  evtFire("ชีวิตประจำวัน",e.title,e.text,e.effect);
+  return true;
+}
+
+function evtWorldEvent(){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(Math.random()*100>=evtChance(7,c))return false;
+
+  const events=[
+    {
+      title:"ราคาธัญพืชสูงขึ้น",
+      text:"ผลผลิตลดลงในหลายหมู่บ้าน อาหารเริ่มมีราคาแพง",
+      effect:{economy:-8,flag:"famine",value:true}
+    },
+    {
+      title:"เส้นทางการค้าถูกโจรปล้น",
+      text:"พ่อค้าหลายรายเลี่ยงเส้นทางเดิม สินค้าบางชนิดเริ่มขาดแคลน",
+      effect:{economy:-5,danger:8}
+    },
+    {
+      title:"ข้อตกลงสงบศึก",
+      text:"ผู้นำของสองฝ่ายตกลงหยุดสู้รบชั่วคราว ผู้คนเริ่มกลับไปค้าขาย",
+      effect:{stability:10,danger:-8,flag:"war",value:false,economy:5}
+    },
+    {
+      title:"กิลด์ประกาศรับสมัคร",
+      text:"กิลด์นักผจญภัยเปิดรับสมาชิกและประกาศงานใหม่สำหรับผู้มีความสามารถ",
+      effect:{stability:2,economy:3}
+    },
+    {
+      title:"สัตว์เวทอพยพ",
+      text:"สัตว์เวทจำนวนมากเคลื่อนผ่านป่า ทำให้พื้นที่บางส่วนอันตรายขึ้น แต่มีผู้ตามหาเบาะแส",
+      effect:{danger:10,knowledge:1}
+    },
+    {
+      title:"เทศกาลประจำเมือง",
+      text:"เมืองจัดงานเทศกาล ดึงดูดพ่อค้า นักแสดง และนักเดินทางจากต่างแดน",
+      effect:{economy:7,stability:3}
+    },
+    {
+      title:"พบแหล่งแร่แห่งใหม่",
+      text:"คนงานค้นพบสายแร่ใหม่ ทำให้ช่างตีเหล็กและพ่อค้าคาดหวังผลกำไร",
+      effect:{economy:8,stability:2}
+    },
+    {
+      title:"โรคระบาดในเมืองห่างไกล",
+      text:"มีรายงานโรคระบาดจากเมืองที่อยู่ห่างออกไป ทางการเริ่มตรวจคนเดินทาง",
+      effect:{stability:-5,danger:4,flag:"plague",value:true}
+    },
+    {
+      title:"ข่าวลือเรื่องประตูมิติ",
+      text:"ผู้เดินทางรายงานแสงประหลาดกลางซากโบราณสถาน ยังไม่ทราบว่าเป็นเวทมนตร์หรือกลลวง",
+      effect:{knowledge:1,flag:"portal",value:true}
+    },
+    {
+      title:"ภัยแล้งสิ้นสุด",
+      text:"ฝนกลับมาตกในพื้นที่เพาะปลูก ผลผลิตคาดว่าจะฟื้นตัวในฤดูกาลถัดไป",
+      effect:{economy:8,stability:5,flag:"famine",value:false}
+    }
+  ];
+
+  let e=evtPick(events);
+
+  // ถ้าสถานการณ์เดิมดำเนินอยู่ ข่าวใหม่มีแนวโน้มเป็นผลสืบเนื่อง
+  if(w.flags.famine && Math.random()<0.45){
+    e={
+      title:"ขบวนข้าวช่วยเหลือมาถึง",
+      text:"พ่อค้าและชุมชนร่วมกันนำอาหารไปยังพื้นที่ขาดแคลน ราคาธัญพืชเริ่มทรงตัว",
+      effect:{economy:6,stability:5,flag:"famine",value:false}
+    };
+  }else if(w.flags.portal && Math.random()<0.35){
+    e={
+      title:"ผู้กล้ากลุ่มแรกเข้าสำรวจประตูมิติ",
+      text:"กิลด์ส่งทีมสำรวจเข้าไป แต่ยังไม่มีใครยืนยันได้ว่าปลายทางอยู่ที่ใด",
+      effect:{danger:5,knowledge:2}
+    };
+  }
+
+  evtFire("ข่าวโลก",e.title,e.text,e.effect,true);
+  return true;
+}
+
+function evtFantasy(){
+  const c=G.c;
+  const w=evtWorld();
+
+  if(Math.random()*100>=evtChance(2.5,c))return false;
+
+  const events=[
+    {title:"แสงจากดาวตก",text:"ดาวตกสีม่วงทิ้งแสงไว้เหนือขอบฟ้า นักเวทเชื่อว่าเป็นลางของพลังโบราณ",effect:{knowledge:3,fame:1}},
+    {title:"เสียงกระซิบจากป่า",text:"เสียงที่ไม่มีที่มาเรียกชื่อคุณจากแนวไม้ เมื่อเข้าใกล้กลับพบเพียงรอยเท้าเรืองแสง",effect:{knowledge:2,energy:-3}},
+    {title:"พรจากผู้พิทักษ์",text:"วิญญาณผู้พิทักษ์ปรากฏชั่วครู่และมอบความสงบให้จิตใจ",effect:{hp:5,energy:8,trust:2}},
+    {title:"รอยแยกมิติเปิดขึ้น",text:"อากาศบิดเบี้ยวเป็นวงแสงประหลาด ก่อนจะปิดตัวลง ทิ้งเศษพลังงานไว้บนพื้น",effect:{knowledge:4,danger:6}},
+    {title:"มังกรบินผ่าน",text:"เงาขนาดมหึมาบดบังแสงอาทิตย์ ผู้คนในพื้นที่ต่างหยุดกิจกรรมและเฝ้ามองด้วยความหวาดหวั่น",effect:{fame:1,energy:-2,danger:4}},
+    {title:"คำทำนายที่ไม่สมบูรณ์",text:"ผู้พยากรณ์เอ่ยถึงการเปลี่ยนแปลงครั้งใหญ่ แต่ไม่สามารถระบุวันหรือสถานที่ได้",effect:{knowledge:2,social:1}}
+  ];
+
+  const e=evtPick(events);
+  evtFire("แฟนตาซี",e.title,e.text,e.effect,true);
+  return true;
+}
+
+function evtNewspaper(){
+  const w=evtWorld();
+  const today=evtDayNumber();
+
+  if(today<w.nextNews)return false;
+
+  w.nextNews=today+lcRandSafe(2,5);
+
+  // ข่าวเกิดจากสถานการณ์โลกที่มีอยู่จริง ไม่ใช่ข้อความลอย ๆ
+  if(w.flags.war){
+    evtFire("หนังสือพิมพ์","สงครามยังไม่ยุติ",
+      "รายงานล่าสุดระบุว่าการสู้รบยังดำเนินต่อ เส้นทางบางแห่งอาจไม่ปลอดภัย",
+      {danger:1},true);
+    return true;
+  }
+
+  if(w.flags.famine){
+    evtFire("หนังสือพิมพ์","อาหารเริ่มขาดแคลน",
+      "ตลาดหลายแห่งรายงานว่าธัญพืชมีน้อยลง ชาวบ้านเริ่มกักตุนเสบียง",
+      {economy:-1},true);
+    return true;
+  }
+
+  if(w.flags.plague){
+    evtFire("หนังสือพิมพ์","ประกาศเฝ้าระวังโรค",
+      "เมืองใกล้เคียงเพิ่มมาตรการตรวจคนเดินทางและขอให้ประชาชนหลีกเลี่ยงพื้นที่เสี่ยง",
+      {stability:-1},true);
+    return true;
+  }
+
+  // ถ้าไม่มีวิกฤต ให้รายงานเรื่องการเมือง การค้า หรือการค้นพบ
+  const headlines=[
+    ["สภาเมืองเตรียมเปลี่ยนกฎการค้า","พ่อค้าและช่างฝีมือกำลังรอฟังรายละเอียดของกฎใหม่",{economy:2}],
+    ["นักสำรวจพบซากโบราณสถาน","กิลด์กำลังรวบรวมข้อมูลและเปิดรับผู้สนใจร่วมสำรวจ",{knowledge:1}],
+    ["ตลาดจัดงานประจำฤดูกาล","ผู้ขายจากหลายพื้นที่นำสินค้ามาแลกเปลี่ยนกัน",{economy:3}],
+    ["ผู้ปกครองประกาศเดินทางตรวจเมือง","เจ้าหน้าที่เริ่มเตรียมงานต้อนรับและตรวจสอบปัญหาในชุมชน",{stability:2}],
+    ["มีการพบเห็นสัตว์เวทใกล้ชายป่า","ทางการแนะนำให้ผู้เดินทางใช้เส้นทางหลักในช่วงกลางคืน",{danger:2}],
+    ["โรงเรียนเวทมนตร์เปิดรับผู้เรียน","ผู้สมัครต้องผ่านการทดสอบความรู้และความสามารถพื้นฐาน",{knowledge:1}]
+  ];
+
+  const n=evtPick(headlines);
+  evtFire("หนังสือพิมพ์",n[0],n[1],n[2],true);
+  return true;
+}
+
+function evtProcessDay(){
+  if(!G || !G.c || G.c.dead)return;
+
+  const w=evtWorld();
+  const day=evtDayNumber();
+
+  if(w.processedDay===day)return;
+  w.processedDay=day;
+
+  // แต่ละหมวดสุ่มแยกกัน มีโอกาสเกิดได้มากกว่าหนึ่งเรื่องในวันเดียว
+  evtFamily();
+  evtDailyLife();
+  evtWorldEvent();
+  evtFantasy();
+  evtNewspaper();
+
+  // โลกค่อย ๆ ฟื้นจากวิกฤต ไม่ค้างตลอดไปโดยไม่มีเหตุผล
+  if(day%7===0){
+    if(w.flags.plague && Math.random()<0.15)w.flags.plague=false;
+    if(w.danger>0)w.danger=Math.max(0,w.danger-1);
+    if(w.stability<60 && !w.flags.war)w.stability++;
+  }
+}
+
+function evtPanelInit(){
+  if(document.getElementById("evtPanel"))return;
+
+  const panel=document.createElement("section");
+  panel.id="evtPanel";
+  panel.style.cssText=
+    "margin:16px 0;padding:14px;border:1px solid #7777;" +
+    "border-radius:12px;background:var(--panel,#20242b);color:inherit";
+
+  panel.innerHTML=`
+    <h2>📰 ข่าวสารและเหตุการณ์โลก</h2>
+    <div id="evtWorldStatus"></div>
+    <div id="evtLatest"></div>
+  `;
+
+  const target=document.querySelector("main")||
+    document.querySelector(".container")||
+    document.body;
+  target.appendChild(panel);
+}
+
+function evtRender(){
+  if(!G || !G.world)return;
+  evtPanelInit();
+
+  const w=evtWorld();
+  const flags=w.flags;
+
+  document.getElementById("evtWorldStatus").innerHTML=
+    `<p>เศรษฐกิจโลก: ${w.economy}/100 · `+
+    `ความมั่นคง: ${w.stability}/100 · `+
+    `ระดับอันตราย: ${w.danger}/100</p>`+
+    `<p>สถานการณ์: `+
+    `${flags.war?"⚔️ สงคราม ":""}`+
+    `${flags.famine?"🌾 ขาดแคลนอาหาร ":""}`+
+    `${flags.plague?"☣️ โรคระบาด ":""}`+
+    `${flags.portal?"🌀 พบประตูมิติ ":""}`+
+    `${!flags.war&&!flags.famine&&!flags.plague&&!flags.portal?"สงบ ไม่มีวิกฤตใหญ่":""}</p>`;
+
+  const list=w.news.slice(0,6);
+  document.getElementById("evtLatest").innerHTML=list.length
+    ?list.map(n=>
+      `<article style="padding:8px 0;border-top:1px solid #7775">`+
+      `<b>ปี ${Math.floor((n.day-1)/360)+1} · ${n.title}</b><br>`+
+      `<span>${n.text}</span></article>`
+    ).join("")
+    :"<p>ยังไม่มีข่าวสำคัญ ข่าวจะปรากฏเมื่อเวลาในเกมเดินหน้า</p>";
+}
+
+function evtInit(){
+  if(!G)return;
+
+  evtPanelInit();
+
+  // เชื่อมระบบกับเวลาเดิมของเกม โดยไม่เขียนทับฟังก์ชัน advance ทั้งชุด
+  if(!window.__evtAdvanceHook && typeof advance==="function"){
+    const oldAdvance=advance;
+
+    advance=function(minutes,allowEncounter=true){
+      const before=evtDayNumber();
+      const result=oldAdvance.apply(this,arguments);
+      const after=evtDayNumber();
+
+      if(G && G.world){
+        for(let day=before+1;day<=after;day++){
+          // ตั้งวันที่จำลองให้ระบบประมวลผลทีละวัน
+          const w=G.world;
+          const save={year:w.year,month:w.month,day:w.day};
+          const serial=(save.year-1)*360+(save.month||0)*30+save.day;
+
+          if(day<=serial){
+            evtProcessDay();
+          }
+        }
+      }
+
+      evtRender();
+      return result;
+    };
+
+    window.__evtAdvanceHook=true;
+  }
+
+  if(!window.__evtRenderHook && typeof render==="function"){
+    const oldRender=render;
+    render=function(){
+      const result=oldRender.apply(this,arguments);
+      evtRender();
+      return result;
+    };
+    window.__evtRenderHook=true;
+  }
+
+  evtRender();
+}
+
+/* ===== END EVENT ENGINE ===== */
+
 
 function escInit(){try{if(localStorage.getItem(SAVEKEY)){$("speedText").textContent="พบเซฟเก่า กดโหลดเกมเพื่อเล่นต่อ";}}catch(e){}}
+lcInit();
+evtInit();
 escInit();
 </script>
 </body>
