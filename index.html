@@ -633,6 +633,41 @@ main > section,
   }
 }
 
+/* FIX: ล็อกแถบด้านซ้ายทั้งแถบ ไม่ใช่ล็อกเฉพาะแผงข้างใน */
+@media (min-width: 781px) {
+  main {
+    align-items: start;
+  }
+
+  main > aside {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  main > aside > .panel:first-child {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* มือถือให้แถบกลับมาอยู่ตามปกติ */
+@media (max-width: 780px) {
+  main > aside {
+    position: static;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 </style>
 </head>
 <body>
