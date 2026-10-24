@@ -934,7 +934,16 @@ main > section,
 <button onclick="buyMerchantItem()">ซื้อของที่เลือก</button>
 <button onclick="refreshMerchant()">สุ่มสินค้าใหม่</button>
 </div>
-<label>สินค้าในร้าน</label><select id="merchantSelect"></select>
+<label>สินค้าในร้าน</label><select id="merchantSelect"></select><div id="specialMerchantPanel" class="card"
+     style="display:none;margin-top:14px;border:2px solid #d7ad52;background:linear-gradient(135deg,#302615,#171c18)">
+  <h3 style="margin-top:0;color:#f5d778">✦ พ่อค้าพิเศษพเนจร ✦</h3>
+  <div id="specialMerchantInfo"></div>
+  <label>เลือกสินค้าพิเศษ</label>
+  <select id="specialMerchantSelect"></select>
+  <div class="actions">
+    <button onclick="buySpecialMerchantItem()">ซื้อสินค้าพิเศษ</button>
+  </div>
+</div>
 </div>
 <div class="panel">
 <h2>มอนสเตอร์และการต่อสู้</h2>
@@ -1410,7 +1419,7 @@ function pauseTime(){
   if(G) silentAutoSave();
 }
 function spend(n){advance(n,true);}
-function actionTime(n){advance(n,true);return !!(G&&!G.c.dead);}
+function actionTime(n){   advance(n,true);   maybeSpawnSpecialMerchant();   return !!(G&&!G.c.dead); }
 function rest(){
 if(!G||G.c.dead)return;let c=G.c;
 c.energy=clamp(c.energy+40,0,100);c.stamina=clamp(c.stamina+20,0,c.maxStamina);
@@ -1733,14 +1742,155 @@ function refreshMerchant(silent = false) {
   render();
 }
 
-function visitMerchant(){ensureMerchant();log("พ่อค้า","พ่อค้าเดินทางมาตั้งร้าน มีสินค้าไม่เหมือนกันในแต่ละครั้ง");render();}
-function buyMerchantItem(){
-let name=$("merchantSelect").value,it=G.world.merchant.find(i=>i.name===name);
-if(!it||it.qty<=0)return;
-let price=it.value+Math.ceil(it.value*(100-G.world.trade)/200);
-if(G.c.gold<price){log("ซื้อขาย","เงินไม่พอสำหรับ "+name+" ราคา "+price+" เหรียญ");return;}
-G.c.gold-=price;it.qty--;
-addItem(it.name,1,it.type,it.value,it.slot||null);log("ซื้อขาย","ซื้อ "+it.name+" สำเร็จ เงินลดลง "+price+" เหรียญ");actionTime(5);render();
+
+/* ===== พ่อค้าพิเศษพเนจร ===== */
+
+function maybeSpawnSpecialMerchant(){
+  if(!G || !G.world) return;
+
+  const world = G.world;
+
+  // พ่อค้าที่มาแล้วจะอยู่ชั่วคราว
+  if(world.specialMerchant){
+    world.specialMerchant.ttl--;
+
+    if(world.specialMerchant.ttl <= 0){
+      const name = world.specialMerchant.name;
+      world.specialMerchant = null;
+      log("พ่อค้าพิเศษ", name + " เก็บร้านเดินทางจากไปแล้ว");
+      renderSpecialMerchant();
+    }
+    return;
+  }
+
+  // โอกาสพบ 7% ต่อการกระทำที่ใช้เวลา
+  if(Math.random() >= 0.07) return;
+
+  const pool = ITEM_CATALOG.filter(
+    item => item.type !== "quest" && Number(item.value) >= 6
+  );
+
+  if(!pool.length) return;
+
+  const used = new Set();
+  const items = [];
+
+  for(let i = 0; i < 3; i++){
+    const available = pool.filter(item => !used.has(item.name));
+    if(!available.length) break;
+
+    const item = pick(available);
+    used.add(item.name);
+
+    items.push({
+      ...item,
+      qty: rand(1, 2),
+      specialPrice: Math.max(
+        1,
+        Math.ceil(item.value * (1.7 + Math.random() * 1.2))
+      )
+    });
+  }
+
+  world.specialMerchant = {
+    name: pick([
+      "พ่อค้าเงาจันทร์",
+      "พ่อค้าแห่งซากโบราณ",
+      "พ่อค้าลึกลับ",
+      "พ่อค้าดาวตก"
+    ]),
+    items,
+    ttl: 6
+  };
+
+  log(
+    "✦ พบพ่อค้าพิเศษ ✦",
+    world.specialMerchant.name +
+    " ปรากฏตัวแล้ว! มีสินค้าหายากให้เลือกซื้อ ตรวจสอบแผงพ่อค้าพิเศษได้เลย"
+  );
+
+  renderSpecialMerchant();
+}
+
+function renderSpecialMerchant(){
+  const panel = document.getElementById("specialMerchantPanel");
+  const info = document.getElementById("specialMerchantInfo");
+  const select = document.getElementById("specialMerchantSelect");
+
+  if(!panel || !info || !select) return;
+
+  const merchant = G && G.world && G.world.specialMerchant;
+
+  if(!merchant || !merchant.items.some(item => item.qty > 0)){
+    panel.style.display = "none";
+    info.textContent = "";
+    select.innerHTML = "";
+    return;
+  }
+
+  panel.style.display = "block";
+
+  info.innerHTML =
+    "<b>" + esc(merchant.name) + "</b>" +
+    "<p>เหลือเวลาอีกประมาณ " + merchant.ttl +
+    " การกระทำที่ใช้เวลาในเกม</p>" +
+    merchant.items.filter(item => item.qty > 0).map(item =>
+      "<div class='stat'><span>" +
+      esc(item.name) + " ×" + item.qty +
+      "</span><b>" + item.specialPrice + " เหรียญ</b></div>"
+    ).join("");
+
+  fillSelect(
+    "specialMerchantSelect",
+    merchant.items
+      .filter(item => item.qty > 0)
+      .map(item => ({
+        value: item.name,
+        text: item.name + " ×" + item.qty +
+          " — " + item.specialPrice + " เหรียญ"
+      }))
+  );
+}
+
+function buySpecialMerchantItem(){
+  if(!G || !G.world) return;
+
+  const merchant = G.world.specialMerchant;
+  if(!merchant) return;
+
+  const name = document.getElementById(
+    "specialMerchantSelect"
+  ).value;
+
+  const item = merchant.items.find(
+    item => item.name === name && item.qty > 0
+  );
+
+  if(!item){
+    log("พ่อค้าพิเศษ", "สินค้านี้หมดแล้ว");
+    return;
+  }
+
+  const price = Number(item.specialPrice) || item.value * 2;
+
+  if(G.c.gold < price){
+    log("ซื้อขาย", "เงินไม่พอ ต้องใช้ " + price + " เหรียญ");
+    return;
+  }
+
+  G.c.gold -= price;
+  item.qty--;
+
+  addItem(item.name, 1, item.type, item.value, item.slot || null);
+
+  log(
+    "ซื้อขายพิเศษ",
+    "ซื้อ " + item.name + " จาก " +
+    merchant.name + " ราคา " + price + " เหรียญ"
+  );
+
+  render();
+
 }
 const MONSTER_ROOTS=["หมาป่าผลึก","กิ้งก่าหนาม","แมลงเถ้าถ่าน","เห็ดกินแสง","สุนัขเงา","นกกระดูก","หมูป่าหิน","ตัวกินฝัน","งูเกล็ดแก้ว","ผู้เฝ้าซาก"];
 const MONSTER_TRAITS=["เพลิง","น้ำแข็ง","พิษ","เงา","สายฟ้า","ป่า","วิญญาณ","โลหะ","ผลึก","โลหิต"];
@@ -2097,6 +2247,7 @@ $("inventory").innerHTML=c.inventory.length?c.inventory.map(i=>`<div class="stat
 fillSelect("itemSelect",c.inventory.map(i=>({value:i.name,text:i.name+" ×"+i.qty})));
 fillSelect("merchantSelect",w.merchant.filter(i=>i.qty>0).map(i=>({value:i.name,text:i.name+" ×"+i.qty+" — "+(i.value+Math.ceil(i.value*(100-w.trade)/200))+" เหรียญ"})));
 $("merchantInfo").textContent=w.merchant.length?"มีสินค้าสุ่ม "+w.merchant.filter(i=>i.qty>0).length+" รายการ":"ยังไม่มีสินค้า";
+  renderSpecialMerchant();
 $("monsterInfo").textContent=monsterDescription();
 $("bestiary").textContent=w.bestiary.length?w.bestiary.join(", "):"ยังไม่ค้นพบสายพันธุ์";
 ensureNPCSelect();
