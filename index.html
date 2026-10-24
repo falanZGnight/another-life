@@ -693,60 +693,7 @@ main > section,
     display: none;
   }
 }
-
-/* หน้าจอคอมพิวเตอร์ */
-@media (min-width: 781px) {
-  main {
-    display: grid;
-    grid-template-columns: 285px minmax(0, 1fr);
-    align-items: start;
-  }
-
-  main > aside {
-    position: fixed;
-    top: 12px;
-    left: max(18px, calc((100vw - 1600px) / 2 + 18px));
-    width: 285px;
-    height: calc(100vh - 24px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    z-index: 20;
-    scrollbar-width: thin;
-    box-sizing: border-box;
-  }
-
-  main > section {
-    grid-column: 2;
-    min-width: 0;
-  }
-
-  main > aside > .panel:first-child {
-    position: static;
-    max-height: none;
-    overflow: visible;
-  }
-}
-
-/* โทรศัพท์และแท็บเล็ตจอเล็ก */
-@media (max-width: 780px) {
-  main {
-    display: block;
-  }
-
-  main > aside {
-    position: static;
-    width: auto;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-  }
-
-  main > section {
-    grid-column: auto;
-  }
-}
-
-
+  
 </style>
 </head>
 <body>
