@@ -598,9 +598,7 @@ main > section,
   }
 }
 
-/* FIX: ล็อกแถบสถานะด้านซ้ายขณะเลื่อนหน้า */
-
-/* แถบสถานะตัวละคร: เปิด-พับได้ */
+/* แถบสถานะ: ไม่ลอยทับเนื้อหา */
 #statusSidebar {
   min-width: 0;
 }
@@ -624,24 +622,25 @@ main > section,
   filter: brightness(1.15);
 }
 
-/* คอมพิวเตอร์ */
+/* คอมพิวเตอร์: แบ่งพื้นที่ซ้าย-ขวาให้ชัดเจน */
 @media (min-width: 781px) {
   main {
     display: grid;
     grid-template-columns: 285px minmax(0, 1fr);
     align-items: start;
+    gap: 20px;
   }
 
   main > #statusSidebar {
-    position: fixed !important;
+    position: sticky;
     top: 12px;
-    left: max(18px, calc((100vw - 1200px) / 2 + 16px));
-    width: 285px;
-    height: calc(100vh - 24px);
+    grid-column: 1;
+    width: auto;
+    max-height: calc(100vh - 24px);
     overflow-y: auto;
     overflow-x: hidden;
-    z-index: 100;
-    box-sizing: border-box;
+    align-self: start;
+    z-index: 5;
     scrollbar-width: thin;
   }
 
@@ -660,7 +659,7 @@ main > section,
   }
 
   main.sidebar-collapsed > #statusSidebar #sidebarToggle {
-    width: 44px;
+    width: 100%;
     padding: 9px 0;
     text-align: center;
     white-space: nowrap;
@@ -671,62 +670,27 @@ main > section,
   }
 }
 
-/* มือถือและแท็บเล็ต */
+/* มือถือ: แถบสถานะอยู่เหนือเนื้อหา */
 @media (max-width: 780px) {
   main {
     display: block;
   }
 
   main > #statusSidebar {
-    position: static !important;
+    position: static;
     width: auto;
-    height: auto;
     max-height: none;
     overflow: visible;
+    margin-bottom: 16px;
   }
 
   main > section {
     grid-column: auto;
+    min-width: 0;
   }
 
   main.sidebar-collapsed > #statusSidebar > .panel {
     display: none;
-  }
-}
-  
-/* FIX FINAL: ล็อกแถบสถานะซ้ายไว้กับหน้าจอ */
-@media (min-width: 781px) {
-  body > main > #statusSidebar {
-    position: fixed !important;
-    top: 12px !important;
-    left: max(18px, calc((100vw - 1200px) / 2 + 16px)) !important;
-    bottom: 12px !important;
-    width: 285px;
-    height: auto !important;
-    max-height: none !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    z-index: 999 !important;
-    align-self: start;
-  }
-
-  body > main.sidebar-collapsed > #statusSidebar {
-    width: 44px !important;
-    overflow: hidden !important;
-  }
-
-  body > main.sidebar-collapsed > #statusSidebar > .panel {
-    display: none !important;
-  }
-}
-
-@media (max-width: 780px) {
-  body > main > #statusSidebar {
-    position: static !important;
-    width: auto !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
   }
 }
 
