@@ -1958,14 +1958,10 @@ function renderSpecialMerchant(){
 }
 
 function buySpecialMerchantItem(){
- const price = merchantBuyPrice(item, G.world.trade);
-
-  const merchant = G.world.specialMerchant;
+  const merchant = G?.world?.specialMerchant;
   if(!merchant) return;
 
-  const name = document.getElementById(
-    "specialMerchantSelect"
-  ).value;
+  const name = document.getElementById("specialMerchantSelect").value;
 
   const item = merchant.items.find(
     item => item.name === name && item.qty > 0
@@ -1991,15 +1987,23 @@ function buySpecialMerchantItem(){
   log(
     "ซื้อขายพิเศษ",
     "ซื้อ " + item.name + " จาก " +
-    merchant.name + " ราคา " + price + " เหรียญ"
+    merchant.name + " ราคา " + formatCoins(price)
   );
+
+  if(!merchant.items.some(item => item.qty > 0)){
+    G.world.specialMerchant = null;
+  }
+
+  render();
+  renderSpecialMerchant();
+}
+
 function declineSpecialMerchant(){
   if(!G || !G.world || !G.world.specialMerchant) return;
 
   const merchant = G.world.specialMerchant;
   const name = merchant.name || "พ่อค้าพิเศษ";
 
-  // จบการพบพ่อค้าครั้งนี้ โดยไม่ซื้อสินค้า
   G.world.specialMerchant = null;
 
   log(
