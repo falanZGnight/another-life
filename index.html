@@ -1241,6 +1241,31 @@ function applyOrigin(){
   }
 }
 
+/* ===== ระบบเงินสามระดับ ===== */
+// ยอดเงินในเซฟเดิมเก็บเป็นหน่วยทองแดง
+// 100 ทองแดง = 1 เงิน
+// 100 เงิน = 1 ทอง
+
+function formatCoins(amount) {
+  let total = Math.max(0, Math.floor(Number(amount) || 0));
+
+  const gold = Math.floor(total / 10000);
+  total %= 10000;
+
+  const silver = Math.floor(total / 100);
+  const copper = total % 100;
+
+  const parts = [];
+
+  if (gold > 0) parts.push(gold + " ทอง");
+  if (silver > 0) parts.push(silver + " เงิน");
+  if (copper > 0 || parts.length === 0) {
+    parts.push(copper + " ทองแดง");
+  }
+
+  return parts.join(" ");
+}
+
 function log(type,text){
 if(!G)return;
 G.world.events.unshift({date:dateString(),type,text});
@@ -1572,12 +1597,12 @@ else if(it.type==="weapon"){c.atk+=2;log("อุปกรณ์","คุณฝ�
 else{log("ไอเทม","คุณตรวจสอบ "+it.name+" แต่ยังไม่มีวิธีใช้เฉพาะ");return;}
 it.qty--;cleanInventory();render();
 }
-function sellSelectedItem(){
+let price = merchantSellPrice(it, G.world.trade);{
 let name=$("itemSelect").value,it=G.c.inventory.find(i=>i.name===name);
 if(!it)return;
 if(it.name==="ยาชุบชีวิต"){log("ตลาด","คุณตัดสินใจเก็บไอเทมชุบชีวิตไว้");return;}
 let price=Math.max(1,Math.floor((it.value||3)*(.65+G.world.trade/250)));
-it.qty--;G.c.gold+=price;cleanInventory();log("ซื้อขาย","ขาย "+name+" ได้ "+price+" เหรียญ");render();
+it.qty--;G.c.gold+=price;cleanInventory();log("ซื้อขาย","ขาย "+name+" ได้ "+formatCoins(price));render();
 }
 function ensureMerchant(){
 if(G.world.merchant.length===0)refreshMerchant(true);
@@ -1709,6 +1734,71 @@ const ITEM_CATALOG = (() => {
   return items;
 })();
 /* ===== END ITEM DATABASE ===== */
+
+/* ===== มูลค่าตลาดของไอเทม ===== */
+
+function marketValue(item) {
+  if (!item) return 1;
+
+  const base = Math.max(
+    1,
+    Number(item.value) || 1
+  );
+
+  const type = String(item.type || "").toLowerCase();
+
+  const multipliers = {
+    food: 1,
+    drink: 1,
+    heal: 3,
+    revive: 15,
+    material: 4,
+    trade: 8,
+    tool: 6,
+    gear: 12,
+    weapon: 12,
+    armor: 12,
+    magic: 15,
+    charm: 5,
+    accessory: 10,
+    quest: 20
+  };
+
+  let value = base * (multipliers[type] || 2);
+
+  // สินค้าหายากหรือวัตถุดิบที่มีมูลค่าสูง
+  const name = String(item.name || "");
+
+  if (/มิธริล|มังกร|อัญมณีเจียระไน|หัวใจโกเล็ม|อาณาจักรเก่า|รูนผนึก/.test(name)) {
+    value *= 5;
+  } else if (/เงิน|ทอง|ผลึก|เวท|โบราณ|หายาก/.test(name)) {
+    value *= 2;
+  }
+
+  return Math.max(1, Math.round(value));
+}
+
+// ราคาซื้อจากร้านทั่วไป ปรับตามสภาพเศรษฐกิจ
+function merchantBuyPrice(item, trade = 50) {
+  const value = marketValue(item);
+  const economy = Math.max(0.5, (100 - trade) / 100);
+
+  return Math.max(
+    1,
+    Math.ceil(value * (1.15 + economy * 0.35))
+  );
+}
+
+// ราคาขายคืนให้พ่อค้า ผู้ขายได้เงินน้อยกว่าราคาซื้อ
+function merchantSellPrice(item, trade = 50) {
+  const value = marketValue(item);
+  const economy = Math.max(0.5, Math.min(1.5, trade / 50));
+
+  return Math.max(
+    1,
+    Math.floor(value * 0.45 * economy)
+  );
+}
 
 function refreshMerchant(silent = false) {
   const pool = ITEM_CATALOG.filter(
@@ -1853,7 +1943,7 @@ function renderSpecialMerchant(){
 }
 
 function buySpecialMerchantItem(){
-  if(!G || !G.world) return;
+ const price = merchantBuyPrice(item, G.world.trade)return;
 
   const merchant = G.world.specialMerchant;
   if(!merchant) return;
@@ -1874,7 +1964,7 @@ function buySpecialMerchantItem(){
   const price = Number(item.specialPrice) || item.value * 2;
 
   if(G.c.gold < price){
-    log("ซื้อขาย", "เงินไม่พอ ต้องใช้ " + price + " เหรียญ");
+    log("ซื้อขาย", "เงินไม่พอ ต้องใช้ " + formatCoins(price));
     return;
   }
 
@@ -2239,7 +2329,7 @@ $("stats").innerHTML=`<div class="stat"><span>HP</span><b>${Math.max(0,c.hp)}/${
 <div class="stat"><span>ความรู้ / งานช่าง</span><b>${c.knowledge} / ${c.craft}</b></div>
 <div class="stat"><span>สังคม / เอาตัวรอด</span><b>${c.social} / ${c.survival}</b></div>`;
 $("needs").innerHTML=`<div class="stat"><span>ความหิว</span><b class="${c.hunger>75?"badtxt":""}">${Math.round(c.hunger)}%</b></div><div class="bar"><span style="width:${c.hunger}%;background:${c.hunger>75?"#e77":"#d9b66e"}"></span></div><div class="stat"><span>กระหาย</span><b class="${c.thirst>75?"badtxt":""}">${Math.round(c.thirst)}%</b></div><div class="bar"><span style="width:${c.thirst}%;background:${c.thirst>75?"#e77":"#88bfff"}"></span></div>`;
-$("gold").textContent=c.gold+" เหรียญ";$("fame").textContent=c.fame;$("job").textContent=c.job+" Lv."+c.jobLevel;
+$("gold").textContent=formatCoins(c.gold);$("fame").textContent=c.fame;$("job").textContent=c.job+" Lv."+c.jobLevel;
 $("lifePath").textContent=c.lifePath;$("place").textContent=G.location;$("clock").textContent=dateString();$("danger").textContent="ระดับ "+danger()+"/5";
 if (G.auto) {
   $("aiToggle").textContent = G.auto.enabled ? "AI: เปิด" : "AI: ปิด";
