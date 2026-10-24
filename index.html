@@ -598,10 +598,9 @@ main > section,
   }
 }
 
-/* FIX: ให้แผงสถานะอยู่กับที่ขณะเลื่อนหน้า */
-@media (min-width: 781px) {
-  
-/* FIX: ล็อกแถบซ้ายกับหน้าจอ */
+/* FIX: ล็อกแถบสถานะด้านซ้ายขณะเลื่อนหน้า */
+
+/* หน้าจอคอมพิวเตอร์ */
 @media (min-width: 781px) {
   main {
     display: grid;
@@ -619,6 +618,7 @@ main > section,
     overflow-x: hidden;
     z-index: 20;
     scrollbar-width: thin;
+    box-sizing: border-box;
   }
 
   main > section {
@@ -633,7 +633,12 @@ main > section,
   }
 }
 
+/* โทรศัพท์และแท็บเล็ตจอเล็ก */
 @media (max-width: 780px) {
+  main {
+    display: block;
+  }
+
   main > aside {
     position: static;
     width: auto;
