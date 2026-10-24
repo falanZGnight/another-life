@@ -612,6 +612,27 @@ main > section,
   }
 }
 
+/* FIX: ให้แผงสถานะอยู่กับที่ขณะเลื่อนหน้า */
+@media (min-width: 781px) {
+  main {
+    align-items: stretch;
+  }
+
+  main > aside {
+    align-self: stretch;
+    min-height: 100%;
+  }
+
+  main > aside > .panel:first-child {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -713,6 +734,16 @@ main > section,
 <option value="เผ่าสัตว์">เผ่าสัตว์ — ประสาทสัมผัสและความคล่องตัว</option>
 <option value="เผ่ามังกรสายเลือดเจือจาง">ผู้มีสายเลือดมังกรเจือจาง — พลังสูงแต่ถูกจับตามอง</option>
 <option value="เผ่าวิญญาณ">เผ่าวิญญาณ — ไวต่อพลังลี้ลับ แต่ร่างกายเปราะบาง</option>
+<option value="ออร์ค">ออร์ค — แข็งแกร่ง อึด และมีเกียรติยศเผ่า</option>
+<option value="ก็อบลิน">ก็อบลิน — คล่องแคล่ว ประดิษฐ์เก่ง และเอาตัวรอดเก่ง</option>
+<option value="ดาร์กเอลฟ์">ดาร์กเอลฟ์ — เวทเงาและการพรางตัว</option>
+<option value="เผ่าสไลม์">เผ่าสไลม์ — ร่างกายยืดหยุ่นและใช้เวทได้</option>
+<option value="เผ่าทะเล">เผ่าทะเล — เชี่ยวชาญสภาพแวดล้อมทางน้ำ</option>
+<option value="เผ่านางฟ้า">เผ่านางฟ้า — เวทมนตร์สูง แต่ร่างกายเปราะบาง</option>
+<option value="เผ่ายักษ์">เผ่ายักษ์ — พลังโจมตีและพลังชีวิตสูง</option>
+<option value="เผ่าพฤกษา">เผ่าพฤกษา — ฟื้นฟูและสัมพันธ์กับธรรมชาติ</option>
+<option value="เผ่าอันเดด">เผ่าอันเดด — พลังลี้ลับและอายุยืน</option>
+<option value="เผ่ามังกรสายเลือดแท้">มังกรสายเลือดแท้ — พลังสูงมากและเติบโตช้า</option>
 </select>
 <label>พรสวรรค์</label>
 <select id="cTalent">
@@ -919,7 +950,18 @@ const RACES={
   "คนแคระ":{hp:5,atk:1,magic:-1,skill:"ช่างโลหะ",adultAge:20,lifeExpectancy:250,maxAge:400},
   "เผ่าสัตว์":{hp:1,atk:2,magic:0,skill:"ประสาทสัมผัส",adultAge:15,lifeExpectancy:100,maxAge:150},
   "เผ่ามังกรสายเลือดเจือจาง":{hp:6,atk:3,magic:2,skill:"สายเลือดมังกร",adultAge:25,lifeExpectancy:180,maxAge:300},
-  "เผ่าวิญญาณ":{hp:-4,atk:0,magic:5,skill:"สัมผัสวิญญาณ",adultAge:18,lifeExpectancy:500,maxAge:1000}
+  "เผ่าวิญญาณ":{hp:-4,atk:0,magic:5,skill:"สัมผัสวิญญาณ",adultAge:18,lifeExpectancy:500,maxAge:1000} 
+  "ออร์ค":{hp:7,atk:3,magic:-1,skill:"พละกำลังและเกียรติยศ",adultAge:15,lifeExpectancy:90,maxAge:130},
+  "ก็อบลิน":{hp:-2,atk:1,magic:1,skill:"นักประดิษฐ์และนักเอาตัวรอด",adultAge:12,lifeExpectancy:60,maxAge:85},
+  "ดาร์กเอลฟ์":{hp:-1,atk:1,magic:4,skill:"เวทเงาและการพรางตัว",adultAge:30,lifeExpectancy:700,maxAge:1100},
+  "เผ่าสไลม์":{hp:2,atk:-1,magic:3,skill:"ร่างกายยืดหยุ่น",adultAge:10,lifeExpectancy:200,maxAge:500},
+  "เผ่าทะเล":{hp:2,atk:1,magic:2,skill:"ปรับตัวในน้ำ",adultAge:18,lifeExpectancy:180,maxAge:300},
+  "เผ่านางฟ้า":{hp:-5,atk:-1,magic:6,skill:"เวทมนตร์ธรรมชาติ",adultAge:25,lifeExpectancy:400,maxAge:800},
+  "เผ่ายักษ์":{hp:12,atk:4,magic:-2,skill:"พละกำลังมหาศาล",adultAge:25,lifeExpectancy:160,maxAge:240},
+  "เผ่าพฤกษา":{hp:4,atk:0,magic:3,skill:"ฟื้นฟูและสัมผัสธรรมชาติ",adultAge:20,lifeExpectancy:350,maxAge:700},
+  "เผ่าอันเดด":{hp:3,atk:1,magic:3,skill:"ทนทานและสัมผัสความตาย",adultAge:18,lifeExpectancy:500,maxAge:900},
+  "เผ่ามังกรสายเลือดแท้":{hp:12,atk:5,magic:6,skill:"พลังมังกรโบราณ",adultAge:50,lifeExpectancy:1500,maxAge:2500}
+
 };
 
   
@@ -930,22 +972,22 @@ const AGE_RULES = {
     lifespan: 80
   },
   "เอลฟ์": {
-    adult: 30,
+    adult: 20,
     elder: 350,
     lifespan: 500
   },
   "คนแคระ": {
-    adult: 20,
+    adult: 14,
     elder: 140,
     lifespan: 200
   },
   "เผ่าสัตว์": {
-    adult: 15,
+    adult: 12,
     elder: 65,
     lifespan: 90
   },
   "เผ่ามังกรสายเลือดเจือจาง": {
-    adult: 50,
+    adult: 30,
     elder: 700,
     lifespan: 1000
   },
@@ -954,6 +996,18 @@ const AGE_RULES = {
     elder: 250,
     lifespan: 400
   }
+  
+  "ออร์ค":{adult:10,elder:65,lifespan:90},
+  "ก็อบลิน":{adult:10,elder:45,lifespan:60},
+  "ดาร์กเอลฟ์":{adult:30,elder:350,lifespan:700},
+  "เผ่าสไลม์":{adult:8,elder:150,lifespan:200},
+  "เผ่าทะเล":{adult:18,elder:120,lifespan:180},
+  "เผ่านางฟ้า":{adult:25,elder:250,lifespan:400},
+  "เผ่ายักษ์":{adult:25,elder:110,lifespan:160},
+  "เผ่าพฤกษา":{adult:20,elder:250,lifespan:350},
+  "เผ่าอันเดด":{adult:18,elder:400,lifespan:500},
+  "เผ่ามังกรสายเลือดแท้":{adult:50,elder:1000,lifespan:1500}
+
 };
 
 function ageRule(race) {
@@ -1333,6 +1387,7 @@ if(c.gold<2){log("การเรียน","ต้องใช้ค่าเ�
 c.gold-=2;c.knowledge+=1;c.magic+=Math.random()<.25?1:0;c.energy-=8;
 log("การเรียน","เรียนรู้ทักษะพื้นฐาน ความรู้เพิ่มขึ้น");actionTime(120);
 }
+  
 function explore(){
 let c=G.c;if(c.energy<15){log("สำรวจ","คุณเหนื่อยเกินไป");return;}
 c.energy-=15;c.survival+=1;
@@ -1341,6 +1396,7 @@ if(roll>=16){let item=pick(["สมุนไพรป่า","แร่ดิบ
 else if(roll>=10){c.gold+=rand(1,5);log("สำรวจ","คุณพบเศษเหรียญและร่องรอยเก่า");}
 else log("สำรวจ","ไม่พบสิ่งมีค่า แต่คุณได้เรียนรู้พื้นที่นี้");
 actionTime(90);
+
 }
 function community(){
 let c=G.c;c.energy-=6;c.social+=1;c.fame+=1;G.world.politics=clamp(G.world.politics+1,0,100);
@@ -7734,6 +7790,257 @@ organizeLifeSections();
 
 })();
  /* ===== END JOURNEY / PETS / SUMMON ===== */
+
+/* ===== ANOTHER LIFE: COMPANION PARTY PATCH ===== */
+(function () {
+  "use strict";
+
+  function getGame() {
+    return typeof G !== "undefined" && G && G.c ? G : null;
+  }
+
+  function setup() {
+    const g = getGame();
+    if (!g) return;
+
+    const c = g.c;
+    c.pets ||= [];
+    c.summons ||= [];
+    c.activePetId ??= null;
+    c.activeSummonId ??= null;
+    c.party ||= [];
+    c.maxHp = Number(c.maxHp) || 30;
+    c.maxMana = Number(c.maxMana) || 12;
+    c.hp = Math.max(0, Math.min(Number(c.hp) || 0, c.maxHp));
+    c.mana = Math.max(0, Math.min(Number(c.mana) || 0, c.maxMana));
+
+    // HP หมด = เสียชีวิต ไม่ฟื้นเอง
+    if (c.hp <= 0) {
+      c.hp = 0;
+      c.dead = true;
+    }
+  }
+
+  function isInParty(type, id) {
+    const g = getGame();
+    if (!g) return false;
+    return g.c.party.some(x => x.type === type && x.id === id);
+  }
+
+  function toggleParty(type, id) {
+    const g = getGame();
+    if (!g || g.c.dead) return;
+
+    const c = g.c;
+    c.party ||= [];
+    const index = c.party.findIndex(x => x.type === type && x.id === id);
+
+    if (index >= 0) {
+      c.party.splice(index, 1);
+    } else {
+      // จำกัดสมาชิกติดตามไม่เกิน 4 ตัว
+      if (c.party.length >= 4) {
+        if (typeof logMsg === "function") {
+          logMsg("ทีม", "ทีมเต็มแล้ว ต้องนำสมาชิกออกก่อน");
+        }
+        return;
+      }
+
+      const list = type === "pet" ? c.pets : c.summons;
+      const member = list.find(x => x.id === id);
+      if (!member) return;
+
+      c.party.push({ type, id });
+    }
+
+    if (typeof save === "function") save();
+    renderPartyButtons();
+    if (typeof pixelRender === "function") pixelRender();
+  }
+
+  function renderPartyButtons() {
+    const g = getGame();
+    if (!g) return;
+
+    const sections = [
+      { type: "pet", selector: "#alPetsList", items: g.c.pets || [] },
+      { type: "summon", selector: "#alSummonList", items: g.c.summons || [] }
+    ];
+
+    sections.forEach(section => {
+      const root = document.querySelector(section.selector);
+      if (!root) return;
+
+      Array.from(root.children).forEach((card, index) => {
+        const item = section.items[index];
+        if (!item || card.querySelector("[data-party-patch]")) return;
+
+        const btn = document.createElement("button");
+        btn.dataset.partyPatch = "1";
+        btn.style.marginTop = "6px";
+
+        function updateButton() {
+          const active = isInParty(section.type, item.id);
+          btn.textContent = active ? "➖ นำออกจากทีม" : "➕ เข้าทีม";
+        }
+
+        btn.onclick = () => {
+          toggleParty(section.type, item.id);
+          updateButton();
+        };
+
+        updateButton();
+        card.appendChild(btn);
+      });
+    });
+  }
+
+  // วาดสมาชิกทีมเพิ่มในฉากพิกเซล โดยไม่แก้ตัววาดฉากเดิม
+  function drawCompanions() {
+    const g = getGame();
+    const canvas = document.getElementById("pixelCanvas");
+    if (!g || !canvas || !g.pixelMap) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const tile = 32;
+    const p = g.pixelMap;
+    const members = (g.c.party || [])
+      .map(entry => {
+        const list = entry.type === "pet" ? g.c.pets : g.c.summons;
+        const item = (list || []).find(x => x.id === entry.id);
+        return item ? { ...entry, name: item.name } : null;
+      })
+      .filter(Boolean);
+
+    const now = performance.now();
+    const bob = Math.sin(now / 180) * 2;
+
+    members.forEach((member, i) => {
+      // วางเป็นแถวข้างผู้เล่น และขยับเล็กน้อยให้ดูมีชีวิต
+      let x = p.x + (i % 2 === 0 ? -1 : 1);
+      let y = p.y + Math.floor(i / 2) + 1;
+
+      // กันหลุดขอบแผนที่
+      x = Math.max(0, Math.min(17, x));
+      y = Math.max(0, Math.min(10, y));
+
+      const cx = x * tile + 16;
+      const cy = y * tile + 17 + bob;
+
+      if (member.type === "summon") {
+        // อัญเชิญ: ออร่าและแกนพลังเวท
+        ctx.fillStyle = "rgba(118,190,255,0.25)";
+        ctx.fillRect(cx - 11, cy - 13, 22, 22);
+        ctx.fillStyle = "#a7e6ff";
+        ctx.fillRect(cx - 6, cy - 9, 12, 12);
+        ctx.fillStyle = "#f5ffff";
+        ctx.fillRect(cx - 2, cy - 5, 4, 4);
+      } else {
+        // สัตว์เลี้ยง: ตัวเล็กแบบพิกเซล
+        ctx.fillStyle = "#49372c";
+        ctx.fillRect(cx - 8, cy - 3, 16, 10);
+        ctx.fillStyle = "#d5a56d";
+        ctx.fillRect(cx - 6, cy - 8, 12, 8);
+        ctx.fillStyle = "#fff4d2";
+        ctx.fillRect(cx - 4, cy - 6, 2, 2);
+        ctx.fillRect(cx + 2, cy - 6, 2, 2);
+        ctx.fillStyle = "#49372c";
+        ctx.fillRect(cx - 7, cy - 11, 3, 5);
+        ctx.fillRect(cx + 4, cy - 11, 3, 5);
+      }
+
+      // ป้ายชื่อ
+      ctx.fillStyle = "rgba(20,25,25,0.8)";
+      ctx.fillRect(cx - 15, cy - 20, 30, 7);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "6px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(String(member.name || "ทีม").slice(0, 7), cx, cy - 14);
+      ctx.textAlign = "start";
+    });
+  }
+
+  // ต่อท้ายการวาดฉากเดิม ไม่แทนที่ระบบวาดเดิม
+  if (typeof window.pixelRender === "function") {
+    const originalPixelRender = window.pixelRender;
+    window.pixelRender = function (...args) {
+      originalPixelRender.apply(this, args);
+      drawCompanions();
+    };
+  }
+
+  // ฟื้นฟูตามเวลาจริง: HP และมานาค่อย ๆ เพิ่ม
+  // หาก HP เป็น 0 จะไม่ฟื้นเอง
+  let lastRegen = Date.now();
+
+  setInterval(() => {
+    const g = getGame();
+    if (!g || !g.c) return;
+
+    const c = g.c;
+    setup();
+
+    const now = Date.now();
+    const elapsed = Math.min((now - lastRegen) / 1000, 10);
+    lastRegen = now;
+
+    if (!c.dead && c.hp > 0) {
+      c.hp = Math.min(c.maxHp, c.hp + elapsed * 0.15);
+    }
+
+    c.mana = Math.min(c.maxMana, c.mana + elapsed * 0.2);
+
+    // สิ่งอัญเชิญที่อยู่ในทีมกินมานาเป็นระยะ
+    // อัตรา 1 มานาต่อ 30 วินาทีต่อหนึ่งตัว
+    c._summonUpkeep ||= 0;
+    c._summonUpkeep += elapsed;
+
+    if (c._summonUpkeep >= 30) {
+      c._summonUpkeep %= 30;
+
+      const activeSummons = (c.party || []).filter(x =>
+        x.type === "summon" && x.id === c.activeSummonId
+      );
+
+      if (activeSummons.length) {
+        if (c.mana >= activeSummons.length) {
+          c.mana -= activeSummons.length;
+        } else {
+          c.activeSummonId = null;
+          c.party = c.party.filter(x => x.type !== "summon");
+          if (typeof logMsg === "function") {
+            logMsg("อัญเชิญ", "มานาไม่พอ สิ่งอัญเชิญจึงกลับไปแล้ว");
+          }
+        }
+      }
+    }
+
+    if (typeof render === "function") render();
+  }, 1000);
+
+  // รายการสัตว์อาจถูกสร้างใหม่ตอนเปิดหน้า จึงเฝ้าดูแล้วเพิ่มปุ่มให้
+  const observer = new MutationObserver(() => renderPartyButtons());
+
+  function start() {
+    setup();
+
+    ["alPetsList", "alSummonList"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el, { childList: true });
+    });
+
+    renderPartyButtons();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+/* ===== END COMPANION PARTY PATCH ===== */
 
 </script>
 </body>
