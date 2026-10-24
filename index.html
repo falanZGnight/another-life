@@ -11344,10 +11344,252 @@ organizeLifeSections();
     });
   }
 })();
-</script>
-</body>
-</html>
+  from pathlib import Path
 
+code = r'''/* =========================================================
+   สักครั้งในจักรวาล — Cosmos + Random Life Events
+   วิธีติดตั้ง: วาง <script> โค้ดนี้ </script> ก่อน </body>
+   ใน index.html โดยไม่ต้องลบระบบเดิม
+   ========================================================= */
+(function installCosmosLife(){
+  "use strict";
+  if (window.__cosmosLifeInstalled) return;
+  window.__cosmosLifeInstalled = true;
+
+  const pick = a => a[Math.floor(Math.random()*a.length)];
+  const clamp = (n,a,b) => Math.max(a,Math.min(b,Number(n)||0));
+  const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const $ = id => document.getElementById(id);
+
+  const eras = [
+    ["ยุคแห่งเวทมนตร์","มานาไหลเวียนอยู่ในธรรมชาติ ผู้มีพรสวรรค์อาจค้นพบพลังที่ซ่อนอยู่"],
+    ["ยุคอาณาจักรแตกแยก","อาณาจักรแข่งขันแย่งชิงทรัพยากร ข่าวสงครามอาจเปลี่ยนชีวิตคนธรรมดา"],
+    ["ยุคชายแดนไร้แผนที่","ดินแดนจำนวนมากยังไม่ถูกสำรวจ การเดินทางมีทั้งโอกาสและความเสี่ยง"],
+    ["ยุคหลังมหาภัยพิบัติ","อารยธรรมกำลังฟื้นตัว ซากโบราณและความรู้ที่สูญหายยังรอการค้นพบ"],
+    ["ยุคพันธสัญญาเทพ","คำสาบานและสิ่งเหนือธรรมชาติมีอิทธิพลต่อผู้คน"],
+    ["ยุคสงบที่ไม่แน่นอน","การค้ารุ่งเรือง แต่แรงกดดันบางอย่างกำลังก่อตัวใต้ความสงบ"]
+  ];
+  const worlds = ["เอเธอเรีย","วาลเธียร์","อัสตราเวน","ลูเมเรีย","เนบิวรา","ไอรอนเวลด์","เอเวอร์มิสต์","โซลาริส"];
+  const regions = ["ป่าเรืองแสง","ที่ราบชายแดน","นครท่าการค้า","หุบเขาหมอกหนา","ซากอาณาจักรโบราณ","หมู่เกาะลอยฟ้า","ทะเลทรายกระจก","เทือกเขามังกร"];
+  const omens = ["ดาวหางสีเงินเพิ่งปรากฏ","ผู้คนเริ่มฝันถึงประตูบานเดียวกัน","สัตว์ป่าอพยพผิดฤดูกาล","มีแสงประหลาดใต้ซากเมือง","เส้นทางการค้าเปลี่ยนไปอย่างไร้เหตุผล","นักเดินทางพบสัญลักษณ์ที่ไม่มีใครอ่านออก"];
+
+  function makeCosmos(){
+    const era=pick(eras), roll=Math.random();
+    return {
+      name:pick(worlds)+" "+pick(["จักรวาล","มหาจักรวาล","แดนดารา"]),
+      world:pick(["อีลารา","เวสเพอเรีย","คาเอลดอร์","มิราเอล","ออร์เบล","เซราฟิน"]),
+      era:era[0],law:era[1],region:pick(regions),omen:pick(omens),
+      rarity:roll<.06?"ตำนาน":roll<.28?"หายาก":"แฟนตาซีทั่วไป",
+      seed:Math.random().toString(36).slice(2,10)
+    };
+  }
+
+  const events = [
+    {kind:"ชีวิตประจำวัน",title:"เสียงเรียกจากตลาด",story:"พ่อค้าเร่กำลังหาคนช่วยงานเล็ก ๆ อาจเป็นโอกาสหาเงินหรือเรียนรู้อะไรใหม่",choices:[
+      {label:"เสนอตัวช่วยงาน",stat:"social",dc:8,ok:"พ่อค้าพอใจและตอบแทนคุณ",bad:"งานวุ่นวายกว่าที่คิด แต่คุณได้เห็นวิธีทำงานจริง",win:{gold:[5,13],social:1},lose:{energy:8}},
+      {label:"สังเกตวิธีทำงาน",stat:"knowledge",dc:5,ok:"คุณสังเกตเห็นกลเม็ดการค้าบางอย่าง",bad:"ข้อมูลไม่มากนัก แต่คุณใช้เวลาอย่างปลอดภัย",win:{knowledge:1,skill:1},lose:{energy:3}},
+      {label:"เดินผ่านไป",dc:0,ok:"คุณเดินทางต่อโดยไม่เสียเวลา",win:{},lose:{}}
+    ]},
+    {kind:"ผู้คน",title:"คนแปลกหน้ากับถุงสมุนไพร",story:"นักเดินทางบาดเจ็บเล็กน้อยทำถุงสมุนไพรหกกระจาย ผู้คนเดินผ่านไปโดยไม่แน่ใจว่าจะช่วยดีไหม",choices:[
+      {label:"ช่วยเก็บสมุนไพร",stat:"social",dc:9,ok:"เขาซาบซึ้งและแบ่งปันความรู้เรื่องสมุนไพร",bad:"เขารับความช่วยเหลือไว้ แต่ยังระแวดระวัง",win:{social:1,knowledge:1,trust:1},lose:{energy:5}},
+      {label:"เสนอผ้าพันแผล",stat:"survival",dc:7,ok:"การช่วยเหลือทำให้เขาไว้ใจคุณ",bad:"แผลของเขาต้องการการรักษามากกว่าที่คุณทำได้",win:{trust:2},lose:{gold:[1,4]}},
+      {label:"ไม่เข้าไปยุ่ง",dc:0,ok:"คุณรักษาระยะและเดินทางต่อ",win:{},lose:{}}
+    ]},
+    {kind:"การค้นพบ",title:"ประกายใต้รากไม้",story:"มีแสงจาง ๆ ลอดออกมาจากใต้รากไม้เก่าแก่ กลิ่นดินชื้นและพลังแปลกประหลาดบอกว่าสิ่งนี้อาจไม่ธรรมดา",choices:[
+      {label:"ตรวจสอบอย่างระมัดระวัง",stat:"knowledge",dc:12,ok:"คุณพบเศษผลึกมานาที่เก็บพลังไว้ได้",bad:"ประกายดับลง เหลือเพียงรอยไหม้บนถุงมือ",win:{magic:1,gold:[2,8],skill:2},lose:{hp:3}},
+      {label:"สำรวจรอบ ๆ ก่อน",stat:"survival",dc:10,ok:"คุณพบทางปลอดภัยและวัสดุมีค่า",bad:"คุณต้องย้อนกลับโดยไม่ได้อะไร",win:{survival:1,gold:[3,7]},lose:{energy:10}},
+      {label:"เดินต่อ",dc:0,ok:"คุณไม่เสี่ยงกับสิ่งที่ยังไม่เข้าใจ",win:{},lose:{}}
+    ]},
+    {kind:"ความเสี่ยง",title:"รอยเท้าข้างทาง",story:"รอยเท้าขนาดใหญ่ตัดผ่านเส้นทาง ดินยังชื้นและรอยนั้นดูสดพอจะบอกว่าสิ่งที่ทิ้งมันไว้คงอยู่ไม่ไกล",choices:[
+      {label:"ตามรอยจากระยะปลอดภัย",stat:"survival",dc:13,ok:"คุณพบรังร้างและวัสดุที่ยังใช้ได้",bad:"เสียงคำรามดังจากพุ่มไม้ คุณถอยกลับมาได้แต่เหนื่อยล้า",win:{survival:1,gold:[4,12],skill:2},lose:{hp:5,energy:12}},
+      {label:"เตรียมอาวุธสำรวจ",stat:"atk",dc:14,ok:"คุณรับมือสถานการณ์ได้และเก็บวัสดุมีค่า",bad:"การเผชิญหน้าไม่เป็นใจ คุณบาดเจ็บก่อนถอนตัว",win:{atk:1,skill:3},lose:{hp:8,energy:15}},
+      {label:"หลีกเลี่ยงพื้นที่",dc:0,ok:"คุณเลือกความปลอดภัยและเปลี่ยนเส้นทาง",win:{},lose:{}}
+    ]},
+    {kind:"โชคชะตา",title:"คำทำนายที่ไม่มีชื่อ",story:"หญิงชราผู้ดูดาวบอกว่าเส้นทางของคนธรรมดาก็อาจพาดผ่านเหตุการณ์ใหญ่ โดยไม่มีใครรู้ตัวล่วงหน้า",choices:[
+      {label:"นั่งฟังคำทำนาย",stat:"knowledge",dc:11,ok:"ถ้อยคำบางส่วนทำให้เป้าหมายชีวิตชัดขึ้น",bad:"คำทำนายคลุมเครือ แต่ประโยคหนึ่งติดอยู่ในใจ",win:{knowledge:1,fame:1,skill:2},lose:{energy:4}},
+      {label:"ถามถึงสิ่งที่ควรระวัง",stat:"social",dc:10,ok:"เธอให้เครื่องรางเล็ก ๆ เป็นของติดตัว",bad:"เธอเตือนเพียงว่าอย่าประมาทสิ่งเล็กน้อย",win:{gold:[3,9],trust:1},lose:{trust:-1}},
+      {label:"ขอบคุณแล้วจากไป",dc:0,ok:"คุณเก็บคำพูดนั้นไว้คิดระหว่างเดินทาง",win:{knowledge:1},lose:{}}
+    ]},
+    {kind:"อุปสรรค",title:"ฝนที่มาไม่ตรงฤดู",story:"ฝนเย็นจัดตกลงมาพร้อมกลิ่นคล้ายโลหะ หากเดินต่อโดยไม่เตรียมตัวอาจเสียแรงมากกว่าที่คิด",choices:[
+      {label:"หาที่กำบังและรอ",stat:"survival",dc:7,ok:"คุณพบที่พักแห้งและฟื้นแรง",bad:"ที่กำบังรั่ว แต่ยังดีกว่าตากฝนเต็ม ๆ",win:{energy:12,hp:2},lose:{energy:5}},
+      {label:"คลุมตัวแล้วเดินต่อ",stat:"def",dc:10,ok:"คุณไปถึงจุดหมายโดยแทบไม่เสียเวลา",bad:"ความหนาวทำให้คุณอ่อนล้า",win:{skill:1},lose:{energy:12,hp:2}},
+      {label:"กลับไปที่ปลอดภัย",dc:0,ok:"คุณยอมเสียเวลาเพื่อหลีกเลี่ยงความเสี่ยง",win:{},lose:{}}
+    ]},
+    {kind:"การค้า",title:"พ่อค้าเสนอของแปลก",story:"พ่อค้าเปิดกล่องให้ดูเศษโลหะสลักลายดาว เขาไม่แน่ใจว่ามันมีค่าแค่ไหน แต่อยากแลกกับสิ่งของหรือความช่วยเหลือ",choices:[
+      {label:"ตรวจสอบและต่อรอง",stat:"knowledge",dc:10,ok:"คุณต่อรองได้ดีและได้ผลตอบแทน",bad:"คุณไม่แน่ใจมูลค่าจริง จึงไม่แลก",win:{gold:[2,6],knowledge:1},lose:{energy:3}},
+      {label:"ช่วยขนสินค้าแลกค่าจ้าง",stat:"craft",dc:7,ok:"คุณช่วยงานเสร็จและได้รับค่าจ้าง",bad:"งานหนักกว่าคาด แต่ยังได้ค่าตอบแทนเล็กน้อย",win:{gold:[6,14],craft:1},lose:{energy:8,gold:[0,2]}},
+      {label:"ปฏิเสธอย่างสุภาพ",dc:0,ok:"คุณเดินทางต่อโดยไม่ผูกมัด",win:{},lose:{}}
+    ]},
+    {kind:"สายสัมพันธ์",title:"คำพูดที่ไม่ตั้งใจ",story:"คนรู้จักพูดบางอย่างคล้ายคำตำหนิ คุณไม่แน่ใจว่าเขาตั้งใจทำร้ายจิตใจหรือเพียงเหนื่อยล้า",choices:[
+      {label:"ถามตรง ๆ อย่างใจเย็น",stat:"social",dc:9,ok:"ความเข้าใจผิดคลี่คลาย ความสัมพันธ์ดีขึ้น",bad:"บทสนทนาไม่ราบรื่น แต่คุณรู้ว่าอีกฝ่ายกังวล",win:{social:1,trust:2},lose:{trust:-1}},
+      {label:"เว้นระยะให้เวลาทั้งคู่",stat:"survival",dc:5,ok:"คุณรักษาความสงบและกลับมาคุยกันได้",bad:"ระยะห่างทำให้เรื่องค้างคา",win:{trust:1},lose:{trust:-1}},
+      {label:"ตอบโต้ทันที",stat:"atk",dc:12,ok:"คุณยืนหยัดในขอบเขตของตัวเอง",bad:"คำพูดแรงเกินไปจนความสัมพันธ์ตึงเครียด",win:{fame:1,trust:-1},lose:{trust:-3}}
+    ]},
+    {kind:"โอกาส",title:"ประกาศรับศิษย์",story:"สำนักเล็ก ๆ เปิดรับคนช่วยงานและให้เรียนพื้นฐานแก่ผู้ตั้งใจ ไม่ได้สัญญาว่าจะสร้างยอดฝีมือ แต่ประตูบานหนึ่งกำลังเปิดอยู่",choices:[
+      {label:"สมัครและแสดงความตั้งใจ",stat:"knowledge",dc:11,ok:"ผู้สอนเห็นความตั้งใจและสอนพื้นฐานให้",bad:"คุณยังไม่ผ่าน แต่ได้คำแนะนำสำหรับฝึกต่อ",win:{knowledge:1,atk:1,skill:2},lose:{energy:6}},
+      {label:"ช่วยงานแลกโอกาสฝึก",stat:"craft",dc:8,ok:"คุณได้เรียนรู้จากงานจริง",bad:"วันนี้มีแต่งานจิปาถะ แต่ได้ฝึกความอดทน",win:{craft:1,knowledge:1},lose:{energy:8}},
+      {label:"เก็บข้อมูลไว้ก่อน",dc:0,ok:"คุณจดจำเส้นทางและเงื่อนไขการสมัคร",win:{knowledge:1},lose:{}}
+    ]},
+    {kind:"ปริศนา",title:"เสียงกระซิบในซากหิน",story:"จากซากหินข้างทาง มีเสียงคล้ายคนกระซิบชื่อที่คุณไม่เคยได้ยิน มันไม่ได้คุกคาม แต่ก็ไม่รู้ว่าควรเชื่อใจหรือไม่",choices:[
+      {label:"ตอบกลับจากระยะห่าง",stat:"magic",dc:14,ok:"พลังบางอย่างตอบรับ คุณเข้าใจเศษความรู้ที่ไม่เคยเรียน",bad:"เสียงหายไปและทิ้งอาการปวดศีรษะ",win:{magic:1,knowledge:1,skill:3},lose:{hp:4,energy:5}},
+      {label:"ตรวจสอบรอบซากหิน",stat:"survival",dc:10,ok:"คุณพบสัญลักษณ์โบราณที่อาจมีความหมายภายหลัง",bad:"คุณไม่พบต้นตอของเสียงและต้องกลับออกมา",win:{survival:1,knowledge:1},lose:{energy:7}},
+      {label:"ถอยออกมา",dc:0,ok:"คุณไม่เสี่ยงกับสิ่งที่ยังไม่เข้าใจ",win:{},lose:{}}
+    ]},
+    {kind:"ความเมตตา",title:"ลูกสัตว์หลงทาง",story:"ลูกสัตว์ตัวเล็กติดอยู่ระหว่างรากไม้ มันขู่ฟ่อด้วยความกลัว ไม่แน่ใจว่าแม่ของมันอยู่ใกล้ ๆ หรือไม่",choices:[
+      {label:"ช่วยมันอย่างระมัดระวัง",stat:"survival",dc:9,ok:"ลูกสัตว์หนีกลับเข้าป่า แต่ทิ้งของเล็ก ๆ ไว้ใกล้คุณ",bad:"มันตกใจและหนีไปเอง คุณไม่ได้รับบาดเจ็บ",win:{survival:1,trust:1,gold:[1,5]},lose:{energy:4}},
+      {label:"รอดูจากระยะปลอดภัย",stat:"knowledge",dc:6,ok:"คุณเห็นแม่ของมันกลับมารับลูก",bad:"คุณรออยู่พักหนึ่งแต่ไม่เห็นอะไร",win:{knowledge:1},lose:{energy:3}},
+      {label:"เดินทางต่อ",dc:0,ok:"คุณปล่อยให้ธรรมชาติดำเนินไป",win:{},lose:{}}
+    ]},
+    {kind:"โชคลาภ",title:"กระเป๋าที่ตกอยู่",story:"กระเป๋าผ้าใบหนึ่งตกอยู่ริมทาง ข้างในมีเหรียญไม่กี่เหรียญกับตราสัญลักษณ์จากเมืองใกล้เคียง",choices:[
+      {label:"นำไปแจ้งผู้ดูแลเมือง",stat:"social",dc:8,ok:"เจ้าของตามพบและมอบสินน้ำใจให้",bad:"ไม่มีใครยืนยันเจ้าของ คุณจึงฝากไว้กับผู้ดูแล",win:{gold:[3,9],fame:2,trust:1},lose:{energy:4}},
+      {label:"ตรวจดูตราเพื่อหาที่มา",stat:"knowledge",dc:7,ok:"คุณระบุที่มาของกระเป๋าได้และพบเบาะแส",bad:"ตราเก่าเกินกว่าจะอ่านออก",win:{knowledge:1,skill:1},lose:{energy:3}},
+      {label:"วางไว้ที่เดิม",dc:0,ok:"คุณไม่เสี่ยงเข้าไปเกี่ยวข้อง",win:{},lose:{}}
+    ]}
+  ];
+
+  let overlay=null, active=null, lastEventAt=0, pending=false;
+  function dayNo(){
+    if(!window.G?.world)return 0;
+    const w=G.world;return ((Number(w.year)||1)-1)*360+(Number(w.month)||0)*30+(Number(w.day)||1);
+  }
+  function logEvent(type,text){
+    if(typeof window.log==="function")window.log(type,text);
+    else if(window.G?.world){G.world.events=G.world.events||[];G.world.events.unshift({date:"",type,text});}
+  }
+  function ensureCosmosPanel(){
+    if($("cosmosPanel")||!$("game"))return;
+    const p=document.createElement("section");p.id="cosmosPanel";p.className="panel";
+    p.innerHTML='<h2>🌌 สักครั้งในจักรวาล</h2><div class="cosmos-grid"><div><small>จักรวาล</small><b id="cosmosName">—</b></div><div><small>ยุคของโลก</small><b id="cosmosEra">—</b></div><div><small>ภูมิภาค</small><b id="cosmosRegion">—</b></div></div><p id="cosmosDesc">ทุกชีวิตเป็นส่วนเล็ก ๆ ของโลกที่เดินหน้าต่อไป</p><div class="actions"><button id="cosmosReroll">🎲 สุ่มจักรวาลใหม่</button><button id="cosmosEventNow">✨ สุ่มเหตุการณ์ตอนนี้</button></div>';
+    $("game").insertBefore(p,$("game").firstElementChild);
+    $("cosmosReroll").onclick=()=>{
+      if(!window.G?.world||!confirm("สุ่มจักรวาลใหม่ให้ชีวิตปัจจุบันใช่ไหม?"))return;
+      G.world.cosmos=makeCosmos();renderCosmos();
+      logEvent("จักรวาล","จักรวาลใหม่: "+G.world.cosmos.name+" · "+G.world.cosmos.era);
+      if(typeof saveGame==="function")saveGame();
+    };
+    $("cosmosEventNow").onclick=()=>queueEvent(true);
+  }
+  function renderCosmos(){
+    if(!window.G?.world)return;ensureCosmosPanel();
+    const c=G.world.cosmos;if(!c)return;
+    if($("cosmosName"))$("cosmosName").textContent=c.name+" / "+c.world;
+    if($("cosmosEra"))$("cosmosEra").textContent=c.era+" · "+c.rarity;
+    if($("cosmosRegion"))$("cosmosRegion").textContent=c.region;
+    if($("cosmosDesc"))$("cosmosDesc").textContent=c.law+" ลางประหลาด: "+c.omen;
+  }
+  function ensureOverlay(){
+    if(overlay)return;
+    const style=document.createElement("style");
+    style.textContent='#cosmosPanel{background:linear-gradient(135deg,#17243a,#202b35);border:1px solid #62708a;border-radius:12px;padding:14px;margin-bottom:14px}#cosmosPanel h2{color:#d9c5ff}#cosmosPanel .cosmos-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}#cosmosPanel .cosmos-grid>div{background:#101824;border:1px solid #39475e;border-radius:8px;padding:9px;min-width:0}#cosmosPanel small{display:block;color:#aebbd0}#cosmosPanel b{color:#f1e7ff;overflow-wrap:anywhere}#cosmosDesc{color:#c0cce0;font-size:13px}#cosmosEventOverlay{display:none;position:fixed;inset:0;z-index:12000;background:#050914ef;align-items:center;justify-content:center;padding:14px}#cosmosEventOverlay.open{display:flex}#cosmosEventCard{width:min(650px,100%);max-height:90dvh;overflow:auto;background:linear-gradient(145deg,#1a2636,#111923);border:1px solid #9c8bc4;border-radius:15px;padding:18px;box-shadow:0 18px 70px #000b}#cosmosEventCard h2{color:#e5d5ff;margin:0}#cosmosEventCard .kind{color:#c5b2ee;font-size:12px}#cosmosEventCard .story{line-height:1.8;color:#e0e7f1;margin:12px 0}#cosmosEventCard .choice{display:block;width:100%;text-align:left;margin:8px 0;padding:11px;background:#26364a;border:1px solid #506785;border-radius:8px;color:white}#cosmosEventCard .choice b{display:block;color:#f5e7c1}#cosmosEventCard .choice small{display:block;color:#c1ccdc;margin-top:3px}#cosmosEventCard .result{background:#101a25;border:1px solid #44536a;border-radius:9px;padding:12px;line-height:1.8;margin-top:12px}#cosmosEventCard .chance{color:#9fe0bc;font-weight:bold}@media(max-width:600px){#cosmosPanel .cosmos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}';
+    document.head.appendChild(style);
+    overlay=document.createElement("div");overlay.id="cosmosEventOverlay";
+    overlay.innerHTML='<div id="cosmosEventCard" role="dialog" aria-modal="true"><div class="kind" id="cosKind"></div><h2 id="cosTitle"></h2><div class="story" id="cosStory"></div><div id="cosChoices"></div><div id="cosResult" class="result" hidden></div><div class="actions"><button id="cosClose" hidden>ดำเนินชีวิตต่อ</button></div></div>';
+    document.body.appendChild(overlay);
+    $("cosClose").onclick=closeEvent;
+    overlay.addEventListener("click",e=>{if(e.target===overlay&&!$("cosClose").hidden)closeEvent();});
+  }
+  function statValue(k){
+    const c=G.c;if(k==="def")return (Number(c.def)||0)+((Number(c.hp)||0)/Math.max(1,Number(c.maxHp)||1))*2;
+    return Number(c[k])||0;
+  }
+  function chanceOf(ch){
+    if(!ch.dc)return 100;
+    let n=56+statValue(ch.stat)*3.2-ch.dc;
+    n-=((G.c.condition||[]).length*1.5)+(100-(Number(G.c.energy)||0))/25;
+    if(G.auto?.risk==="low")n-=3;if(G.auto?.risk==="high")n+=4;
+    return Math.round(clamp(n,8,94));
+  }
+  function statName(k){return ({social:"สังคม",knowledge:"ความรู้",survival:"เอาตัวรอด",atk:"การต่อสู้",def:"ป้องกัน",magic:"เวทมนตร์",craft:"งานช่าง"})[k]||k||"ทั่วไป";}
+  function openEvent(ev){
+    ensureOverlay();active=ev;pending=true;
+    $("cosKind").textContent=ev.kind+" · เหตุการณ์ของชีวิต";
+    $("cosTitle").textContent=ev.title;$("cosStory").textContent=ev.story;
+    $("cosResult").hidden=true;$("cosClose").hidden=true;
+    const box=$("cosChoices");box.innerHTML="";
+    ev.choices.forEach((ch,i)=>{
+      const chance=chanceOf(ch),b=document.createElement("button");b.className="choice";
+      b.innerHTML="<b>"+esc(ch.label)+"</b><small>"+(ch.dc===0?"ไม่ต้องทดสอบ · ความเสี่ยงต่ำ":"โอกาสสำเร็จ <span class=\"chance\">"+chance+"%</span> · ใช้ "+esc(statName(ch.stat)))+"</small>";
+      b.onclick=()=>resolve(i,chance);box.appendChild(b);
+    });
+    overlay.classList.add("open");
+    if(typeof pauseTime==="function")pauseTime();
+  }
+  function roll(v){return Array.isArray(v)?Math.floor(v[0]+Math.random()*(v[1]-v[0]+1)):Number(v)||0;}
+  function apply(effect){
+    const c=G.c,notes=[];
+    for(const [k,raw] of Object.entries(effect||{})){
+      const v=roll(raw);
+      if(k==="gold"){c.gold=Math.max(0,(Number(c.gold)||0)+v);if(v)notes.push((v>0?"+":"")+v+" ทองแดง");}
+      else if(k==="hp"){c.hp=clamp((Number(c.hp)||0)+v,0,Number(c.maxHp)||100);if(v)notes.push((v>0?"+":"")+v+" HP");}
+      else if(k==="energy"){c.energy=clamp((Number(c.energy)||0)+v,0,100);if(v)notes.push((v>0?"+":"")+v+" พลังงาน");}
+      else if(k==="trust"){c.trust=clamp((Number(c.trust)||0)+v,-100,100);if(v)notes.push((v>0?"+":"")+v+" ความไว้วางใจ");}
+      else if(k==="fame"){c.fame=clamp((Number(c.fame)||0)+v,0,99999);if(v)notes.push((v>0?"+":"")+v+" ชื่อเสียง");}
+      else if(["skill","social","knowledge","survival","atk","def","magic","craft"].includes(k)){c[k]=clamp((Number(c[k])||0)+v,0,99999);if(v)notes.push(statName(k)+" "+(v>0?"+":"")+v);}
+    }
+    return notes;
+  }
+  function resolve(i,chance){
+    if(!active||!window.G||G.c.dead)return;
+    const ch=active.choices[i];if(!ch)return;
+    const success=ch.dc===0||Math.random()*100<chance;
+    const notes=apply(success?ch.win:ch.lose);
+    const text=success?ch.ok:ch.bad;
+    $("cosResult").hidden=false;
+    $("cosResult").innerHTML="<b>"+(success?"ผลลัพธ์: สำเร็จ":"ผลลัพธ์: ไม่สำเร็จ")+"</b><div>"+esc(text||"คุณผ่านเหตุการณ์นี้ไปได้")+"</div>"+(notes.length?"<div class=\"muted\">ผลที่เกิดขึ้น: "+esc(notes.join(" · "))+"</div>":"");
+    $("cosChoices").querySelectorAll("button").forEach(b=>b.disabled=true);
+    $("cosClose").hidden=false;
+    G.c.lifeHistory=Array.isArray(G.c.lifeHistory)?G.c.lifeHistory:[];
+    G.c.lifeHistory.unshift({day:dayNo(),title:active.title,choice:ch.label,success,text});
+    G.c.lifeHistory=G.c.lifeHistory.slice(0,100);
+    G.world.eventState=G.world.eventState||{resolved:0};G.world.eventState.resolved++;
+    logEvent("เหตุการณ์: "+active.title,text+(notes.length?" ("+notes.join(", ")+")":""));
+    if(typeof render==="function")render();if(typeof saveGame==="function")saveGame();
+  }
+  function closeEvent(){
+    overlay?.classList.remove("open");active=null;pending=false;
+    if(window.G&&!G.c.dead&&typeof setSpeed==="function")setSpeed(1);
+  }
+  function queueEvent(manual){
+    if(!window.G||!G.c||G.c.dead||active||Date.now()-lastEventAt<2500)return;
+    const t=pick(events),ev={...t,choices:t.choices.map(c=>({...c}))};
+    if(G.world.cosmos&&Math.random()<.3)ev.story+=" ขณะเดียวกัน "+G.world.cosmos.omen+"; บางทีเรื่องเล็ก ๆ นี้อาจเชื่อมโยงกับสิ่งที่ใหญ่กว่าที่คิด";
+    lastEventAt=Date.now();openEvent(ev);
+  }
+  function startCosmos(){
+    if(!window.G?.world)return;
+    if(!G.world.cosmos)G.world.cosmos=makeCosmos();
+    G.world.eventState=G.world.eventState||{resolved:0,lastDay:dayNo()};
+    renderCosmos();
+    logEvent("จักรวาลถือกำเนิด",G.world.cosmos.name+" · "+G.world.cosmos.era+" — "+G.world.cosmos.law);
+    logEvent("ลางแห่งโลก",G.world.cosmos.omen);
+  }
+
+  const oldStart=window.startGame;
+  if(typeof oldStart==="function")window.startGame=function(){oldStart.apply(this,arguments);if(window.G&&!G.c.dead){startCosmos();if(typeof saveGame==="function")saveGame();}};
+  const oldAdvance=window.advance;
+  if(typeof oldAdvance==="function")window.advance=function(minutes,allowEncounter){
+    const before=dayNo();oldAdvance.apply(this,arguments);
+    if(!window.G||!G.world||G.c.dead||pending||active)return;
+    const days=dayNo()-before;
+    if(days>0&&Math.random()<1-Math.pow(1-.46,Math.min(days,7))){
+      pending=true;setTimeout(()=>{if(window.G&&!G.c.dead&&!active)queueEvent(false);else pending=false;},80);
+    }
+  };
+  const oldLoad=window.loadGame;
+  if(typeof oldLoad==="function")window.loadGame=function(){oldLoad.apply(this,arguments);if(window.G&&G.world){startCosmos();}};
+  const oldRender=window.render;
+  if(typeof oldRender==="function")window.render=function(){oldRender.apply(this,arguments);renderCosmos();};
+
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ensureCosmosPanel,{once:true});
+  else ensureCosmosPanel();
+  window.cosmosLife={makeCosmos,queueEvent,renderCosmos};
+})();
+'''
+p=Path("/mnt/data/cosmos_life_patch.js")
+p.write_text(code, encoding="utf-8")
+print(f"สร้างไฟล์ส่วนเสริมแล้ว: {p} ({len(code):,} ตัวอักษร)")
+
+      
 </script>
 </body>
 </html>
