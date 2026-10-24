@@ -29,7 +29,7 @@ button:hover{filter:brightness(1.18)}button:disabled{opacity:.4;cursor:not-allow
 #deathOverlay{display:none;position:fixed;inset:0;background:#080b0eeF;z-index:10;align-items:center;justify-content:center;padding:20px}
 #deathOverlay .panel{max-width:520px;width:100%;border-color:#a65c63}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
-@media(max-width:780px){main{grid-template-columns:1fr}.two{grid-template-columns:1fr}#log{height:240px}}
+:780px){main{grid-template-columns:1fr}.two{grid-template-columns:1fr}#log{height:240px}}
 
 /* ===== 16-BIT PIXEL RPG ===== */
 .pixel-panel {
@@ -107,19 +107,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   margin-top: 8px;
 }
 }
-@media(max-width:650px) {
-  .pixel-layout {
-    grid-template-columns: 1fr;
+  #avatarCanvas {
+    width: 96px;
+    height: 144px;
+    object-fit: contain;
   }
-  .pixel-side {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 10px;
-  }
-  .pixel-side h3 {
-    grid-column: 1/-1;
-  }
-}
 
 /* ===== STATIC PIXEL CHARACTER ===== */
 .avatar-panel {
@@ -10697,16 +10689,11 @@ organizeLifeSections();
     }
     #alIdleToggle { background: #24533f; }
     #alIdleToggle.al-idle-off { background: #693b42; }
-    #alIdleHint { color: #b8c6d3; font-size: 12px; }
-    @media(max-width: 780px) {
-      body { padding-bottom: 82px; }
-      #alMobileWindow { max-height: 86dvh; }
-      #alMobileContent button { min-height: 40px; }
-      #alMobileContent details > summary {
-        padding: 10px 4px;
-        cursor: pointer;
-      }
-    }
+      #avatarCanvas {
+    width: 96px;
+    height: 144px;
+    object-fit: contain;
+  }
   `;
   document.head.appendChild(style);
 
