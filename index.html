@@ -1198,7 +1198,17 @@ function startGame(){
   }
 
   applyOrigin();
-  ensureMerchant();
+ function ensureMerchant(){
+  if(!G || !G.world) return;
+
+  if(!Array.isArray(G.world.merchant)){
+    G.world.merchant = [];
+  }
+
+  if(G.world.merchant.length === 0){
+    refreshMerchant(true);
+  }
+}
 
   $("creation").style.display = "none";
   $("game").style.display = "block";
