@@ -10062,6 +10062,387 @@ organizeLifeSections();
 })();
 /* ===== END PARTY STATUS + CATEGORIES ===== */
 
+/* ===== ANOTHER LIFE: MOBILE POPUP + IDLE PATCH ===== */
+(function installMobileIdlePatch() {
+  "use strict";
+
+  if (window.__alMobileIdlePatch) return;
+  window.__alMobileIdlePatch = true;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    #alQuickMenu {
+      position: fixed;
+      z-index: 8000;
+      left: 10px;
+      right: 10px;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px;
+      background: #111b25ee;
+      border: 1px solid #64788a;
+      border-radius: 14px;
+      box-shadow: 0 4px 24px #0009;
+    }
+    #alQuickMenu button {
+      flex: 1 1 68px;
+      min-height: 42px;
+      margin: 0;
+      font-size: 13px;
+    }
+    #alMobileModal {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: #05090eee;
+    }
+    #alMobileModal.al-open { display: flex; }
+    #alMobileWindow {
+      width: min(760px, 100%);
+      max-height: 90dvh;
+      overflow: auto;
+      overscroll-behavior: contain;
+      padding: 12px;
+      background: #17212c;
+      border: 1px solid #8a9daf;
+      border-radius: 14px;
+      box-shadow: 0 15px 50px #000b;
+    }
+    #alMobileHeader {
+      position: sticky;
+      top: -12px;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin: -12px -12px 12px;
+      padding: 10px 12px;
+      background: #17212c;
+      border-bottom: 1px solid #405365;
+    }
+    #alMobileTitle { color: #e7c77c; font-weight: bold; }
+    #alMobileContent > * { max-width: 100%; }
+    #alMobileContent .panel,
+    #alMobileContent .card {
+      margin: 0;
+      width: 100%;
+    }
+    #alIdleToggle { background: #24533f; }
+    #alIdleToggle.al-idle-off { background: #693b42; }
+    #alIdleHint { color: #b8c6d3; font-size: 12px; }
+    @media(max-width: 780px) {
+      body { padding-bottom: 82px; }
+      #alMobileWindow { max-height: 86dvh; }
+      #alMobileContent button { min-height: 40px; }
+      #alMobileContent details > summary {
+        padding: 10px 4px;
+        cursor: pointer;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const menu = document.createElement("nav");
+  menu.id = "alQuickMenu";
+  menu.innerHTML = `
+    <button type="button" data-al-open="character">👤 ตัวละคร</button>
+    <button type="button" data-al-open="growth">📈 เติบโต</button>
+    <button type="button" data-al-open="party">🛡️ ปาร์ตี้</button>
+    <button type="button" data-al-open="inventory">🎒 กระเป๋า</button>
+    <button type="button" data-al-open="pets">🐾 สัตว์เลี้ยง</button>
+    <button type="button" data-al-open="travel">🗺️ โลก</button>
+    <button type="button" id="alIdleToggle">🚶 Idle: ปิด</button>
+  `;
+  document.body.appendChild(menu);
+
+  const modal = document.createElement("div");
+  modal.id = "alMobileModal";
+  modal.innerHTML = `
+    <div id="alMobileWindow" role="dialog" aria-modal="true">
+      <div id="alMobileHeader">
+        <span id="alMobileTitle">เมนูเกม</span>
+        <button type="button" id="alMobileClose">✕ ปิด</button>
+      </div>
+      <div id="alMobileContent"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const content = modal.querySelector("#alMobileContent");
+  const title = modal.querySelector("#alMobileTitle");
+  const closeButton = modal.querySelector("#alMobileClose");
+
+  let activePanel = null;
+  let placeholder = null;
+  let previousParent = null;
+  let previousNext = null;
+
+  function findPanel(category) {
+    const get = id => document.getElementById(id);
+
+    if (category === "character") {
+      return get("al-party-overview") ||
+        get("al-status-radar-panel") ||
+        get("stats")?.closest(".panel");
+    }
+
+    if (category === "growth") {
+      return get("alClassEvolution");
+    }
+
+    if (category === "party") {
+      return get("al-party-overview") ||
+        get("alPetsList")?.closest(".panel");
+    }
+
+    if (category === "inventory") {
+      return get("inventory")?.closest(".panel");
+    }
+
+    if (category === "pets") {
+      return get("alPetsList")?.closest(".panel") ||
+        get("alSummonList")?.closest(".panel");
+    }
+
+    if (category === "travel") {
+      return get("locationInfo")?.closest(".panel") ||
+        get("al2Archipelago");
+    }
+
+    return null;
+  }
+
+  const labels = {
+    character: "👤 สถานะตัวละคร",
+    growth: "📈 คลาสและอัตราการเติบโต",
+    party: "🛡️ สมาชิกปาร์ตี้",
+    inventory: "🎒 กระเป๋าและอุปกรณ์",
+    pets: "🐾 สัตว์เลี้ยงและอัญเชิญ",
+    travel: "🗺️ โลกและการเดินทาง"
+  };
+
+  function openPopup(category) {
+    const panel = findPanel(category);
+
+    if (!panel) {
+      title.textContent = labels[category] || "เมนูเกม";
+      content.innerHTML =
+        '<p>ระบบนี้ยังไม่พร้อมแสดง หรือยังไม่ได้เริ่มเกม</p>';
+      modal.classList.add("al-open");
+      return;
+    }
+
+    if (activePanel === panel) {
+      modal.classList.add("al-open");
+      return;
+    }
+
+    restorePanel();
+
+    activePanel = panel;
+    previousParent = panel.parentNode;
+    previousNext = panel.nextSibling;
+
+    placeholder = document.createComment("al-popup-placeholder");
+    previousParent.insertBefore(placeholder, panel);
+
+    content.appendChild(panel);
+    title.textContent = labels[category] || "เมนูเกม";
+    modal.classList.add("al-open");
+
+    const windowBox = modal.querySelector("#alMobileWindow");
+    windowBox.scrollTop = 0;
+  }
+
+  function restorePanel() {
+    if (activePanel && placeholder && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(activePanel, placeholder);
+      placeholder.remove();
+    } else if (activePanel && previousParent) {
+      previousParent.insertBefore(activePanel, previousNext);
+    }
+
+    activePanel = null;
+    placeholder = null;
+    previousParent = null;
+    previousNext = null;
+  }
+
+  function closePopup() {
+    modal.classList.remove("al-open");
+    restorePanel();
+  }
+
+  menu.addEventListener("click", event => {
+    const button = event.target.closest("[data-al-open]");
+    if (button) openPopup(button.dataset.alOpen);
+  });
+
+  closeButton.addEventListener("click", closePopup);
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) closePopup();
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && modal.classList.contains("al-open")) {
+      closePopup();
+    }
+  });
+
+  /* แก้ details ที่ถูกสร้างทับระหว่าง render */
+  const growthKey = "al-growth-details-open";
+
+  document.addEventListener("toggle", event => {
+    const details = event.target;
+    if (!(details instanceof HTMLDetailsElement)) return;
+
+    const parent = details.closest("#alClassEvolution");
+    if (!parent) return;
+
+    const summary = details.querySelector("summary");
+    if (!summary) return;
+
+    const key = summary.textContent.includes("อัตราการเติบโต")
+      ? "growth"
+      : summary.textContent.includes("Log การฝึก")
+        ? "history"
+        : "";
+
+    if (!key) return;
+
+    try {
+      localStorage.setItem(
+        growthKey + "-" + key,
+        details.open ? "1" : "0"
+      );
+    } catch (_) {}
+  }, true);
+
+  function restoreGrowthDetails() {
+    const panel = document.getElementById("alClassEvolution");
+    if (!panel) return;
+
+    panel.querySelectorAll("details").forEach(details => {
+      const summary = details.querySelector("summary");
+      if (!summary) return;
+
+      const key = summary.textContent.includes("อัตราการเติบโต")
+        ? "growth"
+        : summary.textContent.includes("Log การฝึก")
+          ? "history"
+          : "";
+
+      if (!key) return;
+
+      try {
+        const saved = localStorage.getItem(growthKey + "-" + key);
+        if (saved !== null) details.open = saved === "1";
+      } catch (_) {}
+    });
+  }
+
+  const growthPanel = document.getElementById("game");
+  if (growthPanel) {
+    new MutationObserver(() => {
+      restoreGrowthDetails();
+    }).observe(growthPanel, { childList: true, subtree: true });
+  }
+
+  restoreGrowthDetails();
+
+  /* Idle: ใช้ Canvas เดิมและลูปเดิม ไม่สร้าง animation loop ซ้อน */
+  let idleEnabled = false;
+  let lastManualMove = 0;
+  let lastDraw = 0;
+  let routeIndex = 0;
+
+  const idleButton = document.getElementById("alIdleToggle");
+
+  const route = [
+    [6, 5], [7, 5], [8, 5], [9, 5], [10, 5],
+    [9, 5], [8, 5], [8, 6], [8, 7], [8, 6]
+  ];
+
+  function setIdle(enabled) {
+    idleEnabled = enabled;
+    idleButton.textContent = enabled
+      ? "🚶 Idle: เปิด"
+      : "🚶 Idle: ปิด";
+    idleButton.classList.toggle("al-idle-off", !enabled);
+  }
+
+  idleButton.addEventListener("click", () => {
+    setIdle(!idleEnabled);
+  });
+
+  const originalPixelRender =
+    typeof window.pixelRender === "function"
+      ? window.pixelRender
+      : null;
+
+  if (originalPixelRender) {
+    window.pixelRender = function (now) {
+      const time = Number(now) || performance.now();
+
+      // ลดการวาดฉากจริงให้เหลือประมาณ 12 FPS
+      if (time - lastDraw < 83) return;
+      lastDraw = time;
+
+      return originalPixelRender.apply(this, arguments);
+    };
+  }
+
+  const originalPixelMove =
+    typeof window.pixelMove === "function"
+      ? window.pixelMove
+      : null;
+
+  if (originalPixelMove) {
+    window.pixelMove = function () {
+      lastManualMove = Date.now();
+      return originalPixelMove.apply(this, arguments);
+    };
+  }
+
+  setInterval(() => {
+    if (!idleEnabled || document.hidden) return;
+    if (!window.G || !G.c || !G.pixelMap) return;
+    if (G.c.dead || Number(G.c.hp) <= 0) return;
+
+    // หลังผู้เล่นเดินเอง ให้พัก Idle 15 วินาที
+    if (Date.now() - lastManualMove < 15000) return;
+
+    const point = route[routeIndex % route.length];
+    routeIndex++;
+
+    G.pixelMap.x = point[0];
+    G.pixelMap.y = point[1];
+
+    if (typeof window.pixelRender === "function") {
+      window.pixelRender(performance.now());
+    }
+  }, 3200);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden &&
+        typeof window.pixelRender === "function") {
+      window.pixelRender(performance.now());
+    }
+  });
+
+  console.log("Another Life mobile popup + idle patch loaded");
+})();
+/* ===== END MOBILE POPUP + IDLE PATCH ===== */
+
 </script>
 </body>
 </html>
