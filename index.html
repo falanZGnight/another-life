@@ -533,7 +533,6 @@ function getSkillValue(key){
   const c=G.character;
   return (c.stats[key]||5)+(c.skills[key]||0);
 }
-
 function getSuccessChance(choice){
   const c = G.character;
   const skill = choice.skill || "survival";
@@ -1520,7 +1519,594 @@ if (typeof oldAdvanceDayForStats === "function") {
       }
     };
   }
+
+/* =====================================================
+   LIFE SYSTEM V2
+   อายุขัย / เวลา 4 ชั่วโมง / กิจวัตร / บันทึกชีวิต
+  ===================================================== */
+(function () {
+  "use strict";
+
+  if (typeof G === "undefined" || !G) return;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .life-clock {
+      background: linear-gradient(135deg,#302b49,#202b3d);
+      border: 1px solid #625784;
+      border-radius: 14px;
+      padding: 15px;
+      margin: 12px 0;
+    }
+    .clock-time {
+      font-size: 25px;
+      font-weight: 800;
+      color: #e5d9ff;
+    }
+    .clock-track {
+      display: grid;
+      grid-template-columns: repeat(6,minmax(0,1fr));
+      gap: 5px;
+      margin: 12px 0;
+    }
+    .clock-slot {
+      padding: 7px 2px;
+      text-align: center;
+      background: #171923;
+      border: 1px solid #3b4154;
+      border-radius: 7px;
+      font-size: 11px;
+      color: #aab0c3;
+    }
+    .clock-slot.active {
+      background: #514576;
+      color: #fff;
+      border-color: #c5b2ff;
+    }
+    .clock-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+    .clock-actions button { flex: 1; min-width: 95px; }
+    .story-card {
+      background: linear-gradient(145deg,#292b3c,#222633);
+      border: 1px solid #46445e;
+      border-left: 3px solid #b8a4ff;
+      border-radius: 10px;
+      padding: 13px;
+      margin: 10px 0;
+    }
+    .story-card p { margin: 6px 0; }
+    .story-lead { color: #e7defe; font-size: 15px; }
+    .log-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .log-toolbar input { flex: 1; min-width: 150px; }
+    .logentry {
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #393d50;
+      border-radius: 10px;
+      background: #202330;
+      overflow-wrap: anywhere;
+    }
+    .logentry[data-kind="เหตุการณ์"] { border-left: 3px solid #b8a4ff; }
+    .logentry[data-kind="ชีวิต"] { border-left: 3px solid #7faacb; }
+    .logentry[data-kind="การเติบโต"] { border-left: 3px solid #8fddb1; }
+    .logentry[data-kind="การค้า"] { border-left: 3px solid #f5d58b; }
+    .logentry[data-kind="อันตราย"] { border-left: 3px solid #ff8799; }
+    .log-meta { color: #aab0c3; font-size: 11px; margin-bottom: 5px; }
+    .log-text { line-height: 1.75; }
+    .logentry .tag { margin-bottom: 4px; }
+  `;
+  document.head.appendChild(style);
+
+  const slots = [
+    { name: "เช้า", time: "06:00–10:00" },
+    { name: "สาย", time: "10:00–14:00" },
+    { name: "บ่าย", time: "14:00–18:00" },
+    { name: "เย็น", time: "18:00–22:00" },
+    { name: "ค่ำ", time: "22:00–02:00" },
+    { name: "กลางคืน", time: "02:00–06:00" }
+  ];
+
+  const raceLifespans = {
+    "มนุษย์": 90,
+    "เอลฟ์": 500,
+    "คนแคระ": 180,
+    "มนุษย์สัตว์": 100,
+    "เผ่ามังกรสายเลือดเจือจาง": 250,
+    "ภูต": 300
+  };
+
+  function character() {
+    return G && G.character;
+  }
+
+  function alive() {
+    return !!(G && character() && !G.dead &&
+      character().hp > 0);
+  }
+
+  function maxAge() {
+    const c = character();
+    return raceLifespans[c.race.name] || 100;
+  }
+
+  function timeIndex() {
+    return G.timeSystem?.slot || 0;
+  }
+
+  function currentSlot() {
+    return slots[timeIndex() % slots.length];
+  }
+
+  function ensureTime() {
+    if (!G.timeSystem) {
+      G.timeSystem = {
+        slot: 0,
+        totalSlots: 0,
+        auto: true,
+        speed: 12000
+      };
+    }
+  }
+
+  function addStory(title, text, kind = "ชีวิต") {
+    const box = document.getElementById("lifeStory");
+    if (!box) return;
+
+    const card = document.createElement("div");
+    card.className = "story-card";
+
+    const heading = document.createElement("strong");
+    heading.className = "story-lead";
+    heading.textContent = title;
+
+    const paragraph = document.createElement("p");
+    paragraph.textContent = text;
+
+    const meta = document.createElement("div");
+    meta.className = "muted small";
+    meta.textContent =
+      `ปี ${G.world.year} · วันที่ ${G.world.day} · ${currentSlot().name}`;
+
+    card.append(heading, paragraph, meta);
+    box.prepend(card);
+
+    while (box.children.length > 8) {
+      box.lastElementChild.remove();
+    }
+
+    if (typeof log === "function") {
+      log(kind, `${title} — ${text}`);
+    }
+  }
+
+  function installTimePanel() {
+    const life = document.getElementById("page-life");
+    if (!life || document.getElementById("lifeClockV2")) return;
+
+    const panel = document.createElement("div");
+    panel.className = "panel";
+    panel.id = "lifeClockV2";
+    panel.innerHTML = `
+      <h2>⌛ เวลาและจังหวะชีวิต</h2>
+      <div class="life-clock">
+        <div id="clockDay" class="muted"></div>
+        <div id="clockName" class="clock-time"></div>
+        <div id="clockRange" class="muted"></div>
+        <div id="clockTrack" class="clock-track"></div>
+        <div class="clock-actions">
+          <button id="clockPause">หยุดเวลา</button>
+          <button id="clockOne">เดินหน้า 4 ชั่วโมง</button>
+          <button id="clockFour">เดินหน้า 1 วัน</button>
+        </div>
+        <p class="muted">
+          หนึ่งช่วงเวลาเท่ากับ 4 ชั่วโมง เวลาเดินเองได้
+          และสามารถเร่งให้ผ่านช่วงที่ไม่ต้องการได้
+        </p>
+      </div>
+    `;
+
+    const firstPanel = life.querySelector(".twocol");
+    life.insertBefore(panel, firstPanel);
+
+    const story = document.createElement("div");
+    story.className = "panel";
+    story.innerHTML = `
+      <h2>📖 เรื่องราวระหว่างวัน</h2>
+      <p class="muted">กิจวัตรและเหตุการณ์ที่เกิดขึ้นระหว่างที่คุณใช้ชีวิต</p>
+      <div id="lifeStory"></div>
+    `;
+
+    life.insertBefore(story, firstPanel);
+
+    document.getElementById("clockPause").onclick = function () {
+      ensureTime();
+      G.timeSystem.auto = !G.timeSystem.auto;
+      this.textContent = G.timeSystem.auto ? "หยุดเวลา" : "เดินเวลา";
+      updateClock();
+    };
+
+    document.getElementById("clockOne").onclick = function () {
+      advanceSegment(true);
+    };
+
+    document.getElementById("clockFour").onclick = function () {
+      for (let i = 0; i < 6 && alive(); i++) {
+        advanceSegment(false);
+      }
+      if (typeof renderAll === "function") renderAll();
+    };
+  }
+
+  function updateClock() {
+    if (!G || !character()) return;
+    ensureTime();
+
+    const slot = currentSlot();
+    const c = character();
+
+    const day = document.getElementById("clockDay");
+    const name = document.getElementById("clockName");
+    const range = document.getElementById("clockRange");
+    const track = document.getElementById("clockTrack");
+    const pause = document.getElementById("clockPause");
+
+    if (day) {
+      day.textContent =
+        `ปี ${G.world.year} · วันที่ ${G.world.day} · อายุ ${c.age} ปี`;
+    }
+    if (name) name.textContent = slot.name;
+    if (range) {
+      range.textContent =
+        `${slot.time} · อายุขัยโดยประมาณไม่เกิน ${maxAge()} ปี`;
+    }
+    if (track) {
+      track.innerHTML = slots.map((s, i) =>
+        `<div class="clock-slot ${i === timeIndex() % 6 ? "active" : ""}">
+          ${s.name}
+        </div>`
+      ).join("");
+    }
+    if (pause) {
+      pause.textContent = G.timeSystem.auto ? "หยุดเวลา" : "เดินเวลา";
+    }
+  }
+
+  function routineNarrative() {
+    const c = character();
+    const slot = currentSlot();
+
+    const stories = {
+      "เช้า": [
+        "แสงอ่อนส่องผ่านหน้าต่าง คุณเริ่มวันใหม่ท่ามกลางเสียงผู้คนที่กำลังเตรียมตัวออกไปทำงาน",
+        "อากาศยามเช้าค่อนข้างเย็น ครอบครัวและเพื่อนบ้านต่างเริ่มกิจวัตรของตนเอง",
+        "กลิ่นอาหารเช้าลอยมาตามลม เป็นช่วงเวลาที่คุณได้เตรียมตัวก่อนวันจะวุ่นวายขึ้น"
+      ],
+      "สาย": [
+        "ถนนเริ่มคึกคัก ผู้คนออกไปทำงาน ซื้อขาย และจัดการเรื่องที่ค้างไว้",
+        "เสียงพูดคุยจากร้านค้าและบ้านเรือนดังต่อเนื่อง วันนี้อาจมีโอกาสใหม่ซ่อนอยู่",
+        "ช่วงสายเหมาะกับการเรียนรู้และลงมือทำสิ่งที่ต้องใช้สมาธิ"
+      ],
+      "บ่าย": [
+        "แสงแดดแรงขึ้น กิจกรรมหลายอย่างดำเนินต่อไป แต่ความเหนื่อยเริ่มสะสม",
+        "ผู้คนบางส่วนพักกินอาหาร ขณะที่บางคนยังเร่งทำงานให้เสร็จก่อนเย็น",
+        "ช่วงบ่ายผ่านไปพร้อมงานเล็ก ๆ และเรื่องราวที่ไม่มีใครคิดว่าจะสำคัญ"
+      ],
+      "เย็น": [
+        "ผู้คนเริ่มทยอยกลับบ้าน ตลาดค่อย ๆ เปลี่ยนจากที่ทำงานเป็นที่พบปะพูดคุย",
+        "แสงอาทิตย์ลดต่ำลง คุณเริ่มคิดถึงสิ่งที่เกิดขึ้นตลอดทั้งวัน",
+        "บรรยากาศผ่อนคลายขึ้น แต่ตามตรอกและถนนสายหลักยังมีคนเดินทางอยู่"
+      ],
+      "ค่ำ": [
+        "แสงตะเกียงเริ่มปรากฏตามบ้านเรือน ผู้คนพูดคุยกันเบาลงหลังวันอันยาวนาน",
+        "ร้านค้าบางแห่งปิดประตู ขณะที่โรงเตี๊ยมและที่พักยังมีเสียงสนทนา",
+        "ความมืดทำให้เส้นทางบางแห่งไม่น่าไว้วางใจนัก"
+      ],
+      "กลางคืน": [
+        "ความเงียบเข้าปกคลุมพื้นที่ส่วนใหญ่ เหลือเพียงเสียงลมและผู้ที่ยังเฝ้ายาม",
+        "ผู้คนส่วนใหญ่พักผ่อน ร่างกายต้องการเวลาฟื้นตัวจากกิจกรรมตลอดวัน",
+        "กลางคืนสงบกว่าช่วงอื่น แต่เหตุการณ์ที่ไม่มีใครคาดคิดก็อาจเกิดขึ้นได้"
+      ]
+    };
+
+    let text = pick(stories[slot.name]);
+
+    if (c.energy < 20) {
+      text += " คุณรู้สึกเหนื่อยมากกว่าปกติ การฝืนทำกิจกรรมหนักอาจส่งผลเสีย";
+    }
+    if (c.hunger > 75) {
+      text += " ความหิวเริ่มรบกวนสมาธิ คุณควรหาอาหารกิน";
+    }
+    if (c.thirst > 75) {
+      text += " อาการกระหายน้ำทำให้ร่างกายอ่อนล้า ควรหาน้ำดื่มโดยเร็ว";
+    }
+    if (c.mood < 20) {
+      text += " ความกังวลทำให้คุณไม่ค่อยมีสมาธิ และอาจตอบสนองต่อคนรอบข้างได้ไม่ดี";
+    }
+
+    addStory(`${slot.name}: กิจวัตรประจำวัน`, text, "ชีวิต");
+  }
+
+  function applyRoutine() {
+    const c = character();
+
+    // การใช้ชีวิตพื้นฐานในแต่ละช่วงเวลา
+    c.hunger = clamp(c.hunger + rand(1, 3), 0, 100);
+    c.thirst = clamp(c.thirst + rand(2, 4), 0, 100);
+    c.energy = clamp(c.energy - rand(2, 5), 0, 100);
+
+    if (c.hunger >= 90) {
+      c.hp = clamp(c.hp - 2, 0, 100);
+      c.mood = clamp(c.mood - 2, 0, 100);
+    }
+
+    if (c.thirst >= 90) {
+      c.hp = clamp(c.hp - 3, 0, 100);
+      c.mood = clamp(c.mood - 2, 0, 100);
+    }
+
+    if (c.energy <= 10) {
+      c.mood = clamp(c.mood - 2, 0, 100);
+    }
+
+    // ฟื้นตัวได้เมื่อความต้องการพื้นฐานอยู่ในเกณฑ์ดี
+    if (
+      c.hp < 100 &&
+      c.energy >= 50 &&
+      c.hunger < 50 &&
+      c.thirst < 50
+    ) {
+      c.hp = clamp(c.hp + 1, 0, 100);
+    }
+  }
+
+  function advanceSegment(showStory = true) {
+    if (!alive()) return;
+
+    ensureTime();
+
+    const previous = timeIndex();
+    G.timeSystem.slot = (previous + 1) % 6;
+    G.timeSystem.totalSlots++;
+
+    // หนึ่งวันครบเมื่อผ่าน 6 ช่วงเวลา
+    const newDay = G.timeSystem.slot === 0;
+
+    applyRoutine();
+
+    if (newDay) {
+      G.world.day++;
+      G.counters.days++;
+
+      if (G.world.day > 30) {
+        G.world.day = 1;
+        G.world.year++;
+        log("ชีวิต", `เริ่มต้นปีที่ ${G.world.year}`);
+      }
+
+      // ในระบบนี้หนึ่งปีในปฏิทินเกมมี 30 วัน
+      character().age++;
+
+      updateAgeStatus();
+
+      log(
+        "การเติบโต",
+        `วันเกิดปีที่ ${character().age} ของ ${character().name}`
+      );
+
+      if (character().age >= maxAge()) {
+        character().hp = 0;
+        G.dead = true;
+        G.deadReason = `อายุขัยของเผ่า${character().race.name}สิ้นสุดลง`;
+        log("อันตราย", G.deadReason);
+      }
+
+      G.quests.forEach(q => {
+        if (q.status !== "active") return;
+        q.daysLeft--;
+        if (q.daysLeft <= 0) {
+          q.daysLeft = 0;
+          q.status = "failed";
+          log("ชีวิต", `เควสต์หมดเวลา: ${q.title}`);
+        }
+      });
+    }
+
+    // โลกยังเคลื่อนไหวแม้ผู้เล่นไม่ได้ทำกิจกรรม
+    G.people.forEach(n => {
+      if (!n.alive) return;
+
+      if (chance(10)) {
+        n.goal = chance(20) ? pick(GOALS) : n.goal;
+      }
+
+      if (chance(8)) {
+        const places = DATA.places.filter(p => p.name !== n.location);
+        if (places.length) n.location = pick(places).name;
+      }
+    });
+
+    routineNarrative();
+
+    if (!G.dead && !currentEvent && chance(newDay ? 40 : 18)) {
+      triggerEvent();
+    }
+
+    updateClock();
+
+    if (typeof renderAll === "function") renderAll();
+
+    if (G.dead) {
+      const box = document.getElementById("eventBox");
+      const choices = document.getElementById("eventChoices");
+      if (box) box.innerHTML =
+        `<h3 class="bad">ชีวิตนี้สิ้นสุดลงแล้ว</h3><p>${esc(G.deadReason)}</p>`;
+      if (choices) choices.innerHTML = "";
+    }
+  }
+
+  // เริ่มต้นชีวิตในวัย 8–12 ปี
+  const originalNewGame = window.newGame;
+
+  if (typeof originalNewGame === "function") {
+    window.newGame = function () {
+      const previous = G;
+      originalNewGame.apply(this, arguments);
+
+      if (G && G !== previous) {
+        ensureTime();
+        character().age = rand(8, 12);
+        character().hp = 100;
+        G.dead = false;
+        G.deadReason = null;
+
+        updateAgeStatus();
+
+        log(
+          "ชีวิต",
+          `เรื่องราวเริ่มต้นเมื่อคุณอายุ ${character().age} ปี`
+        );
+
+        addStory(
+          "จุดเริ่มต้นของชีวิต",
+          `คุณอายุ ${character().age} ปี เติบโตใน${character().background.name} และยังมีเวลาเรียนรู้โลกก่อนออกเดินทางไกล`,
+          "การเติบโต"
+        );
+
+        updateClock();
+        if (typeof renderAll === "function") renderAll();
+      }
+    };
+  }
+
+  // ปรับชีวิตที่สร้างไว้ก่อนติดตั้งแพตช์นี้
+  ensureTime();
+
+  if (character() && character().age < 8 && !G.timeSystem.initialized) {
+    character().age = rand(8, 12);
+    updateAgeStatus();
+    G.timeSystem.initialized = true;
+  }
+
+  // เปลี่ยนระบบวันเดิมเป็นช่วงเวลา 4 ชั่วโมง
+  window.advanceDay = function () {
+    advanceSegment(true);
+  };
+
+  window.advanceDays = function (days) {
+    const count = Math.max(1, Math.min(30, Number(days) || 1));
+    for (let d = 0; d < count && alive(); d++) {
+      for (let s = 0; s < 6 && alive(); s++) {
+        advanceSegment(false);
+      }
+    }
+  };
+
+  // แสดงอายุขัยสูงสุดของเผ่าบนหน้าตัวละคร
+  const oldRenderCharacter = window.renderCharacter;
+
+  if (typeof oldRenderCharacter === "function") {
+    window.renderCharacter = function () {
+      oldRenderCharacter.apply(this, arguments);
+
+      const box = document.getElementById("characterDetails");
+      if (!box || !character()) return;
+
+      const info = document.createElement("div");
+      info.className = "notice";
+      info.innerHTML =
+        `<strong>อายุขัยของเผ่า</strong><p>` +
+        `เผ่า${esc(character().race.name)} มีอายุขัยโดยประมาณสูงสุด ` +
+        `${maxAge()} ปี</p><p class="muted">อายุขัยเป็นเพดานพื้นฐานของเผ่า ` +
+        `สามารถต่อยอดเป็นระบบพรสวรรค์หรือการกลายพันธุ์ได้ในภายหลัง</p>`;
+
+      box.appendChild(info);
+    };
+  }
+
+  // แต่งหน้าบันทึกชีวิตและเพิ่มตัวกรอง
+  const oldLogHTML = window.logHTML;
+
+  window.logHTML = function (entry) {
+    const type = esc(entry.type || "ชีวิต");
+    return `<div class="logentry" data-kind="${type}">
+      <div class="log-meta">
+        <span class="tag">${type}</span>
+        ปี ${entry.year} · วันที่ ${entry.day}
+      </div>
+      <div class="log-text">${esc(entry.text)}</div>
+    </div>`;
+  };
+
+  function installLogSearch() {
+    const allLogs = document.getElementById("allLogs");
+    if (!allLogs || document.getElementById("logSearch")) return;
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "log-toolbar";
+    toolbar.innerHTML = `
+      <input id="logSearch" placeholder="ค้นหาคำในบันทึก เช่น เงิน เควสต์ หรือชื่อคน">
+      <button id="logNewest">ล่าสุดก่อน</button>
+      <button id="logOldest">เก่าสุดก่อน</button>
+    `;
+
+    allLogs.parentNode.insertBefore(toolbar, allLogs);
+
+    let oldestFirst = false;
+
+    function refresh() {
+      if (!G) return;
+
+      const filter = document.getElementById("logFilter")?.value || "all";
+      const query = document.getElementById("logSearch").value
+        .trim().toLowerCase();
+
+      let entries = G.logs.filter(l =>
+        (filter === "all" || l.type === filter) &&
+        (!query || `${l.type} ${l.text}`.toLowerCase().includes(query))
+      );
+
+      if (oldestFirst) entries = entries.slice().reverse();
+
+      allLogs.innerHTML = entries.map(logHTML).join("") ||
+        "<p class='muted'>ไม่พบบันทึกที่ตรงกับการค้นหา</p>";
+    }
+
+    document.getElementById("logSearch").addEventListener("input", refresh);
+    document.getElementById("logNewest").onclick = function () {
+      oldestFirst = false;
+      refresh();
+    };
+    document.getElementById("logOldest").onclick = function () {
+      oldestFirst = true;
+      refresh();
+    };
+
+    const filter = document.getElementById("logFilter");
+    if (filter) filter.addEventListener("change", refresh);
+  }
+
+  // สร้าง UI และอัปเดตเวลา
+  installTimePanel();
+  installLogSearch();
+  updateClock();
+
+  // ใช้เวลาอัตโนมัติทุก 12 วินาที
+  setInterval(function () {
+    if (!G || !G.timeSystem || !G.timeSystem.auto || !alive()) return;
+    advanceSegment(true);
+  }, 12000);
+
 })();
+
 </script>
 </body>
 </html>
