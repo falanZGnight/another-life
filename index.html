@@ -973,7 +973,8 @@ function toggleSummon(id){
 /* =====================================================
    10. การเดินทาง
    ===================================================== */
-function travelTo(placeName){
+
+  function travelTo(placeName){
   if(!G)return;
   const c=G.character;
   if(c.age<15){alert("การเดินทางด้วยตนเองปลดล็อกเมื่ออายุ 15 ปี");return;}
@@ -1202,7 +1203,7 @@ document.getElementById("tabs").addEventListener("click",e=>{
    ===================================================== */
 newGame();
   
-/* === Cosmos Life: core fixes === */
+  /* === Cosmos Life: core fixes === */
 (function () {
   "use strict";
 
@@ -1520,6 +1521,7 @@ if (typeof oldAdvanceDayForStats === "function") {
     };
   }
 
+})();
 /* =====================================================
    LIFE SYSTEM V2
    อายุขัย / เวลา 4 ชั่วโมง / กิจวัตร / บันทึกชีวิต
