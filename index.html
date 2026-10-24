@@ -3185,11 +3185,12 @@ function lcInit(){
     <div id="lcMessage" style="margin-top:10px"></div>
   `;
 
-  const target=document.querySelector("main") ||
-    document.querySelector(".container") ||
-    document.body;
+const target = document.getElementById("alExtraLife")
+  || document.getElementById("game");
 
-  target.appendChild(panel);
+if (!target) return;
+
+target.appendChild(panel);
 
   lcRender();
 }
@@ -3455,26 +3456,270 @@ function lcBuildHouse(){
   lcSpendTime(240);
 }
 
-function lcCraftWeapon(){
-  const s=lcState();
 
-  if(!lcTake("แท่งโลหะ",1)){
-    lcLog("งานช่าง","ต้องมีแท่งโลหะ 1 แท่ง");
+function lcCraftWeapon() {
+  lcOpenForge();
+}
+
+function lcOpenForge() {
+  const old = document.getElementById("lcForgePanel");
+  if (old) {
+    old.remove();
     return;
   }
 
-  if(s.wood<1){
-    lcItem("แท่งโลหะ",1,"material",12);
-    lcLog("งานช่าง","ต้องใช้ไม้ 1 ชิ้นทำด้ามอาวุธ");
+  const panel = document.createElement("div");
+  panel.id = "lcForgePanel";
+  panel.style.cssText =
+    "margin-top:12px;padding:12px;border:1px solid #8886;" +
+    "border-radius:10px";
+
+  panel.innerHTML = `
+    <h3>⚒️ โรงตีเหล็กและโต๊ะช่าง</h3>
+    <p>เลือกสูตรเพื่อดูวัตถุดิบและสร้างอุปกรณ์</p>
+    <div id="lcForgeList"
+      style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+    </div>
+  `;
+
+  document.getElementById("lcActions").after(panel);
+  lcRenderForge();
+}
+
+function lcForgeRecipes() {
+  return [
+    {
+      name: "มีดหิน",
+      type: "weapon",
+      slot: "weapon",
+      material: "หิน",
+      attack: 3, defense: 0, durability: 25,
+      value: 8, time: 30,
+      needs: { wood: 1, stone: 2 }
+    },
+    {
+      name: "ดาบทองแดง",
+      type: "weapon",
+      slot: "weapon",
+      material: "ทองแดง",
+      attack: 8, defense: 0, durability: 55,
+      value: 35, time: 90,
+      needs: { wood: 1 },
+      items: [["แท่งทองแดง", 2]]
+    },
+    {
+      name: "ดาบเหล็ก",
+      type: "weapon",
+      slot: "weapon",
+      material: "เหล็ก",
+      attack: 13, defense: 0, durability: 90,
+      value: 75, time: 120,
+      needs: { wood: 1 },
+      items: [["แท่งเหล็ก", 2]]
+    },
+    {
+      name: "ดาบเหล็กกล้า",
+      type: "weapon",
+      slot: "weapon",
+      material: "เหล็กกล้า",
+      attack: 18, defense: 0, durability: 130,
+      value: 150, time: 180,
+      needs: { wood: 1 },
+      items: [["แท่งเหล็กกล้า", 2]]
+    },
+    {
+      name: "หอกไม้",
+      type: "weapon",
+      slot: "weapon",
+      material: "ไม้",
+      attack: 5, defense: 0, durability: 35,
+      value: 12, time: 40,
+      needs: { wood: 3 }
+    },
+    {
+      name: "ธนูไม้",
+      type: "weapon",
+      slot: "weapon",
+      material: "ไม้",
+      attack: 6, defense: 0, durability: 40,
+      value: 18, time: 60,
+      needs: { wood: 3 },
+      items: [["เส้นใย", 1]]
+    },
+    {
+      name: "โล่ไม้",
+      type: "equipment",
+      slot: "offhand",
+      material: "ไม้",
+      attack: 0, defense: 4, durability: 45,
+      value: 20, time: 60,
+      needs: { wood: 4 }
+    },
+    {
+      name: "หมวกเหล็ก",
+      type: "equipment",
+      slot: "head",
+      material: "เหล็ก",
+      attack: 0, defense: 4, durability: 80,
+      value: 55, time: 90,
+      items: [["แท่งเหล็ก", 2]]
+    },
+    {
+      name: "เกราะเหล็ก",
+      type: "equipment",
+      slot: "body",
+      material: "เหล็ก",
+      attack: 0, defense: 10, durability: 120,
+      value: 130, time: 180,
+      items: [["แท่งเหล็ก", 5]]
+    },
+    {
+      name: "เกราะหนัง",
+      type: "equipment",
+      slot: "body",
+      material: "หนัง",
+      attack: 0, defense: 5, durability: 60,
+      value: 45, time: 90,
+      items: [["หนังสัตว์", 4]]
+    },
+    {
+      name: "แหวนเงิน",
+      type: "equipment",
+      slot: "accessory",
+      material: "เงิน",
+      attack: 1, defense: 1, durability: 100,
+      value: 100, time: 90,
+      items: [["แท่งเงิน", 1]]
+    },
+    {
+      name: "ดาบมิธริล",
+      type: "weapon",
+      slot: "weapon",
+      material: "มิธริล",
+      attack: 28, defense: 0, durability: 200,
+      value: 500, time: 300,
+      needs: { wood: 1 },
+      items: [["แท่งมิธริล", 2]]
+    }
+  ];
+}
+
+function lcForgeHasItem(name, qty) {
+  const item = (G.c.inventory || []).find(
+    i => i.name === name && i.qty >= qty
+  );
+  return !!item;
+}
+
+function lcForgeCanCraft(recipe) {
+  const s = lcState();
+  const needs = recipe.needs || {};
+
+  for (const key in needs) {
+    if ((s[key] || 0) < needs[key]) return false;
+  }
+
+  for (const [name, qty] of (recipe.items || [])) {
+    if (!lcForgeHasItem(name, qty)) return false;
+  }
+
+  return true;
+}
+
+function lcRenderForge() {
+  const list = document.getElementById("lcForgeList");
+  if (!list || !G || !G.c) return;
+
+  list.innerHTML = "";
+
+  lcForgeRecipes().forEach((recipe, index) => {
+    const needs = Object.entries(recipe.needs || {})
+      .map(([key, qty]) => {
+        const labels = {
+          wood: "ไม้", stone: "หิน", ore: "แร่",
+          herbs: "สมุนไพร", seeds: "เมล็ดพันธุ์"
+        };
+        return `${labels[key] || key} ${qty}`;
+      });
+
+    (recipe.items || []).forEach(([name, qty]) => {
+      needs.push(`${name} ${qty}`);
+    });
+
+    const card = document.createElement("div");
+    card.style.cssText =
+      "padding:10px;border:1px solid #8885;border-radius:8px";
+
+    const can = lcForgeCanCraft(recipe);
+
+    card.innerHTML = `
+      <b>${recipe.name}</b>
+      <div>วัสดุ: ${recipe.material}</div>
+      <div>⚔️ โจมตี +${recipe.attack}</div>
+      <div>🛡️ ป้องกัน +${recipe.defense}</div>
+      <div>🔧 ความทนทาน ${recipe.durability}</div>
+      <div>ใช้: ${needs.join(" · ") || "ไม่มี"}</div>
+      <button type="button" ${can ? "" : "disabled"}
+        data-forge="${index}"
+        style="margin-top:8px;padding:6px 10px">
+        ${can ? "สร้างอุปกรณ์" : "วัตถุดิบไม่พอ"}
+      </button>
+    `;
+
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll("[data-forge]").forEach(button => {
+    button.onclick = () => {
+      const recipe = lcForgeRecipes()[Number(button.dataset.forge)];
+      lcForgeCraft(recipe);
+    };
+  });
+}
+
+function lcForgeCraft(recipe) {
+  if (!lcForgeCanCraft(recipe)) {
+    lcLog("งานช่าง", "วัตถุดิบไม่เพียงพอ");
     return;
   }
 
-  s.wood--;
-  lcItem("ดาบเหล็กทำมือ",1,"weapon",15);
-  G.c.craft=(G.c.craft||0)+2;
+  const s = lcState();
 
-  lcLog("งานช่าง","สร้างดาบเหล็กทำมือสำเร็จ");
-  lcSpendTime(120);
+  for (const [key, qty] of Object.entries(recipe.needs || {})) {
+    s[key] -= qty;
+  }
+
+  for (const [name, qty] of (recipe.items || [])) {
+    lcTake(name, qty);
+  }
+
+  const item = {
+    name: recipe.name,
+    qty: 1,
+    type: recipe.type,
+    slot: recipe.slot,
+    value: recipe.value,
+    material: recipe.material,
+    attack: recipe.attack,
+    defense: recipe.defense,
+    durability: recipe.durability,
+    maxDurability: recipe.durability
+  };
+
+  G.c.inventory = G.c.inventory || [];
+  G.c.inventory.push(item);
+  G.c.craft = (G.c.craft || 0) + 2;
+
+  lcLog(
+    "งานช่าง",
+    `สร้าง ${recipe.name} จาก${recipe.material}สำเร็จ ` +
+    `(โจมตี +${recipe.attack}, ป้องกัน +${recipe.defense})`
+  );
+
+  lcSpendTime(recipe.time);
+  lcRenderForge();
+}
+
 }
 
 function lcSleep(){
@@ -3543,7 +3788,8 @@ function lcRender(){
     ["สร้าง/อัปเกรดบ้าน","lcBuildHouse()"],
     ["ทำดาบ","lcCraftWeapon()"],
     ["พักผ่อน/นอน","lcSleep()"],
-    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"]
+    ["ให้ครอบครัวช่วยดูแล","lcFamilyCare()"],
+    ["⚒️ โรงตีเหล็กและสร้างอุปกรณ์", "lcOpenForge()"],
   ];
 
   document.getElementById("lcActions").innerHTML=actions.map(([label,fn])=>
