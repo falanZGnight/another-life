@@ -980,6 +980,35 @@ main > section,
 </div>
 </div>
 
+<!-- ===== วงวาร์ป: เครือข่ายครอบครัวและผู้คน ===== -->
+<div class="panel" id="relationshipCirclePanel">
+  <h2>⭕ วงวาร์ป — เครือข่ายความสัมพันธ์</h2>
+  <p class="muted">
+    ผู้คนที่เชื่อมโยงกับชีวิตของเรา ความสัมพันธ์จะยังอยู่ในโลกเดิม
+  </p>
+
+  <div class="card">
+    <label for="circleRelationSelect">กำหนดความสัมพันธ์ให้คนที่เลือก</label>
+    <select id="circleRelationSelect">
+      <option value="ครอบครัว">ครอบครัว</option>
+      <option value="เครือญาติ">เครือญาติ</option>
+      <option value="คนรัก">คนรัก</option>
+      <option value="เพื่อนสนิท">เพื่อนสนิท</option>
+      <option value="เพื่อน">เพื่อน</option>
+      <option value="พันธมิตร">พันธมิตร</option>
+      <option value="คนรู้จัก" selected>คนรู้จัก</option>
+      <option value="คู่แข่ง">คู่แข่ง</option>
+    </select>
+    <button class="primary" onclick="setCircleRelation()">
+      บันทึกความสัมพันธ์
+    </button>
+  </div>
+
+  <div id="circleSummary" class="three" style="margin-top:12px"></div>
+  <div id="circlePeople" style="margin-top:12px"></div>
+</div>
+<!-- ===== จบวงวาร์ป ===== -->
+
 <div class="panel">
 <h2>บันทึกเหตุการณ์</h2>
 <div id="log"></div>
@@ -2167,6 +2196,162 @@ function socialize(){
 let people=G.world.npcs.filter(n=>n.location===G.location);
 if(!people.length)meetNPC();else talkNPC();
 }
+  
+/* ===== ANOTHER LIFE: RELATIONSHIP CIRCLE ===== */
+
+const CIRCLE_RELATIONS = [
+  "ครอบครัว",
+  "เครือญาติ",
+  "คนรัก",
+  "เพื่อนสนิท",
+  "เพื่อน",
+  "พันธมิตร",
+  "คนรู้จัก",
+  "คู่แข่ง"
+];
+
+function setCircleRelation(){
+  if(!G || !G.world || !G.c) return;
+
+  const npc = getNPC();
+  const select = document.getElementById("circleRelationSelect");
+
+  if(!npc || !select){
+    log("วงวาร์ป", "เลือกคนที่รู้จักก่อน");
+    return;
+  }
+
+  const relation = select.value;
+
+  if(!CIRCLE_RELATIONS.includes(relation)){
+    log("วงวาร์ป", "ประเภทความสัมพันธ์ไม่ถูกต้อง");
+    return;
+  }
+
+  // เพิ่มข้อมูลให้ NPC เดิม โดยไม่ลบความสัมพันธ์เก่า
+  npc.circleRelation = relation;
+
+  log(
+    "วงวาร์ป",
+    "บันทึกว่า " + npc.name + " เป็น" + relation + "ของ " + G.c.name
+  );
+
+  render();
+  silentAutoSave();
+}
+
+function renderCircle(){
+  const summary = document.getElementById("circleSummary");
+  const people = document.getElementById("circlePeople");
+
+  if(!summary || !people || !G || !G.world || !G.c) return;
+
+  const npcs = (G.world.npcs || []).filter(n => n.known !== false);
+
+  // NPC จากเซฟเก่าจะถือเป็นคนรู้จักไปก่อน
+  npcs.forEach(n => {
+    if(!CIRCLE_RELATIONS.includes(n.circleRelation)){
+      n.circleRelation = "คนรู้จัก";
+    }
+  });
+
+  summary.innerHTML = CIRCLE_RELATIONS.map(relation => {
+    const count = npcs.filter(n => n.circleRelation === relation).length;
+
+    return `
+      <div class="card">
+        <div class="muted">${esc(relation)}</div>
+        <strong>${count} คน</strong>
+      </div>
+    `;
+  }).join("");
+
+  if(!npcs.length){
+    people.innerHTML = `
+      <div class="notice">
+        ยังไม่มีผู้คนในวงวาร์ป ลองกด “พบผู้คนใหม่”
+        ในแผงผู้คนและความสัมพันธ์ก่อน
+      </div>
+    `;
+    return;
+  }
+
+  const order = [
+    "ครอบครัว",
+    "เครือญาติ",
+    "คนรัก",
+    "เพื่อนสนิท",
+    "เพื่อน",
+    "พันธมิตร",
+    "คนรู้จัก",
+    "คู่แข่ง"
+  ];
+
+  people.innerHTML = order.map(relation => {
+    const group = npcs.filter(n => n.circleRelation === relation);
+
+    if(!group.length) return "";
+
+    return `
+      <div style="margin-top:12px">
+        <h3>${esc(relation)} (${group.length})</h3>
+        <div class="two">
+          ${group.map(n => `
+            <div class="card">
+              <strong>${esc(n.name)}</strong>
+              <div class="muted">
+                ${esc(n.race || "ไม่ทราบเผ่า")} ·
+                ${esc(n.role || "ไม่ทราบอาชีพ")}
+              </div>
+              <div class="muted">
+                อายุ ${Number(n.age) || 0} ปี ·
+                ${esc(n.location || "ไม่ทราบสถานที่")}
+              </div>
+              <div class="stat">
+                <span>ความชอบ / ความไว้ใจ</span>
+                <b>${Number(n.like) || 0} / ${Number(n.trust) || 0}</b>
+              </div>
+              <button
+                type="button"
+                onclick="selectCircleNPC(${Number(n.id)})"
+              >
+                เลือกคนนี้
+              </button>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function selectCircleNPC(id){
+  if(!G || !G.world) return;
+
+  const npc = G.world.npcs.find(n => Number(n.id) === Number(id));
+  const select = document.getElementById("npcSelect");
+  const relationSelect = document.getElementById("circleRelationSelect");
+
+  if(!npc || !select) return;
+
+  // ถ้าคนนี้ยังไม่อยู่ในรายการเลือก ให้เพิ่มผ่านระบบเดิม
+  ensureNPCSelect();
+  select.value = String(npc.id);
+
+  if(relationSelect){
+    relationSelect.value = CIRCLE_RELATIONS.includes(npc.circleRelation)
+      ? npc.circleRelation
+      : "คนรู้จัก";
+  }
+
+  const panel = document.getElementById("relationshipCirclePanel");
+  if(panel){
+    panel.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+}
+
+/* ===== END RELATIONSHIP CIRCLE ===== */
+
 function ensureNPCSelect(){
 let s=$("npcSelect"),old=s.value;s.innerHTML="";
 G.world.npcs.filter(n=>n.known).forEach(n=>{let o=document.createElement("option");o.value=n.id;o.textContent=n.name+" — "+n.role+" ("+n.location+")";s.appendChild(o);});
@@ -2396,7 +2581,7 @@ $("monsterInfo").textContent=monsterDescription();
 $("bestiary").textContent=w.bestiary.length?w.bestiary.join(", "):"ยังไม่ค้นพบสายพันธุ์";
 ensureNPCSelect();
 $("npcInfo").innerHTML=w.npcs.length?w.npcs.map(n=>`<div class="card"><b>${esc(n.name)}</b> — ${esc(n.race)}<br><span class="muted">${esc(n.role)} · ${esc(n.personality)} · ${esc(n.location)}</span><br>ชอบ ${n.like} | ไว้ใจ ${n.trust} | เคารพ ${n.respect} | กลัว ${n.fear} | สนิทสนม ${n.intimacy} ${n.party?" · <span class='goodtxt'>ร่วมปาร์ตี้</span>":""}</div>`).join(""):"ยังไม่มีคนรู้จัก ลองพบปะผู้คน";
-$("partyInfo").textContent="สมาชิกปาร์ตี้: "+(c.party.map(id=>w.npcs.find(n=>n.id===id)?.name).filter(Boolean).join(", ")||"ไม่มี");
+$("partyInfo").textContent="สมาชิกปาร์ตี้: "+(c.party.map(id=>w.npcs.find(n=>n.id===id)?.name).filter(Boolean).join(", ")||"ไม่มี");renderCircle(); 
 $("lifeCount").textContent=w.lifeCount;$("kills").textContent=w.kills;$("discoveries").textContent=w.discovery;
 $("conditions").textContent=c.condition.join(", ")||"ปกติ";
 $("history").innerHTML=w.history.length?"<h3>ชีวิตก่อนหน้า</h3>"+w.history.slice().reverse().map(h=>`<div class="card">${esc(h.name)} · ${esc(h.race)} · ${esc(h.job)}<br><span class="muted">อายุ ${h.age} ปี / ชื่อเสียง ${h.fame} / ${esc(h.death)}</span></div>`).join(""):"ประวัติของชีวิตก่อนหน้าจะปรากฏเมื่อมีการเกิดใหม่";
