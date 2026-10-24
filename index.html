@@ -2552,9 +2552,17 @@ $("locationInfo").innerHTML=`<b>${esc(G.location)}</b><p class="muted">${esc(LOC
 $("politicsInfo").innerHTML=`<div class="stat"><span>เสถียรภาพการเมือง</span><b>${w.politics}/100</b></div><div class="bar"><span style="width:${w.politics}%"></span></div><div class="stat"><span>เศรษฐกิจการค้า</span><b>${w.trade}/100</b></div><div class="bar"><span style="width:${w.trade}%"></span></div><div class="stat"><span>ความเสี่ยงสงคราม</span><b>${w.war}/100</b></div>`;
 $("travelActions").innerHTML="";
 Object.keys(LOCATIONS).filter(l=>l!==G.location).forEach(l=>{let b=document.createElement("button");b.textContent="ไป "+l;b.onclick=()=>travel(l);$("travelActions").appendChild(b);});
-$("inventory").innerHTML=c.inventory.length?c.inventory.map(i=>`<div class="stat"><span>${esc(i.name)} ×${i.qty}</span><span class="muted">${i.type}</span></div>`).join(""):"กระเป๋าว่าง";
+$("inventory").innerHTML = c.inventory.length   ? c.inventory.map(i => {       const sellPrice = merchantSellPrice(i, w.trade);       return `<div class="stat">         <span>           ${esc(i.name)} ×${i.qty}           <span class="muted">(${esc(i.type)})</span>         </span>         <b>ขายคืน ${formatCoins(sellPrice)}/ชิ้น</b>       </div>`;     }).join("")   : "กระเป๋าว่าง";
 fillSelect("itemSelect",c.inventory.map(i=>({value:i.name,text:i.name+" ×"+i.qty})));
-fillSelect("merchantSelect",w.merchant.filter(i=>i.qty>0).map(i=>({value:i.name,text:i.name+" ×"+i.qty+" — "+(i.value+Math.ceil(i.value*(100-w.trade)/200))+" เหรียญ"})));
+fillSelect(
+  "merchantSelect",
+  w.merchant
+    .filter(i => i.qty > 0)
+    .map(i => ({
+      value: i.name,
+      text: `${i.name} ×${i.qty} — ซื้อ ${formatCoins(merchantBuyPrice(i, w.trade))}/ชิ้น`
+    }))
+);
 $("merchantInfo").textContent=w.merchant.length?"มีสินค้าสุ่ม "+w.merchant.filter(i=>i.qty>0).length+" รายการ":"ยังไม่มีสินค้า";
   renderSpecialMerchant();
 $("monsterInfo").textContent=monsterDescription();
