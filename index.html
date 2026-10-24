@@ -2822,11 +2822,17 @@ function runAIDecision(manual = false) {
       });
   }
 
-  // 8. ชวน NPC ที่สนิทเข้าร่วมปาร์ตี้
+ 
+  // 8. ชวน NPC ที่สนิทในพื้นที่เดียวกันเข้าร่วมปาร์ตี้
+  const localNPCs = (G.world.npcs || []).filter(n =>
+    n.location === G.location && !n.party
+  );
+
   const partyCandidate = localNPCs.find(n =>
     (n.like || 0) + (n.trust || 0) + (n.respect || 0) >= 7 &&
-    !n.party && c.age >= 12
+    c.age >= 12
   );
+
 
   if (partyCandidate) {
     add("aiParty", 26,
