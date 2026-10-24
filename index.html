@@ -2681,7 +2681,7 @@ function runAIDecision(manual = false) {
   }
 
   // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
-  const gear = (c.inventory || []).find(
+const gearList = inventory.filter(item =>
     i => i.type === "gear" && i.slot && i.qty > 0
   );
 
@@ -2973,7 +2973,7 @@ function runAIDecision(manual = false) {
   const equipmentTypes = new Set(["weapon", "armor"]);
   const equipmentSlots = ["head", "body", "legs", "weapon"];
 
-  const gear = inventory.filter(item =>
+  const gearList = inventory.filter(...)(item =>
     item &&
     item.qty > 0 &&
     (item.slot || equipmentTypes.has(item.type))
@@ -2983,7 +2983,7 @@ function runAIDecision(manual = false) {
   let bestGearSlot = null;
   let bestGearScore = 0;
 
-  for (const item of gear) {
+ for (const item of gearList) {
     let slot = item.slot || (
       item.type === "weapon" ? "weapon" :
       item.type === "armor" ? "body" : null
