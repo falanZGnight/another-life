@@ -173,17 +173,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   font-size: 11px;
   margin-top: 8px;
 }
-@media(max-width:480px) {
-  .avatar-stage {
-    width: 112px;
-    min-height: 150px;
-  }
   #avatarCanvas {
     width: 96px;
-    height: 128px;
+    height: 144px;
+    object-fit: contain;
   }
-}
-
+  
 /* ===== ANOTHER LIFE: READABLE UI LAYOUT ===== */
 
 /* พื้นที่หลัก */
@@ -1227,18 +1222,11 @@ function startGame(){
   }
 
   applyOrigin();
- function ensureMerchant(){
-  if(!G || !G.world) return;
+   applyOrigin();
+  ensureMerchant();
 
-  if(!Array.isArray(G.world.merchant)){
-    G.world.merchant = [];
-  }
-
-  if(G.world.merchant.length === 0){
-    refreshMerchant(true);
-  }
-}
-
+  $("creation").style.display = "none";
+  $("game").style.display = "block";
   $("creation").style.display = "none";
   $("game").style.display = "block";
 
@@ -5067,83 +5055,62 @@ function drawAnimeCharacter(ctx, cx, cy, scale, c){
   ctx.restore();
 }
 
+
 function avatarRender(){
   if(!G || !G.c) return;
 
   avatarInit();
 
-  const c=G.c;
-  const canvas=document.getElementById("avatarCanvas");
+  const c = G.c;
+  const canvas = document.getElementById("avatarCanvas");
   if(!canvas) return;
 
-  const ctx=canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
   if(!ctx) return;
 
-  ctx.clearRect(0,0,128,192);
-ctx.imageSmoothingEnabled=true;
+  const age = Number(c.age) || 0;
+  const wear = c.wearing || {};
 
-drawAnimeCharacter(ctx,64,12,1.05,c);
-  // ข้อมูลตัวละคร
-  document.getElementById("avName").textContent=c.name||"-";
-  document.getElementById("avRace").textContent=c.race||"-";
-  document.getElementById("avAge").textContent=age+" ปี";
-  document.getElementById("avStage").textContent=ageStage(c);
-  document.getElementById("avJob").textContent=c.job||"-";
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = true;
 
-  const slots=[
-    ["head","ศีรษะ"],
-    ["body","ลำตัว"],
-    ["legs","ขา"],
-    ["weapon","อาวุธ"]
-  ];
+  drawAnimeCharacter(
+    ctx,
+    canvas.width / 2,
+    12,
+    1.05,
+    c
+  );
 
-  document.getElementById("avGear").innerHTML=
-    "<b>สวมใส่อยู่</b><br>"+
-    slots.map(([key,label])=>
-      label+": "+esc(wear[key]?.name||"ชุดพื้นฐาน")
-    ).join("<br>");
-}
-
-function equipSelectedGear(){
-  if(!G || !G.c) return;
-
-  const c=G.c;
-  const name=document.getElementById("itemSelect").value;
-  const item=c.inventory.find(i=>i.name===name);
-
-  if(!item){
-    log("อุปกรณ์","กรุณาเลือกไอเทมก่อน");
-    return;
-  }
-
-  if(item.type!=="gear" || !item.slot){
-    log("อุปกรณ์","ไอเทมนี้ไม่สามารถสวมใส่ได้");
-    return;
-  }
-
-  if(!c.wearing || Array.isArray(c.wearing)){
-    c.wearing={head:null,body:null,legs:null,weapon:null};
-  }
-
-  const slot=item.slot;
-  const previous=c.wearing[slot];
-
-  if(previous){
-    addItem(previous.name,1,"gear",previous.value,slot);
-  }
-
-  c.wearing[slot]={
-    name:item.name,
-    slot:item.slot,
-    value:item.value||0
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = value;
   };
 
-  item.qty--;
-  cleanInventory();
+  setText("avName", c.name || "-");
+  setText("avRace", c.race || "-");
+  setText("avAge", age + " ปี");
+  setText("avStage", ageStage(c));
+  setText("avJob", c.job || "-");
 
-  log("สวมใส่อุปกรณ์","สวม "+item.name+" เรียบร้อย");
-  render();
+  const slots = [
+    ["head", "ศีรษะ"],
+    ["body", "ลำตัว"],
+    ["legs", "ขา"],
+    ["weapon", "อาวุธ"]
+  ];
+
+  const gear = document.getElementById("avGear");
+
+  if(gear){
+    gear.innerHTML =
+      "<b>สวมใส่อยู่</b><br>" +
+      slots.map(([key, label]) =>
+        label + ": " + esc(wear[key]?.name || "ชุดพื้นฐาน")
+      ).join("<br>");
+  }
 }
+
 
 /* ===== ANOTHER LIFE PIXEL MAP ===== */
 
