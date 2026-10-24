@@ -600,6 +600,100 @@ main > section,
 
 /* FIX: ล็อกแถบสถานะด้านซ้ายขณะเลื่อนหน้า */
 
+/* แถบสถานะตัวละคร: เปิด-พับได้ */
+#statusSidebar {
+  min-width: 0;
+}
+
+#sidebarToggle {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  color: var(--gold);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+}
+
+#sidebarToggle:hover {
+  filter: brightness(1.15);
+}
+
+/* คอมพิวเตอร์ */
+@media (min-width: 781px) {
+  main {
+    display: grid;
+    grid-template-columns: 285px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  main > #statusSidebar {
+    position: fixed !important;
+    top: 12px;
+    left: max(18px, calc((100vw - 1200px) / 2 + 16px));
+    width: 285px;
+    height: calc(100vh - 24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 100;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+  }
+
+  main > section {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  main.sidebar-collapsed {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  main.sidebar-collapsed > #statusSidebar {
+    width: 44px;
+    overflow: hidden;
+  }
+
+  main.sidebar-collapsed > #statusSidebar #sidebarToggle {
+    width: 44px;
+    padding: 9px 0;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  main.sidebar-collapsed > #statusSidebar > .panel {
+    display: none;
+  }
+}
+
+/* มือถือและแท็บเล็ต */
+@media (max-width: 780px) {
+  main {
+    display: block;
+  }
+
+  main > #statusSidebar {
+    position: static !important;
+    width: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  main > section {
+    grid-column: auto;
+  }
+
+  main.sidebar-collapsed > #statusSidebar > .panel {
+    display: none;
+  }
+}
+
 /* หน้าจอคอมพิวเตอร์ */
 @media (min-width: 781px) {
   main {
@@ -662,7 +756,11 @@ main > section,
 </header>
 
 <main>
-<aside>
+<aside id="statusSidebar">
+<button id="sidebarToggle" type="button" onclick="toggleStatusSidebar()">
+  ‹ พับแถบสถานะ
+</button>
+<div class="panel">
 <div class="panel">
 <h2>สถานะตัวละคร</h2>
 <div id="identity" class="muted">ยังไม่ได้เริ่มชีวิต</div>
@@ -9272,6 +9370,51 @@ organizeLifeSections();
 })();
 
 </script>
+  
+<script>
+(function () {
+  const main = document.querySelector("main");
+  const sidebar = document.getElementById("statusSidebar");
+  const button = document.getElementById("sidebarToggle");
+
+  if (!main || !sidebar || !button) return;
+
+  let collapsed = false;
+
+  try {
+    collapsed = localStorage.getItem("anotherLifeSidebarCollapsed") === "1";
+  } catch (e) {}
+
+  function renderSidebar() {
+    main.classList.toggle("sidebar-collapsed", collapsed);
+
+    button.textContent = collapsed
+      ? "›"
+      : "‹ พับแถบสถานะ";
+
+    button.title = collapsed
+      ? "เปิดแถบสถานะ"
+      : "พับแถบสถานะ";
+
+    button.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  window.toggleStatusSidebar = function () {
+    collapsed = !collapsed;
+    renderSidebar();
+
+    try {
+      localStorage.setItem(
+        "anotherLifeSidebarCollapsed",
+        collapsed ? "1" : "0"
+      );
+    } catch (e) {}
+  };
+
+  renderSidebar();
+})();
+</script>
+
 </body>
 /* ===== NPC AUTONOMOUS LIFE ===== */
 (function installNPCLifeAI() {
