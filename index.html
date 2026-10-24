@@ -1599,7 +1599,7 @@ it.qty--;cleanInventory();render();
 }
 let price = merchantSellPrice(it, G.world.trade);{
 let name=$("itemSelect").value,it=G.c.inventory.find(i=>i.name===name);
-if(!it)return;
+if(!it)return
 if(it.name==="ยาชุบชีวิต"){log("ตลาด","คุณตัดสินใจเก็บไอเทมชุบชีวิตไว้");return;}
 let price=Math.max(1,Math.floor((it.value||3)*(.65+G.world.trade/250)));
 it.qty--;G.c.gold+=price;cleanInventory();log("ซื้อขาย","ขาย "+name+" ได้ "+formatCoins(price));render();
