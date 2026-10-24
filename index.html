@@ -29,7 +29,33 @@ button:hover{filter:brightness(1.18)}button:disabled{opacity:.4;cursor:not-allow
 #deathOverlay{display:none;position:fixed;inset:0;background:#080b0eeF;z-index:10;align-items:center;justify-content:center;padding:20px}
 #deathOverlay .panel{max-width:520px;width:100%;border-color:#a65c63}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
-:780px){main{grid-template-columns:1fr}.two{grid-template-columns:1fr}#log{height:240px}}
+@media (max-width: 780px) {
+  main {
+    display: block;
+    padding: 12px;
+  }
+
+  main > #statusSidebar {
+    position: static;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 16px;
+  }
+
+  .two,
+  .three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #log {
+    height: 220px;
+  }
+
+  button {
+    min-height: 40px;
+  }
+}
 
 /* ===== 16-BIT PIXEL RPG ===== */
 .pixel-panel {
