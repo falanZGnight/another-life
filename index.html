@@ -2099,14 +2099,13 @@ if (typeof oldAdvanceDayForStats === "function") {
   installLogSearch();
   updateClock();
 
-  // ใช้เวลาอัตโนมัติทุก 12 วินาที
+ // ใช้เวลาอัตโนมัติทุก 12 วินาที
   setInterval(function () {
     if (!G || !G.timeSystem || !G.timeSystem.auto || !alive()) return;
     advanceSegment(true);
   }, 12000);
 
 })();
-
 </script>
 </body>
 </html>
