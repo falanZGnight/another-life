@@ -2680,7 +2680,8 @@ function runAIDecision(manual = false) {
       });
   }
 
-    // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
+    
+  // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
   const basicGear = inventory.find(
     i => i.type === "gear" && i.slot && i.qty > 0
   );
@@ -2689,13 +2690,22 @@ function runAIDecision(manual = false) {
     add("aiEquip", 28 + (goal === "skill" ? 8 : 0),
       "ตรวจสอบและสวมอุปกรณ์ที่มี", () => {
         c.wearing ||= {
-          head: null, body: null, legs: null, weapon: null
+          head: null,
+          body: null,
+          legs: null,
+          weapon: null
         };
 
         const old = c.wearing[basicGear.slot];
+
         if (old) {
-          addItem(old.name, 1, "gear",
-            old.value || 1, old.slot || basicGear.slot);
+          addItem(
+            old.name,
+            1,
+            "gear",
+            old.value || 1,
+            old.slot || basicGear.slot
+          );
         }
 
         c.wearing[basicGear.slot] = {
@@ -2712,11 +2722,7 @@ function runAIDecision(manual = false) {
 
         log("AI อุปกรณ์", c.name + " สวม " + basicGear.name);
       });
-  }       
-  log("AI อุปกรณ์", c.name + " สวม " + basicGear.name);
-      });
   }
-
 
   // 8. ชวน NPC ที่สนิทเข้าร่วมปาร์ตี้
   const partyCandidate = localNPCs.find(n =>
