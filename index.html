@@ -131,7 +131,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   color: #f4d58a;
   min-height: 24px;
   margin-top: 8px;
-}
+  
 }
   #avatarCanvas {
     width: 96px;
@@ -11023,6 +11023,330 @@ organizeLifeSections();
   console.log("Another Life mobile popup + idle patch loaded");
 })();
 /* ===== END MOBILE POPUP + IDLE PATCH ===== */
+
+<style id="another-life-clean-ui">
+  :root {
+    --bg: #111813;
+    --panel: #1a241e;
+    --panel-soft: #202d25;
+    --line: #34483a;
+    --gold: #e7cf91;
+    --text: #edf1e9;
+    --muted: #aab8a9;
+    --green: #8bd5a6;
+    --red: #ef9292;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at top, #24352a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+
+  header {
+    padding: 20px clamp(16px, 4vw, 36px);
+    background: rgba(20, 31, 24, .96);
+    border-bottom: 1px solid var(--line);
+  }
+
+  header h1 {
+    font-size: clamp(23px, 3vw, 30px);
+    letter-spacing: .2px;
+  }
+
+  main {
+    max-width: 1480px;
+    grid-template-columns: minmax(240px, 275px) minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px;
+    align-items: start;
+  }
+
+  #statusSidebar {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+
+  .panel {
+    background: rgba(26, 36, 30, .96);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: clamp(12px, 1.5vw, 18px);
+    margin-bottom: 14px;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, .10);
+  }
+
+  h2 {
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--gold);
+    margin: 0 0 12px;
+  }
+
+  h3 {
+    margin-top: 16px;
+    color: #d9e5d6;
+  }
+
+  .two {
+    gap: 14px;
+  }
+
+  .three {
+    gap: 10px;
+  }
+
+  .card {
+    background: var(--panel-soft);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .stat {
+    padding: 6px 0;
+    gap: 12px;
+  }
+
+  .stat > :last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .bar {
+    height: 7px;
+    margin: 5px 0 10px;
+    background: #0d130f;
+  }
+
+  button {
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 2px 2px 4px 0;
+    transition: filter .15s, transform .15s;
+  }
+
+  button:hover {
+    filter: brightness(1.15);
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .actions {
+    gap: 6px;
+    align-items: center;
+  }
+
+  .actions button {
+    max-width: 100%;
+  }
+
+  input, select, textarea {
+    border-radius: 8px;
+    background: #111a14;
+    border-color: var(--line);
+    min-height: 40px;
+  }
+
+  .notice {
+    border-left-color: var(--gold);
+    border-radius: 0 8px 8px 0;
+    background: #263128;
+    padding: 10px 12px;
+  }
+
+  #log {
+    height: 240px;
+    background: #111914;
+    border: 1px solid #2d3d31;
+    line-height: 1.65;
+  }
+
+  .logline {
+    padding: 8px 2px;
+    border-bottom-color: #29372d;
+  }
+
+  /* ปุ่มพับหัวข้อที่ไม่จำเป็นต้องเปิดตลอดเวลา */
+  .al-collapse-btn {
+    float: right;
+    font-size: 12px;
+    padding: 4px 9px;
+    margin: -2px 0 8px 8px;
+    background: #26372b;
+    border-color: #405744;
+  }
+
+  .panel.al-collapsed {
+    padding-bottom: 10px;
+  }
+
+  .panel.al-collapsed > h2 {
+    margin-bottom: 0;
+  }
+
+  .panel.al-collapsed > h2 ~ *:not(.al-collapse-btn) {
+    display: none !important;
+  }
+
+  .panel.al-collapsed::after {
+    content: "แตะปุ่มเพื่อดูรายละเอียด";
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 5px;
+  }
+
+  @media (max-width: 1000px) {
+    main {
+      grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+      gap: 12px;
+      padding: 12px;
+    }
+  }
+
+  @media (max-width: 780px) {
+    main {
+      display: block;
+      padding: 10px;
+    }
+
+    #statusSidebar {
+      position: static;
+      width: auto;
+      max-height: none;
+      overflow: visible;
+    }
+
+    main > section {
+      min-width: 0;
+    }
+
+    .two,
+    .three {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .panel {
+      padding: 13px;
+      margin-bottom: 11px;
+    }
+
+    #log {
+      height: 210px;
+    }
+
+    .actions button {
+      flex: 1 1 auto;
+    }
+
+    .pixel-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+
+<script id="another-life-clean-ui-script">
+(() => {
+  "use strict";
+
+  const storagePrefix = "anotherLife.ui.collapsed.";
+
+  // พับเฉพาะส่วนข้อมูลรอง ส่วนระบบหลักยังเปิดให้เห็น
+  const collapseTitles = [
+    "ประวัติชีวิต",
+    "⭕ วงศ์วาน — เครือข่ายความสัมพันธ์",
+    "📰 ข่าวสารและเหตุการณ์โลก",
+    "🧭 หมู่เกาะและการเอาชีวิตรอด",
+    "🏰 เกียรติยศ ฐานะ และตระกูล",
+    "🌦️ เศรษฐกิจโลกและฤดูกาล"
+  ];
+
+  function setupCollapsiblePanels() {
+    document.querySelectorAll("#game .panel").forEach(panel => {
+      const heading = panel.querySelector(":scope > h2");
+      if (!heading) return;
+
+      const title = heading.textContent.trim();
+      if (!collapseTitles.includes(title)) return;
+      if (panel.dataset.alCollapseReady === "1") return;
+
+      panel.dataset.alCollapseReady = "1";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "al-collapse-btn";
+      button.setAttribute("aria-expanded", "true");
+
+      let collapsed = false;
+
+      try {
+        collapsed = localStorage.getItem(storagePrefix + title) === "1";
+      } catch (_) {}
+
+      function applyState(nextState) {
+        collapsed = nextState;
+        panel.classList.toggle("al-collapsed", collapsed);
+        button.textContent = collapsed ? "＋ เปิด" : "－ พับ";
+        button.setAttribute("aria-expanded", String(!collapsed));
+
+        try {
+          localStorage.setItem(
+            storagePrefix + title,
+            collapsed ? "1" : "0"
+          );
+        } catch (_) {}
+      }
+
+      button.addEventListener("click", () => {
+        applyState(!collapsed);
+      });
+
+      heading.insertAdjacentElement("afterend", button);
+      applyState(collapsed);
+    });
+  }
+
+  setupCollapsiblePanels();
+
+  // รองรับแผงที่ถูกสร้างเพิ่มระหว่างเล่น
+  const game = document.getElementById("game");
+  if (game && "MutationObserver" in window) {
+    let scheduled = false;
+
+    new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+
+      requestAnimationFrame(() => {
+        scheduled = false;
+        setupCollapsiblePanels();
+      });
+    }).observe(game, {
+      childList: true,
+      subtree: true
+    });
+  }
+})();
+</script>
+</body>
+</html>
 
 </script>
 </body>
