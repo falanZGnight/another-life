@@ -708,7 +708,7 @@ main > section,
 <div id="identity" class="muted">ยังไม่ได้เริ่มชีวิต</div>
 <div id="stats"></div>
 <div id="needs"></div>
-<div class="stat"><span>เงิน</span><b id="gold">—</b></div>
+<div class="stat"><span>เงินรวม</span><b id="gold">—</b></div> <div class="stat"><span>ทองแดง</span><b id="copperCoins">0</b></div> <div class="stat"><span>เงิน</span><b id="silverCoins">0</b></div> <div class="stat"><span>ทอง</span><b id="goldCoins">0</b></div>
 <div class="stat"><span>ชื่อเสียง</span><b id="fame">—</b></div>
 <div class="stat"><span>อาชีพหลัก</span><b id="job">—</b></div>
 <div class="stat"><span>วิถีชีวิต</span><b id="lifePath">—</b></div>
@@ -2541,7 +2541,7 @@ $("stats").innerHTML=`<div class="stat"><span>HP</span><b>${Math.max(0,c.hp)}/${
 <div class="stat"><span>ความรู้ / งานช่าง</span><b>${c.knowledge} / ${c.craft}</b></div>
 <div class="stat"><span>สังคม / เอาตัวรอด</span><b>${c.social} / ${c.survival}</b></div>`;
 $("needs").innerHTML=`<div class="stat"><span>ความหิว</span><b class="${c.hunger>75?"badtxt":""}">${Math.round(c.hunger)}%</b></div><div class="bar"><span style="width:${c.hunger}%;background:${c.hunger>75?"#e77":"#d9b66e"}"></span></div><div class="stat"><span>กระหาย</span><b class="${c.thirst>75?"badtxt":""}">${Math.round(c.thirst)}%</b></div><div class="bar"><span style="width:${c.thirst}%;background:${c.thirst>75?"#e77":"#88bfff"}"></span></div>`;
-$("gold").textContent=formatCoins(c.gold);$("fame").textContent=c.fame;$("job").textContent=c.job+" Lv."+c.jobLevel;
+const coinTotal = Math.max(0, Math.floor(Number(c.gold) || 0));  $("gold").textContent = formatCoins(coinTotal); $("copperCoins").textContent = coinTotal % 100; $("silverCoins").textContent = Math.floor(coinTotal / 100) % 100; $("goldCoins").textContent = Math.floor(coinTotal / 10000);  $("fame").textContent = c.fame; $("job").textContent = c.job + " Lv." + c.jobLevel;
 $("lifePath").textContent=c.lifePath;$("place").textContent=G.location;$("clock").textContent=dateString();$("danger").textContent="ระดับ "+danger()+"/5";
 if (G.auto) {
   $("aiToggle").textContent = G.auto.enabled ? "AI: เปิด" : "AI: ปิด";
