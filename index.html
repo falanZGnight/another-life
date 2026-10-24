@@ -534,9 +534,6 @@ function getSkillValue(key){
   return (c.stats[key]||5)+(c.skills[key]||0);
 }
 
-จุด A — ปรับโอกาสสำเร็จของเหตุการณ์
-ค้นหาฟังก์ชัน getSuccessChance(choice) เดิม แล้วแทนที่ทั้งฟังก์ชันด้วยโค้ดนี้
-
 function getSuccessChance(choice){
   const c = G.character;
   const skill = choice.skill || "survival";
