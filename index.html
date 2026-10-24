@@ -1849,7 +1849,17 @@ function refreshMerchant(silent = false) {
 
 
 /* ===== พ่อค้าพิเศษพเนจร ===== */
+function ensureMerchant(){
+  if(!G || !G.world) return;
 
+  if(!Array.isArray(G.world.merchant)){
+    G.world.merchant = [];
+  }
+
+  if(G.world.merchant.length === 0){
+    refreshMerchant(true);
+  }
+}
 function maybeSpawnSpecialMerchant(){
   if(!G || !G.world) return;
 
