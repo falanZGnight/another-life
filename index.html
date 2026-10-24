@@ -2525,8 +2525,513 @@ function runAIDecision(manual = false) {
       c.knowledge = (c.knowledge || 0) + 1;
       c.energy = clamp(energy + 5, 0, 100);
     });
+  
+  // ===== AI LIFE SIMULATION EXPANSION =====
 
-  // 4. เลือกทางเลือกคะแนนสูงสุด พร้อมความแปรผันเล็กน้อย
+  // 1. ต่อสู้เมื่อมั่นใจว่ามีโอกาสชนะ
+  if (currentMonster) {
+    let fightScore = 30 + c.atk + c.skill;
+    if (hpRate < 0.35) fightScore -= 45;
+    if (c.stamina < 8) fightScore -= 20;
+    if (risk === "high") fightScore += 15;
+    if (risk === "low") fightScore -= 8;
+
+    add("aiFight", fightScore,
+      "ประเมินคู่ต่อสู้แล้วตัดสินใจต่อสู้", () => {
+        const m = currentMonster;
+        const damage = Math.max(1, rand(1, 20) + c.atk + c.skill - m.def);
+        m.hp -= damage;
+        c.energy = clamp(c.energy - 3, 0, 100);
+        c.stamina = clamp(c.stamina - 3, 0, c.maxStamina);
+
+        if (m.hp <= 0) {
+          c.gold += Math.ceil(m.xp / 2);
+          c.skill++;
+          c.fame++;
+          G.world.kills++;
+          if (!G.world.bestiary.includes(m.name))
+            G.world.bestiary.push(m.name);
+          if (Math.random() < 0.7)
+            addItem("วัสดุมอนสเตอร์", 1, "material",
+              Math.max(3, m.level * 2));
+          log("AI ต่อสู้", c.name + " กำจัด " + m.name +
+            " และเก็บของจากซาก");
+          currentMonster = null;
+        } else {
+          const incoming = Math.max(1,
+            Math.floor(m.atk) - c.def);
+          c.hp -= incoming;
+          log("AI ต่อสู้", c.name + " โจมตี " + m.name +
+            " แต่ถูกสวนกลับ เสีย HP " + incoming);
+          if (c.hp <= 0) die("พ่ายแพ้ระหว่าง AI ต่อสู้กับ " + m.name);
+        }
+      });
+  }
+
+  // 2. ออกล่าหาเงินและวัตถุดิบ
+  if (!currentMonster && c.age >= 12 &&
+      c.energy >= 35 && hpRate > 0.55) {
+    let huntScore = goal === "wealth" ? 42 : 24;
+    if (goal === "explore") huntScore += 12;
+    if (risk === "high") huntScore += 12;
+    if (risk === "low") huntScore -= 10;
+
+    add("aiHunt", huntScore,
+      "ออกล่ามอนสเตอร์เพื่อหาเงินและวัตถุดิบ", () => {
+        c.energy = clamp(c.energy - 10, 0, 100);
+        c.survival++;
+        if (Math.random() < 0.65) {
+          currentMonster = generateMonster();
+          log("AI ออกล่า", c.name + " พบ " +
+            currentMonster.name + " ระดับ " + currentMonster.level);
+        } else {
+          const loot = pick([
+            "สมุนไพรป่า", "แร่ดิบ", "เขี้ยวประหลาด",
+            "เกล็ดมอนสเตอร์"
+          ]);
+          addItem(loot, 1, "material", rand(3, 9));
+          c.gold += rand(1, 4);
+          log("AI ออกล่า", c.name + " เก็บ " + loot +
+            " และได้เงินเล็กน้อย");
+        }
+      });
+  }
+
+  // 3. คราฟต์ของจากวัตถุดิบที่มีจริง
+  const aiMaterials = (c.inventory || []).filter(
+    i => i.type === "material" && i.qty > 0
+  );
+
+  if (aiMaterials.length && c.energy >= 20) {
+    let craftScore = goal === "wealth" ? 34 : 23;
+    if (c.job === "ช่างฝีมือ") craftScore += 18;
+    if (goal === "skill") craftScore += 12;
+
+    add("aiCraft", craftScore,
+      "นำวัตถุดิบมาคราฟต์เป็นสิ่งของ", () => {
+        const mat = aiMaterials[0];
+        mat.qty--;
+        cleanInventory();
+
+        const products = [
+          { name: "เครื่องมือทำมือ", type: "tool", value: 8 },
+          { name: "ยาสมุนไพร", type: "heal", value: 9 },
+          { name: "อุปกรณ์เดินทาง", type: "gear", value: 10,
+            slot: "body" },
+          { name: "เครื่องประดับทำมือ", type: "material", value: 12 }
+        ];
+
+        const product = pick(products);
+        addItem(product.name, 1, product.type,
+          product.value, product.slot || null);
+        c.craft = (c.craft || 0) + 1;
+        c.skill = (c.skill || 0) + 1;
+        c.energy = clamp(c.energy - 5, 0, 100);
+
+        log("AI คราฟต์", c.name + " ใช้ " + mat.name +
+          " สร้าง " + product.name);
+      });
+  }
+
+  // 4. ทำอาหารเองเมื่อมีเนื้อดิบและไม้
+  const rawMeat = (c.inventory || []).find(
+    i => i.name === "เนื้อดิบ" && i.qty > 0
+  );
+  const fireWood = (c.inventory || []).find(
+    i => i.name === "ไม้" && i.qty > 0
+  );
+
+  if (rawMeat && fireWood && hunger >= 25) {
+    add("aiCook", 52,
+      "ปรุงเนื้อดิบเป็นอาหารก่อนกิน", () => {
+        rawMeat.qty--;
+        fireWood.qty--;
+        cleanInventory();
+        addItem("เนื้อย่าง", 1, "food", 6);
+        c.craft = (c.craft || 0) + 1;
+        log("AI ทำอาหาร", c.name + " ก่อไฟและปรุงเนื้อย่าง");
+      });
+  }
+
+  // 5. ขายวัสดุส่วนเกินเมื่อเงินเหลือน้อย
+  const sellable = (c.inventory || []).filter(
+    i => i.qty > 0 &&
+      ["material", "tool"].includes(i.type) &&
+      i.name !== "ยาชุบชีวิต"
+  );
+
+  if (sellable.length && c.gold < 25) {
+    add("aiSell", goal === "wealth" ? 48 : 32,
+      "ขายสิ่งของที่ไม่จำเป็นเพื่อหาเงิน", () => {
+        const item = sellable[0];
+        const price = Math.max(1,
+          Math.floor((item.value || 3) *
+            (0.65 + G.world.trade / 250)));
+        item.qty--;
+        c.gold += price;
+        cleanInventory();
+        log("AI ซื้อขาย", c.name + " ขาย " +
+          item.name + " ได้ " + price + " เหรียญ");
+      });
+  }
+
+  // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
+  const gear = (c.inventory || []).find(
+    i => i.type === "gear" && i.slot && i.qty > 0
+  );
+
+  if (gear) {
+    add("aiEquip", 28 + (goal === "skill" ? 8 : 0),
+      "ตรวจสอบและสวมอุปกรณ์ที่มี", () => {
+        c.wearing ||= {
+          head: null, body: null, legs: null, weapon: null
+        };
+
+        const old = c.wearing[gear.slot];
+        if (old) addItem(old.name, 1, "gear",
+          old.value || 1, old.slot || gear.slot);
+
+        c.wearing[gear.slot] = {
+          name: gear.name,
+          value: gear.value || 1,
+          slot: gear.slot
+        };
+        gear.qty--;
+        cleanInventory();
+
+        if (gear.slot === "weapon") c.atk += 1;
+        if (gear.slot === "body") c.def += 1;
+
+        log("AI อุปกรณ์", c.name + " สวม " + gear.name);
+      });
+  }
+
+  // 7. สร้างความสัมพันธ์กับ NPC ที่อยู่พื้นที่เดียวกัน
+  const localNPCs = (G.world.npcs || []).filter(
+    n => n.location === G.location && !n.dead
+  );
+
+  if (localNPCs.length) {
+    const npc = [...localNPCs].sort((a, b) =>
+      ((a.like || 0) + (a.trust || 0) +
+       (a.intimacy || 0) - (a.fear || 0)) -
+      ((b.like || 0) + (b.trust || 0) +
+       (b.intimacy || 0) - (b.fear || 0))
+    )[0];
+
+    let socialLifeScore = goal === "social" ? 48 : 25;
+    if (goal === "peaceful") socialLifeScore += 8;
+
+    add("aiRelationship", socialLifeScore,
+      "ใช้เวลากับ " + npc.name + " และพัฒนาความสัมพันธ์", () => {
+        npc.memory ||= [];
+        const friendly = has(personality,
+          ["ใจดี", "เมตตา", "เป็นมิตร"]);
+        const hostile = has(personality,
+          ["เย็นชา", "เจ้าเล่ห์", "ก้าวร้าว"]);
+
+        if (hostile && Math.random() < 0.25) {
+          npc.fear = (npc.fear || 0) + 1;
+          npc.like = (npc.like || 0) - 1;
+          log("ความสัมพันธ์", c.name + " พูดจาไม่เข้าหู " +
+            npc.name + " ความสัมพันธ์แย่ลง");
+        } else {
+          npc.like = (npc.like || 0) + (friendly ? 2 : 1);
+          npc.trust = (npc.trust || 0) + 1;
+          c.social = (c.social || 0) + 1;
+          npc.memory.push("ใช้เวลาร่วมกับ " + c.name);
+
+          // ความสนิทเชิงรักจะพัฒนาได้เฉพาะผู้ใหญ่ทั้งคู่
+          const npcAdultAge = raceRules(npc.race).adultAge;
+          if (isAdult(c) && npc.age >= npcAdultAge &&
+              npc.like >= 5 && npc.trust >= 3 &&
+              Math.random() < 0.3) {
+            npc.intimacy = (npc.intimacy || 0) + 1;
+            npc.memory.push("ช่วงเวลาที่ใกล้ชิดกับ " + c.name);
+          }
+
+          log("ความสัมพันธ์", c.name + " ใช้เวลากับ " +
+            npc.name + " ความชอบและความไว้ใจเปลี่ยนแปลง");
+        }
+      });
+  }
+
+  // 8. ชวน NPC ที่สนิทเข้าร่วมปาร์ตี้
+  const partyCandidate = localNPCs.find(n =>
+    (n.like || 0) + (n.trust || 0) + (n.respect || 0) >= 7 &&
+    !n.party && c.age >= 12
+  );
+
+  if (partyCandidate) {
+    add("aiParty", 26,
+      "ชวน " + partyCandidate.name + " ร่วมเดินทาง", () => {
+        partyCandidate.party = true;
+        partyCandidate.friend = true;
+        c.party ||= [];
+        if (!c.party.includes(partyCandidate.id))
+          c.party.push(partyCandidate.id);
+        log("AI ปาร์ตี้", partyCandidate.name +
+          " ตัดสินใจร่วมเดินทางกับ " + c.name);
+      });
+  }
+
+  // 9. รับสัตว์เลี้ยงและสร้างพันธสัญญาอัญเชิญ
+  c.pets ||= [];
+  c.summons ||= [];
+  c.companionNextId ||= 1;
+
+  if (c.pets.length < 4 && c.energy >= 25) {
+    add("aiPet", goal === "peaceful" ? 28 : 18,
+      "ออกตามหาสัตว์ที่สามารถสร้างความผูกพันได้", () => {
+        const options = [
+          { name: "จิ้งจอกป่า", desc: "ว่องไวและช่วยสังเกตร่องรอย" },
+          { name: "หมาป่าตัวเล็ก", desc: "กล้าหาญและช่วยต่อสู้" },
+          { name: "นกส่งสาร", desc: "ช่วยสอดส่องเส้นทาง" },
+          { name: "เต่ามอส", desc: "อดทนและช่วยเอาตัวรอด" }
+        ].filter(p => !c.pets.some(x => x.name === p.name));
+
+        if (options.length && Math.random() < 0.35) {
+          const p = pick(options);
+          const pet = {
+            id: "pet-" + c.companionNextId++,
+            name: p.name, desc: p.desc, loyalty: 1
+          };
+          c.pets.push(pet);
+          c.activePetId = pet.id;
+          log("AI สัตว์เลี้ยง", c.name +
+            " สร้างความไว้วางใจกับ " + pet.name + " สำเร็จ");
+        } else {
+          log("AI สัตว์เลี้ยง", c.name +
+            " พบเพียงร่องรอยสัตว์ แต่ยังไม่สามารถทำให้เชื่องได้");
+        }
+      });
+  }
+
+  if ((c.magic || 0) >= 3 || (c.knowledge || 0) >= 5) {
+    const summonOptions = [
+      { name: "ภูตแสง", cost: 3, desc: "ภูตผู้ส่องทาง" },
+      { name: "โกเลมหิน", cost: 5, desc: "ผู้พิทักษ์แข็งแกร่ง" },
+      { name: "อีกาวิญญาณ", cost: 4, desc: "ผู้สอดส่องจากโลกวิญญาณ" }
+    ].filter(s => !c.summons.some(x => x.name === s.name));
+
+    if (summonOptions.length) {
+      add("aiSummon", 16 + (goal === "skill" ? 12 : 0),
+        "ค้นคว้าพันธสัญญาอัญเชิญ", () => {
+          const s = pick(summonOptions);
+          s.id = "summon-" + c.companionNextId++;
+          c.summons.push(s);
+          log("AI อัญเชิญ", c.name +
+            " ค้นพบพันธสัญญากับ " + s.name);
+        });
+    }
+  }
+
+  if (c.summons.length && c.mana >= 3 && !c.activeSummonId) {
+    add("aiCallSummon", 24,
+      "เรียกสิ่งอัญเชิญมาช่วยในการเดินทาง", () => {
+        const s = c.summons.find(x => c.mana >= (x.cost || 3));
+        if (!s) return;
+        c.mana -= s.cost || 3;
+        c.activeSummonId = s.id;
+        log("AI อัญเชิญ", c.name + " เรียก " + s.name + " ออกมา");
+      });
+  }
+
+  // 10. สร้างบ้านจากทรัพยากรที่เก็บสะสมได้
+  if (typeof lcState === "function") {
+    const home = lcState();
+    const houseCosts = [
+      { wood: 5, stone: 2 },
+      { wood: 8, stone: 6 },
+      { wood: 12, stone: 10 }
+    ];
+
+    if (home.house < 3) {
+      const cost = houseCosts[home.house];
+      if (home.wood >= cost.wood && home.stone >= cost.stone) {
+        add("aiHouse", goal === "peaceful" ? 45 : 20,
+          "ใช้ทรัพยากรที่สะสมไว้สร้างหรือขยายบ้าน", () => {
+            home.wood -= cost.wood;
+            home.stone -= cost.stone;
+            home.house++;
+            log("AI บ้าน", c.name + " สร้างบ้านระดับ " +
+              home.house + " สำเร็จ");
+          });
+      }
+    }
+  }
+
+  // 11. สำรวจและเก็บทรัพยากรสำหรับอนาคต
+  if (goal === "explore" && c.energy >= 25 &&
+      hpRate > 0.6) {
+    add("aiGather", 34,
+      "ออกสำรวจเพื่อค้นหาทรัพยากรและสถานที่ใหม่", () => {
+        const found = pick([
+          ["ไม้", "material", 2],
+          ["หิน", "material", 2],
+          ["แร่ดิบ", "material", 5],
+          ["ผลไม้ป่า", "food", 3]
+        ]);
+        addItem(found[0], 1, found[1], found[2]);
+        c.survival = (c.survival || 0) + 1;
+        c.energy = clamp(c.energy - 5, 0, 100);
+        log("AI สำรวจ", c.name + " ค้นพบ " + found[0]);
+      });
+  }
+
+  // AI LIFE EXTENSION: ซื้อของและพัฒนาตัวเอง
+  const catalog = Array.isArray(ITEM_CATALOG) ? ITEM_CATALOG : [];
+
+  // ซื้อของที่จำเป็น หากมีเงินเหลือและยังขาดของใช้
+  const buyCandidates = catalog.filter(item =>
+    item &&
+    item.name &&
+    Number(item.value) > 0 &&
+    ["food", "drink", "heal", "material", "weapon", "armor"].includes(item.type)
+  );
+
+  const countItem = name =>
+    inventory.filter(i => i.name === name)
+      .reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+
+  let bestBuy = null;
+  let bestBuyScore = -1;
+
+  for (const item of buyCandidates) {
+    const price = Math.max(1, Number(item.value) || 1);
+    if ((Number(c.gold) || 0) < price) continue;
+
+    let score = 0;
+    const owned = countItem(item.name);
+
+    if (item.type === "food" && hunger >= 30) score += 25;
+    if (item.type === "drink" && thirst >= 30) score += 30;
+    if (item.type === "heal" && hpRate < 0.65) score += 35;
+    if (item.type === "material" && goal === "wealth") score += 4;
+
+    // ไม่ซื้อของซ้ำเกินความจำเป็น
+    score -= owned * 12;
+
+    // เก็บเงินสำรอง ไม่ใช้เงินจนหมดตัว
+    if (c.gold - price < 5) score -= 18;
+
+    // ซื้อของจำเป็นก่อนของที่ไม่จำเป็น
+    score -= price * 0.2;
+
+    if (score > bestBuyScore) {
+      bestBuyScore = score;
+      bestBuy = item;
+    }
+  }
+
+  if (bestBuy && bestBuyScore >= 15) {
+    add(
+      "buy_item",
+      bestBuyScore + (goal === "wealth" ? -5 : 0),
+      "ซื้อ " + bestBuy.name + " ตามความจำเป็นและเงินที่มี",
+      () => {
+        const price = Math.max(1, Number(bestBuy.value) || 1);
+        if (c.gold < price) return;
+
+        c.gold -= price;
+
+        if (typeof addItem === "function") {
+          addItem(
+            bestBuy.name,
+            1,
+            bestBuy.type,
+            bestBuy.value,
+            bestBuy.slot || null
+          );
+        } else {
+          c.inventory ||= [];
+          const existing = c.inventory.find(
+            i => i.name === bestBuy.name
+          );
+
+          if (existing) existing.qty = (existing.qty || 0) + 1;
+          else c.inventory.push({
+            name: bestBuy.name,
+            qty: 1,
+            type: bestBuy.type,
+            value: bestBuy.value,
+            slot: bestBuy.slot || null
+          });
+        }
+
+        c.energy = clamp(c.energy - 1, 0, 100);
+      }
+    );
+  }
+
+  // พัฒนาอุปกรณ์: สวมของที่มีช่องอุปกรณ์ตรงกัน
+  const equipmentTypes = new Set(["weapon", "armor"]);
+  const equipmentSlots = ["head", "body", "legs", "weapon"];
+
+  const gear = inventory.filter(item =>
+    item &&
+    item.qty > 0 &&
+    (item.slot || equipmentTypes.has(item.type))
+  );
+
+  let bestGear = null;
+  let bestGearSlot = null;
+  let bestGearScore = 0;
+
+  for (const item of gear) {
+    let slot = item.slot || (
+      item.type === "weapon" ? "weapon" :
+      item.type === "armor" ? "body" : null
+    );
+
+    if (!equipmentSlots.includes(slot)) continue;
+
+    const current = c.wearing?.[slot];
+    const power = Number(item.atk || item.def || item.power || item.value || 0);
+    const currentPower = Number(
+      current?.atk || current?.def || current?.power || current?.value || 0
+    );
+
+    // ใช้ค่า value เป็นตัวประมาณเฉพาะเมื่อไม่มีค่าสเตตัส
+    // ไม่เปลี่ยนอุปกรณ์หากของใหม่ไม่ได้ดีกว่า
+    const improvement = power - currentPower;
+
+    if (!current || improvement > bestGearScore) {
+      if (!current || improvement > 0) {
+        bestGear = item;
+        bestGearSlot = slot;
+        bestGearScore = Math.max(1, improvement);
+      }
+    }
+  }
+
+  if (bestGear && bestGearSlot) {
+    add(
+      "equip_item",
+      27 + Math.min(15, bestGearScore),
+      "เปลี่ยนอุปกรณ์ช่อง " + bestGearSlot + " เป็น " + bestGear.name,
+      () => {
+        c.wearing ||= {
+          head: null,
+          body: null,
+          legs: null,
+          weapon: null
+        };
+
+        c.wearing[bestGearSlot] = {
+          ...bestGear,
+          qty: 1
+        };
+
+        c.equipment ||= [];
+        if (!c.equipment.some(i => i.name === bestGear.name)) {
+          c.equipment.push({ ...bestGear, qty: 1 });
+        }
+      }
+    );
+  }
+
+     // 4. เลือกทางเลือกคะแนนสูงสุด พร้อมความแปรผันเล็กน้อย
   // เพื่อไม่ให้ตัวละครทำสิ่งเดิมซ้ำทุกครั้ง
   for (const a of actions) {
     a.score += Math.random() * 7;
@@ -2543,6 +3048,20 @@ function runAIDecision(manual = false) {
 
   chosen.run();
 
+  // โหมด ask: ให้ผู้เล่นอนุมัติการตัดสินใจของ AI
+  if (G.auto?.controlMode === "ask" && !manual) {
+    const approved = window.confirm(
+      "ให้ AI ทำกิจกรรมนี้หรือไม่?\n\n" +
+      "การตัดสินใจ: " + chosen.reason +
+      "\n\nกด OK เพื่อให้ AI ทำ\nกด Cancel เพื่อข้ามกิจกรรมนี้"
+    );
+
+    if (!approved) {
+      G.auto.last = "รอผู้เล่นตัดสินใจ";
+      return;
+    }
+  }
+
   // เก็บผลการตัดสินใจไว้ให้ผู้เล่นเข้าใจพฤติกรรม AI
   G.auto.last = chosen.reason;
   c.lastAction = chosen.reason;
@@ -2553,6 +3072,20 @@ function runAIDecision(manual = false) {
   }
 
   log("การตัดสินใจ", chosen.reason);
+  // โหมด ask: ให้ผู้เล่นอนุมัติการตัดสินใจของ AI
+  if (G.auto?.controlMode === "ask" && !manual) {
+    const approved = window.confirm(
+      "ให้ AI ทำกิจกรรมนี้หรือไม่?\n\n" +
+      "การตัดสินใจ: " + chosen.reason +
+      "\n\nกด OK เพื่อให้ AI ทำ\nกด Cancel เพื่อข้ามกิจกรรมนี้"
+    );
+
+    if (!approved) {
+      G.auto.last = "รอผู้เล่นตัดสินใจ";
+      return;
+    }
+  }
+
   render();
 }
 
@@ -8057,6 +8590,616 @@ organizeLifeSections();
 })();
 /* ===== END COMPANION PARTY PATCH ===== */
 
+/* =====================================================
+   ANOTHER LIFE — WORLD ECONOMY, DEMAND/SUPPLY & SEASONS
+   วางก่อน </script> ตัวสุดท้าย
+   ===================================================== */
+(function installWorldEconomy() {
+  "use strict";
+
+  const SEASONS = ["ฤดูใบไม้ผลิ", "ฤดูร้อน", "ฤดูใบไม้ร่วง", "ฤดูหนาว"];
+
+  const GOODS = {
+    "ขนมปัง":       { type: "food",     base: 5,  supply: 65, demand: 55 },
+    "เนื้อย่าง":    { type: "food",     base: 9,  supply: 45, demand: 65 },
+    "ปลาแห้ง":      { type: "food",     base: 7,  supply: 40, demand: 50 },
+    "สมุนไพรป่า":   { type: "material", base: 6,  supply: 55, demand: 60 },
+    "แร่ดิบ":       { type: "material", base: 10, supply: 35, demand: 60 },
+    "ไม้":          { type: "material", base: 5,  supply: 70, demand: 45 },
+    "ยา":           { type: "heal",     base: 15, supply: 30, demand: 70 },
+    "เสื้อผ้า":     { type: "armor",    base: 12, supply: 45, demand: 50 },
+    "อาวุธ":        { type: "weapon",   base: 25, supply: 25, demand: 45 },
+    "น้ำดื่ม":      { type: "drink",    base: 3,  supply: 75, demand: 50 },
+    "เมล็ดพันธุ์":  { type: "material", base: 8,  supply: 40, demand: 45 }
+  };
+
+  // ความต้องการประจำเผ่า ไม่ใช่ข้อบังคับตายตัว
+  const RACE_NEEDS = {
+    "มนุษย์": ["ขนมปัง", "เสื้อผ้า", "ยา"],
+    "เอลฟ์": ["สมุนไพรป่า", "เมล็ดพันธุ์", "ยา"],
+    "คนแคระ": ["แร่ดิบ", "ไม้", "อาวุธ"],
+    "เผ่าสัตว์": ["เนื้อย่าง", "น้ำดื่ม", "ยา"],
+    "เผ่ามังกรสายเลือดเจือจาง": ["เนื้อย่าง", "ยา", "อาวุธ"],
+    "เผ่าวิญญาณ": ["สมุนไพรป่า", "ยา"],
+    "ออร์ค": ["เนื้อย่าง", "อาวุธ"],
+    "ก็อบลิน": ["แร่ดิบ", "เสื้อผ้า", "ไม้"],
+    "ดาร์กเอลฟ์": ["สมุนไพรป่า", "ยา", "อาวุธ"],
+    "เผ่าสไลม์": ["น้ำดื่ม", "สมุนไพรป่า"],
+    "เผ่าทะเล": ["ปลาแห้ง", "น้ำดื่ม", "ยา"],
+    "เผ่านางฟ้า": ["สมุนไพรป่า", "เมล็ดพันธุ์"],
+    "เผ่ายักษ์": ["เนื้อย่าง", "เสื้อผ้า", "อาวุธ"],
+    "เผ่าพฤกษา": ["น้ำดื่ม", "เมล็ดพันธุ์", "สมุนไพรป่า"],
+    "เผ่าอันเดด": ["สมุนไพรป่า", "ยา"],
+    "เผ่ามังกรสายเลือดแท้": ["เนื้อย่าง", "ยา", "อาวุธ"]
+  };
+
+  // สินค้าที่พื้นที่ผลิตหรือจัดหาได้สะดวก
+  const REGIONS = {
+    "หมู่บ้านชายป่า": {
+      produce: ["ไม้", "สมุนไพรป่า", "เมล็ดพันธุ์"],
+      need: ["ยา", "อาวุธ", "เสื้อผ้า"]
+    },
+    "เมืองการค้า": {
+      produce: ["เสื้อผ้า", "ยา", "อาวุธ"],
+      need: ["ไม้", "สมุนไพรป่า", "แร่ดิบ"]
+    },
+    "ชุมชนคนแคระ": {
+      produce: ["แร่ดิบ", "อาวุธ", "ไม้"],
+      need: ["ขนมปัง", "เนื้อย่าง", "สมุนไพรป่า"]
+    },
+    "เขตชายแดน": {
+      produce: ["อาวุธ"],
+      need: ["ยา", "เนื้อย่าง", "น้ำดื่ม", "เสื้อผ้า"]
+    },
+    "ชุมชนเอลฟ์": {
+      produce: ["สมุนไพรป่า", "เมล็ดพันธุ์"],
+      need: ["แร่ดิบ", "อาวุธ", "เสื้อผ้า"]
+    }
+  };
+
+  function game() {
+    return typeof G !== "undefined" && G && G.world && G.c ? G : null;
+  }
+
+  function ensure() {
+    const g = game();
+    if (!g) return null;
+
+    const w = g.world;
+    w.economy ||= {};
+    const e = w.economy;
+
+    e.markets ||= {};
+    e.exchange ||= {};
+    e.history ||= [];
+    e.lastDailyTick ??= -1;
+
+    w.climate ||= {
+      season: "ฤดูใบไม้ผลิ",
+      weather: "แจ่มใส",
+      temperature: 22,
+      lastDay: -1
+    };
+
+    w.npcs ||= [];
+
+    for (const npc of w.npcs) {
+      npc.wallet ??= 20 + Math.floor(Math.random() * 31);
+      npc.goods ||= [];
+      npc.equipment ||= {};
+      npc.economySkill ??= 0;
+    }
+
+    return { g, w, e };
+  }
+
+  function dayNumber(w) {
+    return Math.max(0,
+      (((w.year || 1) - 1) * 12 + (w.month || 0)) * 30 +
+      (w.day || 1)
+    );
+  }
+
+  function seasonFor(w) {
+    // หนึ่งฤดูกาลกินเวลา 3 เดือนในปฏิทินเกม
+    return SEASONS[Math.floor(((w.month || 0) % 12) / 3)];
+  }
+
+  function marketFor(location) {
+    const { e } = ensure();
+    e.markets[location] ||= {};
+
+    const market = e.markets[location];
+
+    for (const [name, item] of Object.entries(GOODS)) {
+      market[name] ||= {
+        stock: Math.max(1, Math.round(item.supply / 10)),
+        demand: item.demand,
+        supply: item.supply
+      };
+    }
+
+    return market;
+  }
+
+  function seasonModifier(name, season) {
+    const s = {
+      "ฤดูใบไม้ผลิ": {
+        "เมล็ดพันธุ์": 0.75, "สมุนไพรป่า": 0.85,
+        "น้ำดื่ม": 1, "เนื้อย่าง": 1
+      },
+      "ฤดูร้อน": {
+        "น้ำดื่ม": 1.55, "ปลาแห้ง": 1.1,
+        "สมุนไพรป่า": 1.1, "เนื้อย่าง": 1.15
+      },
+      "ฤดูใบไม้ร่วง": {
+        "เมล็ดพันธุ์": 0.75, "ขนมปัง": 0.85,
+        "ไม้": 1, "น้ำดื่ม": 1
+      },
+      "ฤดูหนาว": {
+        "ไม้": 1.5, "เนื้อย่าง": 1.35,
+        "ขนมปัง": 1.2, "สมุนไพรป่า": 1.6,
+        "เมล็ดพันธุ์": 1.5
+      }
+    };
+
+    return s[season]?.[name] ?? 1;
+  }
+
+  function localNeed(name, location, race) {
+    const region = REGIONS[location] || {};
+    let need = 1;
+
+    if ((region.need || []).includes(name)) need *= 1.45;
+    if ((region.produce || []).includes(name)) need *= 0.78;
+    if ((RACE_NEEDS[race] || []).includes(name)) need *= 1.2;
+
+    return need;
+  }
+
+  function price(name, location, race = "") {
+    const { w } = ensure();
+    const item = GOODS[name];
+    if (!item) return 1;
+
+    const market = marketFor(location);
+    const row = market[name];
+
+    // สต็อกน้อย + ความต้องการสูง = ราคาแพง
+    const shortage = item.supply / Math.max(1, row.stock);
+    const pressure = Math.max(0.55, Math.min(2.5,
+      (row.demand / Math.max(1, row.supply)) *
+      localNeed(name, location, race)
+    ));
+
+    const scarcity = Math.max(0.65, Math.min(2.2,
+      0.65 + shortage * 0.12
+    ));
+
+    const climate = seasonModifier(name, w.climate.season);
+    return Math.max(1, Math.round(
+      item.base * pressure * scarcity * climate
+    ));
+  }
+
+  function logWorld(type, message) {
+    if (typeof log === "function") {
+      log(type, message);
+    }
+  }
+
+  function addToNPC(npc, name, qty = 1) {
+    const row = npc.goods.find(x => x.name === name);
+    if (row) row.qty += qty;
+    else npc.goods.push({ name, qty });
+  }
+
+  function tickClimate(w, day) {
+    if (w.climate.lastDay === day) return;
+
+    w.climate.lastDay = day;
+    w.climate.season = seasonFor(w);
+
+    const weatherBySeason = {
+      "ฤดูใบไม้ผลิ": ["แจ่มใส", "ฝนปรอย", "ฝนตก"],
+      "ฤดูร้อน": ["แดดจัด", "ร้อนจัด", "พายุฝน"],
+      "ฤดูใบไม้ร่วง": ["ลมแรง", "แจ่มใส", "ฝนตก"],
+      "ฤดูหนาว": ["หนาวเย็น", "หมอก", "ฝนหนาว"]
+    };
+
+    const choices = weatherBySeason[w.climate.season] || ["แจ่มใส"];
+    w.climate.weather = choices[Math.floor(Math.random() * choices.length)];
+
+    const tempBase = {
+      "ฤดูใบไม้ผลิ": 23,
+      "ฤดูร้อน": 33,
+      "ฤดูใบไม้ร่วง": 24,
+      "ฤดูหนาว": 12
+    };
+
+    w.climate.temperature =
+      tempBase[w.climate.season] + Math.floor(Math.random() * 7) - 3;
+
+    // อากาศส่งผลต่อผลผลิตและความต้องการของตลาด
+    for (const location of Object.keys(REGIONS)) {
+      const market = marketFor(location);
+
+      for (const [name, row] of Object.entries(market)) {
+        if ((REGIONS[location].produce || []).includes(name)) {
+          row.stock = Math.min(100, row.stock + 1 + Math.floor(Math.random() * 3));
+        }
+
+        if (w.climate.weather === "ร้อนจัด" && name === "น้ำดื่ม") {
+          row.demand = Math.min(100, row.demand + 8);
+        }
+
+        if (w.climate.weather === "หนาวเย็น" && name === "ไม้") {
+          row.demand = Math.min(100, row.demand + 5);
+        }
+
+        row.demand = Math.max(5, Math.min(100, row.demand));
+      }
+    }
+  }
+
+  function npcEconomyTick(npc, g) {
+    if (!npc || npc.age < 12 || Math.random() > 0.65) return;
+
+    const location = npc.location || g.location;
+    const market = marketFor(location);
+
+    // NPC ใช้เงินตามความจำเป็นก่อนซื้อของฟุ่มเฟือย
+    const wants = RACE_NEEDS[npc.race] || ["ขนมปัง", "ยา"];
+    const desired = wants
+      .map(name => ({
+        name,
+        price: price(name, location, npc.race),
+        stock: market[name]?.stock || 0
+      }))
+      .filter(x => x.stock > 0 && x.price <= npc.wallet)
+      .sort((a, b) => {
+        const aHave = npc.goods.some(x => x.name === a.name && x.qty > 0);
+        const bHave = npc.goods.some(x => x.name === b.name && x.qty > 0);
+        return Number(aHave) - Number(bHave);
+      });
+
+    if (desired.length && Math.random() < 0.65) {
+      const item = desired[0];
+      market[item.name].stock--;
+      npc.wallet -= item.price;
+      addToNPC(npc, item.name, 1);
+      npc.economySkill = Math.min(100, npc.economySkill + 1);
+
+      // อาวุธและเสื้อผ้าที่ซื้อสามารถติดตั้งได้
+      if (item.name === "อาวุธ") npc.equipment.weapon = item.name;
+      if (item.name === "เสื้อผ้า") npc.equipment.clothing = item.name;
+      if (item.name === "ยา") npc.equipment.potion = item.name;
+
+      return;
+    }
+
+    // NPC บางคนหารายได้จากงานหรือขายของส่วนเกิน
+    const goods = npc.goods.find(x => x.qty > 1);
+    if (goods && Math.random() < 0.5) {
+      const value = price(goods.name, location, npc.race);
+      goods.qty--;
+      npc.wallet += Math.max(1, Math.floor(value * 0.7));
+      npc.economySkill = Math.min(100, npc.economySkill + 1);
+    } else if (Math.random() < 0.35) {
+      const wage = Math.max(1, 2 + Math.floor(Math.random() * 5));
+      npc.wallet += wage;
+    }
+
+    // การพัฒนาตัวเองช้าและมีข้อจำกัด ไม่เพิ่มพลังฟรีทุกวัน
+    if (npc.wallet >= 30 && Math.random() < 0.2) {
+      npc.wallet -= 10;
+      npc.skill = (npc.skill || 0) + 1;
+    }
+  }
+
+  function dailyTick() {
+    const data = ensure();
+    if (!data) return;
+
+    const { g, w, e } = data;
+    const day = dayNumber(w);
+
+    tickClimate(w, day);
+
+    if (e.lastDailyTick === day) return;
+    e.lastDailyTick = day;
+
+    // ตลาดมีการผลิตและการใช้สินค้าในแต่ละวัน
+    for (const location of Object.keys(REGIONS)) {
+      const market = marketFor(location);
+      const region = REGIONS[location];
+
+      for (const [name, row] of Object.entries(market)) {
+        const produced = region.produce.includes(name);
+        const consumed = region.need.includes(name);
+
+        if (produced) row.stock += 2 + Math.floor(Math.random() * 4);
+        if (consumed) row.stock -= 1 + Math.floor(Math.random() * 3);
+
+        row.stock = Math.max(0, Math.min(100, row.stock));
+
+        // Demand เปลี่ยนตามการขาดแคลนและการผลิต
+        if (row.stock < 3) row.demand += 5;
+        else if (row.stock > 25) row.demand -= 2;
+
+        row.demand = Math.max(5, Math.min(100, row.demand));
+      }
+    }
+
+    // อัตราแลกเปลี่ยนเป็นราคาสัมพัทธ์ของพื้นที่
+    const locations = Object.keys(REGIONS);
+    for (const location of locations) {
+      e.exchange[location] ||= 1;
+      const region = REGIONS[location];
+      const pressure = region.need.length - region.produce.length;
+      e.exchange[location] = Math.max(0.5, Math.min(2,
+        e.exchange[location] * (1 + pressure * 0.001)
+      ));
+    }
+
+    for (const npc of w.npcs) npcEconomyTick(npc, g);
+
+    // ตลาดมีข่าวและประวัติราคาให้ตรวจสอบย้อนหลัง
+    e.history.unshift({
+      day,
+      season: w.climate.season,
+      weather: w.climate.weather,
+      location: g.location
+    });
+    e.history = e.history.slice(0, 60);
+  }
+
+  function installPanel() {
+    const root = document.getElementById("game");
+    if (!root || document.getElementById("alWorldEconomy")) return;
+
+    const panel = document.createElement("section");
+    panel.id = "alWorldEconomy";
+    panel.className = "panel";
+    panel.innerHTML = `
+      <h2>🌦️ เศรษฐกิจโลกและฤดูกาล</h2>
+      <div id="alClimateInfo"></div>
+      <h3>ตลาดในพื้นที่ปัจจุบัน</h3>
+      <div id="alMarketInfo"></div>
+      <h3>อัตราแลกเปลี่ยนท้องถิ่น</h3>
+      <div id="alExchangeInfo"></div>
+      <p class="muted">ราคาเปลี่ยนตามสินค้าในตลาด ความต้องการ เผ่า พื้นที่ และฤดูกาล</p>
+    `;
+    root.appendChild(panel);
+  }
+
+  function renderPanel() {
+    const data = ensure();
+    if (!data) return;
+
+    installPanel();
+
+    const { g, w, e } = data;
+    const climate = document.getElementById("alClimateInfo");
+    const marketInfo = document.getElementById("alMarketInfo");
+    const exchangeInfo = document.getElementById("alExchangeInfo");
+
+    if (!climate || !marketInfo || !exchangeInfo) return;
+
+    climate.textContent =
+      `${w.climate.season} · ${w.climate.weather} · ${w.climate.temperature}°C`;
+
+    const market = marketFor(g.location);
+    marketInfo.innerHTML = Object.keys(GOODS).map(name => {
+      const row = market[name];
+      return `<div class="stat">
+        <span>${name} · คงเหลือ ${row.stock}</span>
+        <b>${price(name, g.location, g.c.race)} เหรียญ</b>
+      </div>`;
+    }).join("");
+
+    exchangeInfo.innerHTML = Object.entries(e.exchange).map(([place, rate]) =>
+      `<div class="stat"><span>${place}</span><b>${rate.toFixed(2)}×</b></div>`
+    ).join("") || "อัตราแลกเปลี่ยนกำลังเริ่มต้น";
+  }
+
+  // เชื่อมเข้ากับเวลาเดิมโดยไม่เขียนทับระบบเวลา
+  const oldAdvance = window.advance;
+  if (typeof oldAdvance === "function" && !oldAdvance.__economyWrapped) {
+    const wrappedAdvance = function(minutes, allowEncounter) {
+      const result = oldAdvance.apply(this, arguments);
+      try {
+        dailyTick();
+        renderPanel();
+      } catch (err) {
+        console.error("World economy tick:", err);
+      }
+      return result;
+    };
+    wrappedAdvance.__economyWrapped = true;
+    window.advance = wrappedAdvance;
+  }
+
+  const oldRender = window.render;
+  if (typeof oldRender === "function" && !oldRender.__economyWrapped) {
+    const wrappedRender = function() {
+      const result = oldRender.apply(this, arguments);
+      try {
+        dailyTick();
+        renderPanel();
+      } catch (err) {
+        console.error("World economy render:", err);
+      }
+      return result;
+    };
+    wrappedRender.__economyWrapped = true;
+    window.render = wrappedRender;
+  }
+
+  // ฟังก์ชันสำหรับให้ระบบร้านค้าเดิมหรือระบบอื่นเรียกใช้
+  window.ALWorldEconomy = {
+    price,
+    marketFor,
+    dailyTick,
+    npcEconomyTick,
+    render: renderPanel,
+    goods: GOODS,
+    raceNeeds: RACE_NEEDS,
+    regions: REGIONS
+  };
+
+  window.addEventListener("load", () => {
+    try {
+      ensure();
+      dailyTick();
+      renderPanel();
+    } catch (err) {
+      console.error("World economy init:", err);
+    }
+  });
+})();
+
 </script>
 </body>
+/* ===== NPC AUTONOMOUS LIFE ===== */
+(function installNPCLifeAI() {
+  "use strict";
+
+  function initNPC(npc) {
+    if (!npc || typeof npc !== "object") return;
+
+    npc.gold = Math.max(0, Number(npc.gold) || 0);
+    npc.inventory = Array.isArray(npc.inventory)
+      ? npc.inventory : [];
+    npc.wearing = npc.wearing || {
+      head: null, body: null, legs: null, weapon: null
+    };
+
+    npc.skill = Number(npc.skill) || 0;
+    npc.knowledge = Number(npc.knowledge) || 0;
+    npc.jobLevel = Number(npc.jobLevel) || 1;
+    npc.lifeAI = npc.lifeAI || {
+      lastAction: "ใช้ชีวิตประจำวัน",
+      days: 0
+    };
+  }
+
+  function npcAct(npc) {
+    initNPC(npc);
+
+    if (npc.dead || npc.isDead) return;
+
+    const age = Number(npc.age) || 0;
+    const adultAge = Number(npc.adultAge) || 15;
+    const inv = npc.inventory;
+    const goal = npc.goal || npc.lifeGoal || "balanced";
+
+    // เด็กจะเน้นเรียนรู้และเก็บของจำเป็น ไม่เสี่ยงลงทุนมาก
+    if (age < adultAge) {
+      npc.knowledge += 1;
+      npc.lifeAI.lastAction = "เรียนรู้และเติบโต";
+      return;
+    }
+
+    const count = name => inv.reduce(
+      (sum, item) => sum +
+        (item.name === name ? Math.max(0, Number(item.qty) || 0) : 0),
+      0
+    );
+
+    const actions = [];
+
+    actions.push({
+      name: "work",
+      score: 25 + (goal === "wealth" ? 20 : 0)
+        + (npc.gold < 10 ? 15 : 0),
+      run() {
+        const income = 2 + Math.floor(Math.random() * 6)
+          + Math.min(5, npc.jobLevel);
+        npc.gold += income;
+        npc.energy = Math.max(0, (Number(npc.energy) || 50) - 3);
+      }
+    });
+
+    actions.push({
+      name: "train",
+      score: 18 + (goal === "skill" ? 20 : 0),
+      run() {
+        npc.skill += 1;
+        npc.jobLevel += Math.random() < 0.15 ? 1 : 0;
+        npc.energy = Math.max(0, (Number(npc.energy) || 50) - 4);
+      }
+    });
+
+    // ซื้อเฉพาะของจำเป็น ไม่ทำให้เงินติดลบ
+    if (npc.gold >= 2 && count("ขนมปัง") === 0) {
+      actions.push({
+        name: "buy_food",
+        score: 24,
+        run() {
+          if (npc.gold < 2) return;
+          npc.gold -= 2;
+          const bread = inv.find(i => i.name === "ขนมปัง");
+          if (bread) bread.qty = (Number(bread.qty) || 0) + 1;
+          else inv.push({
+            name: "ขนมปัง", qty: 1, type: "food", value: 2
+          });
+        }
+      });
+    }
+
+    // ถ้ามีไอเทมสวมใส่ได้ ให้เลือกอุปกรณ์ตามช่อง
+    const slots = ["head", "body", "legs", "weapon"];
+    const candidate = inv.find(item =>
+      item && Number(item.qty) > 0 &&
+      (slots.includes(item.slot) ||
+        ["weapon", "armor"].includes(item.type))
+    );
+
+    if (candidate) {
+      const slot = candidate.slot ||
+        (candidate.type === "weapon" ? "weapon" : "body");
+
+      if (slots.includes(slot) &&
+          (!npc.wearing[slot] ||
+           Number(candidate.value || 0) >
+           Number(npc.wearing[slot].value || 0))) {
+        actions.push({
+          name: "equip",
+          score: 30,
+          run() {
+            npc.wearing[slot] = { ...candidate, qty: 1 };
+          }
+        });
+      }
+    }
+
+    // สุ่มเล็กน้อยให้ NPC แต่ละคนไม่ได้เลือกแบบเดียวกันทุกครั้ง
+    actions.forEach(a => {
+      a.score += Math.random() * 8;
+    });
+    actions.sort((a, b) => b.score - a.score);
+
+    const chosen = actions[0];
+    if (!chosen) return;
+
+    chosen.run();
+    npc.lifeAI.lastAction = chosen.name;
+    npc.lifeAI.days += 1;
+  }
+
+  // เรียกใช้จากระบบเวลาเดิม เพื่อให้ NPC เปลี่ยนแปลงไปพร้อมโลก
+  function simulateNPCs() {
+    if (!window.G || !G.world ||
+        !Array.isArray(G.world.npcs)) return;
+
+    for (const npc of G.world.npcs) {
+      // โอกาสทำกิจกรรมในแต่ละรอบ จำลองชีวิตแบบเบาเครื่อง
+      if (Math.random() < 0.35) npcAct(npc);
+    }
+  }
+
+  window.simulateNPCsLife = simulateNPCs;
+})();
+
 </html>
