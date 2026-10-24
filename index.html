@@ -2680,84 +2680,39 @@ function runAIDecision(manual = false) {
       });
   }
 
-  // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
-const gearList = inventory.filter(item =>
+    // 6. สวมอุปกรณ์ที่ดีกว่าของเดิม
+  const basicGear = inventory.find(
     i => i.type === "gear" && i.slot && i.qty > 0
   );
 
-  if (gear) {
+  if (basicGear) {
     add("aiEquip", 28 + (goal === "skill" ? 8 : 0),
       "ตรวจสอบและสวมอุปกรณ์ที่มี", () => {
         c.wearing ||= {
           head: null, body: null, legs: null, weapon: null
         };
 
-        const old = c.wearing[gear.slot];
-        if (old) addItem(old.name, 1, "gear",
-          old.value || 1, old.slot || gear.slot);
+        const old = c.wearing[basicGear.slot];
+        if (old) {
+          addItem(old.name, 1, "gear",
+            old.value || 1, old.slot || basicGear.slot);
+        }
 
-        c.wearing[gear.slot] = {
-          name: gear.name,
-          value: gear.value || 1,
-          slot: gear.slot
+        c.wearing[basicGear.slot] = {
+          name: basicGear.name,
+          value: basicGear.value || 1,
+          slot: basicGear.slot
         };
-        gear.qty--;
+
+        basicGear.qty--;
         cleanInventory();
 
-        if (gear.slot === "weapon") c.atk += 1;
-        if (gear.slot === "body") c.def += 1;
+        if (basicGear.slot === "weapon") c.atk += 1;
+        if (basicGear.slot === "body") c.def += 1;
 
-        log("AI อุปกรณ์", c.name + " สวม " + gear.name);
+        log("AI อุปกรณ์", c.name + " สวม " + basicGear.name);
       });
   }
-
-  // 7. สร้างความสัมพันธ์กับ NPC ที่อยู่พื้นที่เดียวกัน
-  const localNPCs = (G.world.npcs || []).filter(
-    n => n.location === G.location && !n.dead
-  );
-
-  if (localNPCs.length) {
-    const npc = [...localNPCs].sort((a, b) =>
-      ((a.like || 0) + (a.trust || 0) +
-       (a.intimacy || 0) - (a.fear || 0)) -
-      ((b.like || 0) + (b.trust || 0) +
-       (b.intimacy || 0) - (b.fear || 0))
-    )[0];
-
-    let socialLifeScore = goal === "social" ? 48 : 25;
-    if (goal === "peaceful") socialLifeScore += 8;
-
-    add("aiRelationship", socialLifeScore,
-      "ใช้เวลากับ " + npc.name + " และพัฒนาความสัมพันธ์", () => {
-        npc.memory ||= [];
-        const friendly = has(personality,
-          ["ใจดี", "เมตตา", "เป็นมิตร"]);
-        const hostile = has(personality,
-          ["เย็นชา", "เจ้าเล่ห์", "ก้าวร้าว"]);
-
-        if (hostile && Math.random() < 0.25) {
-          npc.fear = (npc.fear || 0) + 1;
-          npc.like = (npc.like || 0) - 1;
-          log("ความสัมพันธ์", c.name + " พูดจาไม่เข้าหู " +
-            npc.name + " ความสัมพันธ์แย่ลง");
-        } else {
-          npc.like = (npc.like || 0) + (friendly ? 2 : 1);
-          npc.trust = (npc.trust || 0) + 1;
-          c.social = (c.social || 0) + 1;
-          npc.memory.push("ใช้เวลาร่วมกับ " + c.name);
-
-          // ความสนิทเชิงรักจะพัฒนาได้เฉพาะผู้ใหญ่ทั้งคู่
-          const npcAdultAge = raceRules(npc.race).adultAge;
-          if (isAdult(c) && npc.age >= npcAdultAge &&
-              npc.like >= 5 && npc.trust >= 3 &&
-              Math.random() < 0.3) {
-            npc.intimacy = (npc.intimacy || 0) + 1;
-            npc.memory.push("ช่วงเวลาที่ใกล้ชิดกับ " + c.name);
-          }
-
-          log("ความสัมพันธ์", c.name + " ใช้เวลากับ " +
-            npc.name + " ความชอบและความไว้ใจเปลี่ยนแปลง");
-        }
       });
   }
 
@@ -2973,7 +2928,7 @@ const gearList = inventory.filter(item =>
   const equipmentTypes = new Set(["weapon", "armor"]);
   const equipmentSlots = ["head", "body", "legs", "weapon"];
 
-  const gearList = inventory.filter(...)(item =>
+  const gearList = inventory.filter(item =>
     item &&
     item.qty > 0 &&
     (item.slot || equipmentTypes.has(item.type))
