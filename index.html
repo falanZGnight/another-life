@@ -1158,6 +1158,279 @@ document.getElementById("tabs").addEventListener("click",e=>{
    14. เริ่มเกม
    ===================================================== */
 newGame();
+  
+<script>
+/* === Cosmos Life: core fixes === */
+(function () {
+  "use strict";
+
+  let cosmosClock = null;
+  let cosmosBusy = false;
+
+  function game() {
+    return window.G || null;
+  }
+
+  function player() {
+    return game()?.character || null;
+  }
+
+  function writeLog(type, message) {
+    if (typeof window.log === "function") {
+      window.log(type, message);
+    }
+  }
+
+  function endLife(reason) {
+    const g = game();
+    const p = player();
+
+    if (!g || !p || g.dead) return;
+
+    g.dead = true;
+    g.deadReason = reason;
+    p.hp = 0;
+
+    window.currentEvent = null;
+    window.eventLock = false;
+
+    if (cosmosClock) {
+      clearInterval(cosmosClock);
+      cosmosClock = null;
+    }
+
+    writeLog("ชีวิต", "ตัวละครเสียชีวิต: " + reason);
+
+    const box = document.getElementById("eventBox");
+    const choices = document.getElementById("eventChoices");
+
+    if (box) {
+      box.innerHTML =
+        '<h3 class="bad">ชีวิตนี้สิ้นสุดลงแล้ว</h3>' +
+        '<p>' + reason + '</p>';
+    }
+
+    if (choices) choices.innerHTML = "";
+
+    if (typeof window.renderAll === "function") {
+      window.renderAll();
+    }
+
+    if (!document.getElementById("cosmosDead")) {
+      const panel = document.createElement("div");
+      panel.id = "cosmosDead";
+      panel.className = "panel";
+      panel.style.cssText =
+        "position:fixed;inset:10%;z-index:9999;" +
+        "background:#171923;border:2px solid #ff9caa;" +
+        "display:grid;place-content:center;text-align:center;" +
+        "padding:25px;overflow:auto";
+
+      panel.innerHTML =
+        "<h1>ชีวิตนี้สิ้นสุดลงแล้ว</h1>" +
+        "<p>เรื่องราวของตัวละครนี้ถูกบันทึกไว้</p>" +
+        '<button id="cosmosNewLife">เริ่มชีวิตใหม่</button>';
+
+      document.body.appendChild(panel);
+
+      panel.querySelector("#cosmosNewLife").onclick = function () {
+        panel.remove();
+        if (typeof window.newGame === "function") {
+          window.newGame();
+        }
+        startClock();
+      };
+    }
+  }
+
+  function checkDeath() {
+    const p = player();
+    if (p && p.hp <= 0) {
+      endLife("สุขภาพลดลงจนถึงศูนย์");
+      return true;
+    }
+    return false;
+  }
+
+  /*
+   * เวลาเดินเองทุก 12 วินาที
+   * ไม่สร้างเหตุการณ์ใหม่ทับเหตุการณ์ที่ผู้เล่นกำลังเลือก
+   */
+  function startClock() {
+    if (cosmosClock) clearInterval(cosmosClock);
+
+    cosmosClock = setInterval(function () {
+      const g = game();
+      const p = player();
+
+      if (!g || !p || g.dead) return;
+
+      // ใช้กลไกเวลาเดิมของเกม แต่ไม่ให้มันสุ่มทับเหตุการณ์
+      const oldEvent = window.currentEvent;
+      const oldLock = window.eventLock;
+
+      window.currentEvent = null;
+      window.eventLock = false;
+
+      if (typeof window.advanceDay === "function") {
+        window.advanceDay(true);
+      }
+
+      checkDeath();
+      if (g.dead) return;
+
+      // ถ้ามีเหตุการณ์เดิมอยู่ ให้รักษาเหตุการณ์นั้นไว้
+      if (oldEvent) {
+        window.currentEvent = oldEvent;
+        window.eventLock = oldLock;
+        if (typeof window.renderEvent === "function") {
+          window.renderEvent();
+        }
+      } else if (
+        !window.currentEvent &&
+        !window.eventLock &&
+        Math.random() < 0.25 &&
+        typeof window.triggerEvent === "function"
+      ) {
+        window.triggerEvent();
+      }
+
+      if (typeof window.renderAll === "function") {
+        window.renderAll();
+      }
+    }, 12000);
+  }
+
+  /*
+   * ครอบการเลือกเหตุการณ์:
+   * เลือกแล้วปิดเหตุการณ์เดิม แม้ผลลัพธ์จะล้มเหลวก็ตาม
+   */
+  const oldResolveChoice = window.resolveChoice;
+
+  if (typeof oldResolveChoice === "function") {
+    window.resolveChoice = function (index) {
+      if (cosmosBusy || checkDeath()) return;
+      if (!window.currentEvent || !window.eventLock) return;
+
+      cosmosBusy = true;
+
+      try {
+        oldResolveChoice(index);
+      } finally {
+        window.currentEvent = null;
+        window.eventLock = false;
+
+        const box = document.getElementById("eventBox");
+        const choices = document.getElementById("eventChoices");
+
+        if (box) {
+          box.innerHTML =
+            '<p class="muted">เหตุการณ์นี้จบลงแล้ว ชีวิตดำเนินต่อไป</p>';
+        }
+
+        if (choices) choices.innerHTML = "";
+
+        cosmosBusy = false;
+        checkDeath();
+
+        if (!game()?.dead && typeof window.renderAll === "function") {
+          window.renderAll();
+        }
+      }
+    };
+  }
+
+  /*
+   * แสดงเฉพาะ NPC ที่อยู่สถานที่เดียวกัน
+   */
+  const oldRenderPeople = window.renderPeople;
+
+  window.renderPeople = function () {
+    const g = game();
+    const p = player();
+
+    if (!g || !p) return;
+
+    const visible = (g.people || []).filter(function (npc) {
+      return npc.alive !== false &&
+        npc.location === p.location;
+    });
+
+    const container = document.getElementById("peopleList");
+    if (!container) return;
+
+    if (visible.length === 0) {
+      container.innerHTML =
+        '<div class="notice">' +
+        'ตอนนี้ไม่มีคนรู้จักอยู่ในบริเวณนี้ ' +
+        'อาจพบพวกเขาอีกครั้งเมื่อเดินทางไปยังสถานที่ที่ตรงกัน' +
+        '</div>';
+      return;
+    }
+
+    // ให้ renderer เดิมแสดงข้อมูล แต่ซ่อน NPC ที่อยู่ที่อื่น
+    const originalPeople = g.people;
+    g.people = visible;
+
+    try {
+      if (typeof oldRenderPeople === "function") {
+        oldRenderPeople();
+      }
+    } finally {
+      g.people = originalPeople;
+    }
+  };
+
+  /*
+   * กันการกระทำหลักเมื่อเสียชีวิตแล้ว
+   */
+  [
+    "rest", "study", "work", "socialize",
+    "travelTo", "completeQuest", "trySummon"
+  ].forEach(function (name) {
+    const original = window[name];
+    if (typeof original !== "function") return;
+
+    window[name] = function () {
+      if (game()?.dead || checkDeath()) return;
+
+      const result = original.apply(this, arguments);
+
+      checkDeath();
+      return result;
+    };
+  });
+
+  /*
+   * ตรวจ HP หลังการฟื้นฟูหรือรับความเสียหาย
+   */
+  const oldRenderAll = window.renderAll;
+
+  if (typeof oldRenderAll === "function") {
+    window.renderAll = function () {
+      oldRenderAll.apply(this, arguments);
+      checkDeath();
+    };
+  }
+
+  startClock();
+
+  // ถ้าโหลดเกมใหม่ ให้เริ่มนาฬิกาตามสถานะเกม
+  const oldLoadGame = window.loadGame;
+
+  if (typeof oldLoadGame === "function") {
+    window.loadGame = function () {
+      oldLoadGame.apply(this, arguments);
+
+      if (game()?.dead) {
+        if (cosmosClock) clearInterval(cosmosClock);
+        cosmosClock = null;
+      } else {
+        startClock();
+      }
+    };
+  }
+})();
 </script>
 </body>
 </html>
