@@ -9508,6 +9508,560 @@ organizeLifeSections();
   window.simulateNPCsLife = simulateNPCs;
 })();
   
+/* ===== AL STATUS RADAR + TRAINING GAUGES ===== */
+(function () {
+  "use strict";
+
+  const STYLE_ID = "al-status-radar-style";
+  const PANEL_ID = "al-status-radar-panel";
+  let selectedTraining = null;
+
+  const TRAINING_TYPES = [
+    ["fight", "⚔️ ฝึกต่อสู้"],
+    ["magic", "✨ ฝึกเวท"],
+    ["guard", "🛡️ ฝึกป้องกัน"],
+    ["hunt", "🏹 ฝึกล่า"],
+    ["explore", "🧭 ฝึกสำรวจ"],
+    ["support", "🤝 ฝึกช่วยเหลือ"],
+    ["craft", "🔨 ฝึกงานฝีมือ"],
+    ["bow", "🎯 ฝึกธนู"]
+  ];
+
+  function game() {
+    return typeof G !== "undefined" && G && G.c ? G : null;
+  }
+
+  function number(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      #${PANEL_ID} {
+        margin: 12px 0;
+        padding: 14px;
+        border: 1px solid #526477;
+        border-radius: 12px;
+        background: var(--panel-bg, #18232d);
+        color: var(--text-color, #edf4fa);
+        font-size: 14px;
+      }
+      #${PANEL_ID} .al-sr-title {
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      #${PANEL_ID} .al-sr-grid {
+        display: grid;
+        grid-template-columns: minmax(130px, 0.9fr) minmax(140px, 1fr);
+        gap: 12px;
+        align-items: center;
+      }
+      #${PANEL_ID} svg {
+        display: block;
+        width: 100%;
+        max-width: 260px;
+        margin: auto;
+      }
+      #${PANEL_ID} .al-sr-bars {
+        display: grid;
+        gap: 10px;
+      }
+      #${PANEL_ID} .al-sr-row {
+        display: grid;
+        gap: 4px;
+      }
+      #${PANEL_ID} .al-sr-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+      }
+      #${PANEL_ID} .al-sr-track {
+        height: 9px;
+        border-radius: 20px;
+        background: #354451;
+        overflow: hidden;
+      }
+      #${PANEL_ID} .al-sr-fill {
+        height: 100%;
+        width: 0;
+        border-radius: inherit;
+        transition: width .25s ease;
+      }
+      #${PANEL_ID} .al-sr-training {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #526477;
+      }
+      #${PANEL_ID} .al-sr-training select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 7px;
+        margin: 5px 0 10px;
+      }
+      #${PANEL_ID} .al-sr-note {
+        font-size: 12px;
+        opacity: .8;
+        margin-top: 7px;
+      }
+      @media (max-width: 480px) {
+        #${PANEL_ID} .al-sr-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function getStats(c) {
+    const d = c.classData || {};
+    const s = d.stats || {};
+
+    return [
+      ["str", "พละกำลัง"],
+      ["dex", "ความคล่องแคล่ว"],
+      ["mind", "การเรียนรู้"],
+      ["will", "จิตใจ"],
+      ["aim", "ความแม่นยำ"],
+      ["luck", "โชค"]
+    ].map(([key, label]) => ({
+      key,
+      label,
+      value: Math.max(0, number(s[key], 0))
+    }));
+  }
+
+  function radarSVG(stats) {
+    const cx = 110, cy = 110, radius = 68;
+    const max = Math.max(10, ...stats.map(s => s.value));
+    const points = (scale) => stats.map((s, i) => {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / stats.length;
+      const r = radius * scale;
+      return `${cx + Math.cos(a) * r},${cy + Math.sin(a) * r}`;
+    }).join(" ");
+
+    const polygon = stats.map((s, i) => {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / stats.length;
+      const r = radius * Math.min(1, s.value / max);
+      return `${cx + Math.cos(a) * r},${cy + Math.sin(a) * r}`;
+    }).join(" ");
+
+    const labels = stats.map((s, i) => {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / stats.length;
+      const x = cx + Math.cos(a) * (radius + 22);
+      const y = cy + Math.sin(a) * (radius + 22);
+      return `<text x="${x}" y="${y}" fill="currentColor"
+        font-size="9" text-anchor="middle" dominant-baseline="middle">${s.label}</text>`;
+    }).join("");
+
+    const grids = [0.25, 0.5, 0.75, 1].map(scale =>
+      `<polygon points="${points(scale)}" fill="none"
+        stroke="#8293a4" stroke-opacity=".4" stroke-width="1"/>`
+    ).join("");
+
+    return `<svg viewBox="0 0 220 220" role="img"
+      aria-label="กราฟค่าสเตตัสตัวละคร">
+      ${grids}
+      <polygon points="${polygon}" fill="#50b7ff" fill-opacity=".3"
+        stroke="#50b7ff" stroke-width="2"/>
+      ${labels}
+    </svg>`;
+  }
+
+  function gauge(label, value, max, color, visible = true) {
+    if (!visible) return "";
+
+    const safeMax = Math.max(1, number(max, 1));
+    const safeValue = Math.max(0, number(value));
+    const percent = Math.min(100, safeValue / safeMax * 100);
+
+    return `<div class="al-sr-row">
+      <div class="al-sr-label">
+        <span>${label}</span>
+        <span>${Math.floor(safeValue)} / ${Math.floor(safeMax)}</span>
+      </div>
+      <div class="al-sr-track">
+        <div class="al-sr-fill"
+          style="width:${percent}%;background:${color}"></div>
+      </div>
+    </div>`;
+  }
+
+  function ensurePanel() {
+    let panel = document.getElementById(PANEL_ID);
+    if (panel) return panel;
+
+    panel = document.createElement("section");
+    panel.id = PANEL_ID;
+    panel.innerHTML = `
+      <div class="al-sr-title">📊 สเตตัสตัวละคร</div>
+      <div class="al-sr-grid">
+        <div data-radar></div>
+        <div class="al-sr-bars" data-bars></div>
+      </div>
+      <div class="al-sr-training">
+        <label for="al-sr-training-select"><b>🏋️ เลือกประเภทการฝึก</b></label>
+        <select id="al-sr-training-select">
+          <option value="">ไม่กำลังฝึก</option>
+          ${TRAINING_TYPES.map(([key, label]) =>
+            `<option value="${key}">${label}</option>`
+          ).join("")}
+        </select>
+        <div data-training-gauge></div>
+        <div class="al-sr-note" data-training-note>
+          เลือกประเภทฝึกเพื่อแสดงเกจพลังงานฝึก
+        </div>
+      </div>`;
+
+    const host = document.querySelector("main > aside") ||
+      document.querySelector("main > section") ||
+      document.getElementById("game") ||
+      document.body;
+
+    host.appendChild(panel);
+
+    panel.querySelector("#al-sr-training-select").addEventListener("change", e => {
+      selectedTraining = e.target.value || null;
+      update();
+    });
+
+    return panel;
+  }
+
+  function update() {
+    const g = game();
+    if (!g) return;
+
+    ensureStyle();
+    const panel = ensurePanel();
+    const c = g.c;
+    const stats = getStats(c);
+
+    panel.querySelector("[data-radar]").innerHTML = radarSVG(stats);
+
+    const hpMax = number(c.maxHp, number(c.hpMax, 100) || 100);
+    const manaMax = number(c.maxMana, number(c.manaMax, 100) || 100);
+    const staminaMax = number(c.maxStamina, number(c.staminaMax, 100) || 100);
+    const energyMax = number(c.maxEnergy, number(c.energyMax, 100) || 100);
+
+    panel.querySelector("[data-bars]").innerHTML =
+      gauge("❤️ พลังชีวิต", c.hp, hpMax, "#ef6262") +
+      gauge("🔵 พลังเวท", c.mana, manaMax, "#60a5fa") +
+      gauge("🟡 พละกำลัง", c.stamina, staminaMax, "#f5c451");
+
+    const trainingGauge = panel.querySelector("[data-training-gauge]");
+    const note = panel.querySelector("[data-training-note]");
+    const select = panel.querySelector("#al-sr-training-select");
+
+    if (select.value !== (selectedTraining || "")) {
+      select.value = selectedTraining || "";
+    }
+
+    if (selectedTraining) {
+      trainingGauge.innerHTML = gauge(
+        "🟢 พลังงานสำหรับฝึก",
+        c.energy,
+        energyMax,
+        "#5bd18b"
+      );
+      note.textContent = `เลือกฝึก: ${
+        (TRAINING_TYPES.find(x => x[0] === selectedTraining) || [ "", "การฝึก" ])[1]
+      } — เกจนี้จะแสดงเฉพาะเมื่อเลือกฝึก`;
+    } else {
+      trainingGauge.innerHTML = "";
+      note.textContent = "ยังไม่ได้เลือกฝึก เกจพลังงานฝึกจึงถูกซ่อนไว้";
+    }
+  }
+
+  function start() {
+    ensureStyle();
+    update();
+
+    // อัปเดตค่าแสดงผลโดยไม่เปลี่ยนค่าพลังของเกม
+    setInterval(update, 1000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+/* ===== END AL STATUS RADAR + TRAINING GAUGES ===== */
+
+/* ===== ANOTHER LIFE: PARTY STATUS + COLLAPSIBLE CATEGORIES ===== */
+(function () {
+  "use strict";
+
+  const ID = "al-party-overview";
+  const STYLE = "al-party-overview-style";
+
+  function getGame() {
+    return typeof G !== "undefined" && G && G.c ? G : null;
+  }
+
+  function addStyle() {
+    if (document.getElementById(STYLE)) return;
+
+    const style = document.createElement("style");
+    style.id = STYLE;
+    style.textContent = `
+      #${ID} {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #526477;
+        border-radius: 10px;
+        background: var(--panel-bg, #18232d);
+        color: var(--text-color, #edf4fa);
+      }
+
+      #${ID} details {
+        margin: 7px 0;
+        border: 1px solid #455665;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      #${ID} summary {
+        padding: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        background: rgba(120,150,180,.12);
+      }
+
+      #${ID} .al-party-content {
+        padding: 9px;
+      }
+
+      #${ID} .al-member {
+        padding: 9px;
+        margin: 7px 0;
+        border-radius: 8px;
+        background: rgba(120,150,180,.10);
+        border: 1px solid rgba(140,160,180,.25);
+      }
+
+      #${ID} .al-member-name {
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      #${ID} .al-member-meta {
+        font-size: 12px;
+        opacity: .8;
+        margin-bottom: 6px;
+      }
+
+      #${ID} .al-bar {
+        height: 7px;
+        background: #344452;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 4px 0 7px;
+      }
+
+      #${ID} .al-bar > div {
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      #${ID} .al-small {
+        font-size: 12px;
+        opacity: .8;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function bar(label, value, max, color) {
+    value = Math.max(0, Number(value) || 0);
+    max = Math.max(1, Number(max) || 1);
+    const pct = Math.min(100, value / max * 100);
+
+    return `
+      <div class="al-small">${label}: ${Math.floor(value)} / ${Math.floor(max)}</div>
+      <div class="al-bar">
+        <div style="width:${pct}%;background:${color}"></div>
+      </div>`;
+  }
+
+  function memberCard(member, type) {
+    const name = member.name || "สมาชิก";
+    const dead = member.dead || member.hp === 0;
+    const stats = member.stats || {};
+
+    return `
+      <div class="al-member">
+        <div class="al-member-name">
+          ${type === "pet" ? "🐾" : "✨"} ${name}
+        </div>
+        <div class="al-member-meta">
+          ${type === "pet" ? "สัตว์เลี้ยง" : "สิ่งอัญเชิญ"}
+          · ${dead ? "หมดสภาพ" : "อยู่ในทีม"}
+        </div>
+        ${member.hp != null
+          ? bar("❤️ HP", member.hp, member.maxHp || 100, "#ef6262")
+          : ""}
+        ${member.mana != null
+          ? bar("🔵 มานา", member.mana, member.maxMana || 100, "#60a5fa")
+          : ""}
+        ${member.stamina != null
+          ? bar("🟡 พละกำลัง", member.stamina, member.maxStamina || 100, "#f5c451")
+          : ""}
+        ${
+          Object.keys(stats).length
+            ? `<div class="al-small">สเตตัส: ${
+                Object.entries(stats)
+                  .map(([k, v]) => `${k} ${Number(v) || 0}`)
+                  .join(" · ")
+              }</div>`
+            : `<div class="al-small">ยังไม่มีข้อมูลสเตตัสแยกของสมาชิก</div>`
+        }
+      </div>`;
+  }
+
+  function ensurePanel() {
+    let panel = document.getElementById(ID);
+    if (panel) return panel;
+
+    panel = document.createElement("section");
+    panel.id = ID;
+    panel.innerHTML = `
+      <h3 style="margin:4px 0 10px">📚 เมนูตัวละคร</h3>
+
+      <details open data-category="overview">
+        <summary>📊 ภาพรวมตัวละคร</summary>
+        <div class="al-party-content" id="al-party-player"></div>
+      </details>
+
+      <details data-category="party">
+        <summary>👥 ปาร์ตี้ <span id="al-party-count"></span></summary>
+        <div class="al-party-content" id="al-party-members"></div>
+      </details>
+
+      <details data-category="training">
+        <summary>🏋️ ฝึกฝน</summary>
+        <div class="al-party-content">
+          <p class="al-small">
+            เลือกประเภทฝึกจากระบบฝึกเดิมของเกม
+            เกจพลังงานฝึกจะแสดงในหมวดนี้เมื่อเลือกฝึก
+          </p>
+          <div id="al-party-training"></div>
+        </div>
+      </details>
+
+      <details data-category="companions">
+        <summary>🐾 สัตว์เลี้ยงและอัญเชิญ</summary>
+        <div class="al-party-content">
+          <p class="al-small">จัดการผู้ติดตามจากหน้าสัตว์เลี้ยงและอัญเชิญเดิม</p>
+          <button type="button" id="al-party-open-pets">ไปที่สัตว์เลี้ยง</button>
+          <button type="button" id="al-party-open-summons">ไปที่อัญเชิญ</button>
+        </div>
+      </details>
+    `;
+
+    const sidebar = document.getElementById("statusSidebar");
+    if (sidebar) {
+      sidebar.appendChild(panel);
+    } else {
+      document.querySelector("main > section")?.prepend(panel);
+    }
+
+    panel.querySelector("#al-party-open-pets").onclick = () => {
+      document.getElementById("alPetsList")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    };
+
+    panel.querySelector("#al-party-open-summons").onclick = () => {
+      document.getElementById("alSummonList")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    };
+
+    // จำสถานะเปิด/ปิดหมวดแต่ละหมวด
+    panel.querySelectorAll("details[data-category]").forEach(details => {
+      const key = "alCategory_" + details.dataset.category;
+
+      try {
+        const saved = localStorage.getItem(key);
+        if (saved !== null) details.open = saved === "1";
+      } catch (e) {}
+
+      details.addEventListener("toggle", () => {
+        try {
+          localStorage.setItem(key, details.open ? "1" : "0");
+        } catch (e) {}
+      });
+    });
+
+    return panel;
+  }
+
+  function update() {
+    const g = getGame();
+    if (!g) return;
+
+    const c = g.c;
+    const panel = ensurePanel();
+
+    panel.querySelector("#al-party-player").innerHTML = `
+      <b>${c.name || "ตัวละคร"}</b>
+      ${bar("❤️ HP", c.hp, c.maxHp || 100, "#ef6262")}
+      ${bar("🔵 มานา", c.mana, c.maxMana || 100, "#60a5fa")}
+      ${bar("🟡 พละกำลัง", c.stamina, c.maxStamina || 100, "#f5c451")}
+      ${bar("🟢 พลังงาน", c.energy, c.maxEnergy || 100, "#5bd18b")}
+      <div class="al-small">
+        ${c.dead || Number(c.hp) <= 0 ? "สถานะ: เสียชีวิต" : "สถานะ: ยังมีชีวิต"}
+      </div>`;
+
+    const entries = Array.isArray(c.party) ? c.party : [];
+    const members = entries.map(entry => {
+      const list = entry.type === "pet" ? c.pets : c.summons;
+      const member = (list || []).find(x => x.id === entry.id);
+      return member ? { member, type: entry.type } : null;
+    }).filter(Boolean);
+
+    panel.querySelector("#al-party-count").textContent =
+      `(${members.length}/4)`;
+
+    panel.querySelector("#al-party-members").innerHTML =
+      members.length
+        ? members.map(x => memberCard(x.member, x.type)).join("")
+        : `<div class="al-small">
+             ยังไม่มีสมาชิกในปาร์ตี้ ไปเลือกสัตว์เลี้ยงหรือสิ่งอัญเชิญแล้วกด “เข้าทีม”
+           </div>`;
+
+    // ย้ายเกจฝึกเดิมมาแสดงในหมวดฝึก โดยไม่สร้างเกจซ้ำ
+    const trainingSlot = panel.querySelector("#al-party-training");
+    const trainingGauge = document.getElementById("al-sr-training-gauge");
+    if (trainingGauge && trainingGauge.parentElement !== trainingSlot) {
+      trainingSlot.appendChild(trainingGauge);
+    }
+  }
+
+  function start() {
+    addStyle();
+    ensurePanel();
+    update();
+    setInterval(update, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+/* ===== END PARTY STATUS + CATEGORIES ===== */
+
 </script>
 </body>
 </html>
