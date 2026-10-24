@@ -941,7 +941,7 @@ main > section,
   <label>เลือกสินค้าพิเศษ</label>
   <select id="specialMerchantSelect"></select>
   <div class="actions">
-    <button onclick="buySpecialMerchantItem()">ซื้อสินค้าพิเศษ</button>
+    <button onclick="buySpecialMerchantItem()">ซื้อสินค้าพิเศษ</button><button class="danger" onclick="declineSpecialMerchant()">ปฏิเสธข้อเสนอ</button>
   </div>
 </div>
 </div>
@@ -1888,10 +1888,25 @@ function buySpecialMerchantItem(){
     "ซื้อ " + item.name + " จาก " +
     merchant.name + " ราคา " + price + " เหรียญ"
   );
+function declineSpecialMerchant(){
+  if(!G || !G.world || !G.world.specialMerchant) return;
+
+  const merchant = G.world.specialMerchant;
+  const name = merchant.name || "พ่อค้าพิเศษ";
+
+  // จบการพบพ่อค้าครั้งนี้ โดยไม่ซื้อสินค้า
+  G.world.specialMerchant = null;
+
+  log(
+    "พ่อค้าพิเศษ",
+    "คุณปฏิเสธข้อเสนอของ " + name +
+    " และแยกย้ายกันไป โดยไม่ได้ซื้อสินค้า"
+  );
 
   render();
-
+  renderSpecialMerchant();
 }
+
 const MONSTER_ROOTS=["หมาป่าผลึก","กิ้งก่าหนาม","แมลงเถ้าถ่าน","เห็ดกินแสง","สุนัขเงา","นกกระดูก","หมูป่าหิน","ตัวกินฝัน","งูเกล็ดแก้ว","ผู้เฝ้าซาก"];
 const MONSTER_TRAITS=["เพลิง","น้ำแข็ง","พิษ","เงา","สายฟ้า","ป่า","วิญญาณ","โลหะ","ผลึก","โลหิต"];
 function generateMonster(){
@@ -4824,31 +4839,88 @@ pixelRender();
 pixelStartLoop();
 }
 
-function pxRect(ctx,x,y,w,h,color){
+
+function pxRect(ctx, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(
+    Math.round(x),
+    Math.round(y),
+    Math.round(w),
+    Math.round(h)
+  );
 }
 
-function pxPerson(ctx,x,y,shirt,skin,hair){
-  x*=32;
-  y*=32;
+/* Stardew-inspired top-down pixel character */
+function pxPerson(ctx, x, y, shirt, skin, hair) {
+  const ox = Math.round(x * 32);
+  const oy = Math.round(y * 32);
+  const p = (a, b, w, h, color) =>
+    pxRect(ctx, ox + a, oy + b, w, h, color);
 
-  // เงา
-  pxRect(ctx,x+8,y+26,16,3,"#29352b");
+  // เงาใต้ตัว
+  p(7, 27, 18, 3, "#344335");
+  p(10, 28, 12, 1, "#26352b");
 
-  // ขาและลำตัว
-  pxRect(ctx,x+10,y+20,5,7,"#34425b");
-  pxRect(ctx,x+18,y+20,5,7,"#34425b");
-  pxRect(ctx,x+7,y+11,18,11,shirt);
-  pxRect(ctx,x+4,y+14,4,7,shirt);
-  pxRect(ctx,x+24,y+14,4,7,shirt);
+  // รองเท้าบูต
+  p(9, 25, 5, 5, "#49372d");
+  p(18, 25, 5, 5, "#49372d");
+  p(9, 28, 5, 2, "#302b2a");
+  p(18, 28, 5, 2, "#302b2a");
 
-  // ศีรษะและผม
-  pxRect(ctx,x+9,y+3,14,10,skin);
-  pxRect(ctx,x+8,y+1,16,5,hair);
-  pxRect(ctx,x+7,y+4,3,6,hair);
+  // กางเกง
+  p(10, 20, 5, 7, "#40577b");
+  p(17, 20, 5, 7, "#40577b");
+  p(10, 21, 3, 5, "#526b8e");
+  p(18, 21, 3, 5, "#526b8e");
+
+  // แขนและมือ
+  p(6, 14, 5, 8, shirt);
+  p(21, 14, 5, 8, shirt);
+  p(7, 20, 4, 3, skin);
+  p(21, 20, 4, 3, skin);
+
+  // เสื้อ
+  p(10, 12, 12, 10, shirt);
+  p(9, 14, 14, 7, shirt);
+  p(11, 13, 3, 7, "#ffffff");
+  p(18, 13, 3, 7, "#ffffff");
+
+  // ขอบเสื้อและเข็มขัด
+  p(10, 21, 12, 2, "#59443a");
+  p(15, 21, 3, 2, "#d9bd77");
+
+  // คอ
+  p(13, 10, 6, 4, skin);
+
+  // ผมด้านหลัง
+  p(8, 4, 16, 13, hair);
+  p(7, 7, 3, 9, hair);
+  p(22, 7, 3, 9, hair);
+
+  // ใบหน้า
+  p(10, 5, 12, 11, skin);
+  p(9, 7, 2, 6, skin);
+  p(21, 7, 2, 6, skin);
+
+  // ผมด้านบนและหน้าม้า
+  p(9, 3, 14, 5, hair);
+  p(8, 5, 5, 4, hair);
+  p(13, 6, 4, 3, hair);
+  p(18, 5, 5, 4, hair);
 
   // ดวงตา
-  pxRect(ctx,x+12,y+7,2,2,"#171a20");
-  pxRect(ctx,x+19,y+7,2,2,"#171a20");
+  p(11, 10, 2, 3, "#292a32");
+  p(19, 10, 2, 3, "#292a32");
+  p(12, 10, 1, 1, "#ffffff");
+  p(20, 10, 1, 1, "#ffffff");
+
+  // จมูกและปากแบบพิกเซล
+  p(15, 13, 2, 1, "#d49a79");
+  p(14, 15, 4, 1, "#985a50");
+
+  // ไฮไลต์ผม
+  p(11, 4, 4, 1, "#8a6657");
+  p(10, 5, 2, 1, "#8a6657");
 }
 
 function pxTree(ctx,x,y){
