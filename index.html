@@ -9785,7 +9785,7 @@ organizeLifeSections();
       <h2>🌦️ เศรษฐกิจโลกและฤดูกาล</h2>
       <div id="alClimateInfo"></div>
       <h3>ตลาดในพื้นที่ปัจจุบัน</h3>
-      <div id="alMarketInfo"></div>
+      <div id="formatCoins(price)"></div>
       <h3>อัตราแลกเปลี่ยนท้องถิ่น</h3>
       <div id="alExchangeInfo"></div>
       <p class="muted">ราคาเปลี่ยนตามสินค้าในตลาด ความต้องการ เผ่า พื้นที่ และฤดูกาล</p>
@@ -9802,7 +9802,7 @@ organizeLifeSections();
 
     const { g, w, e } = data;
     const climate = document.getElementById("alClimateInfo");
-    const marketInfo = document.getElementById("alMarketInfo");
+    const marketInfo = document.getElementById("formatCoins(price)");
     const exchangeInfo = document.getElementById("alExchangeInfo");
 
     if (!climate || !marketInfo || !exchangeInfo) return;
@@ -9812,13 +9812,15 @@ organizeLifeSections();
 
     const market = marketFor(g.location);
     marketInfo.innerHTML = Object.keys(GOODS).map(name => {
-      const row = market[name];
-      return `<div class="stat">
-        <span>${name} · คงเหลือ ${row.stock}</span>
-        <b>${price(name, g.location, g.c.race)} เหรียญ</b>
-      </div>`;
-    }).join("");
+  const row = market[name];
+  const itemPrice = price(name, g.location, g.c.race);
 
+  return `<div class="stat">
+    <span>${name} · คงเหลือ ${row.stock}</span>
+    <b>${formatCoins(itemPrice)}</b>
+  </div>`;
+}).join("");
+    
     exchangeInfo.innerHTML = Object.entries(e.exchange).map(([place, rate]) =>
       `<div class="stat"><span>${place}</span><b>${rate.toFixed(2)}×</b></div>`
     ).join("") || "อัตราแลกเปลี่ยนกำลังเริ่มต้น";
