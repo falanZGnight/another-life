@@ -534,14 +534,62 @@ function getSkillValue(key){
   return (c.stats[key]||5)+(c.skills[key]||0);
 }
 
+จุด A — ปรับโอกาสสำเร็จของเหตุการณ์
+ค้นหาฟังก์ชัน getSuccessChance(choice) เดิม แล้วแทนที่ทั้งฟังก์ชันด้วยโค้ดนี้
+
 function getSuccessChance(choice){
-  const c=G.character;
-  let stat=getSkillValue(choice.skill||"survival");
-  let condition=(c.energy<25?-12:0)+(c.hp<40?-15:0)+(c.mood<20?-5:0);
-  let p=clamp(choice.base+(stat-5)*3+condition,5,97);
-  if(c.traits.some(t=>t.name==="โชคดีเล็กน้อย")) p+=3;
-  if(c.rare && c.rare.name==="ผู้มองเห็นเส้นชะตา") p+=2;
-  return clamp(p,5,98);
+  const c = G.character;
+  const skill = choice.skill || "survival";
+
+  // ค่าสถานะหลักที่เกี่ยวข้องกับแต่ละทักษะ
+  const statMap = {
+    combat: ["strength", "agility"],
+    work: ["strength", "craft"],
+    travel: ["survival", "agility"],
+    survival: ["survival", "perception"],
+    magic: ["magic", "learning"],
+    learning: ["learning", "perception"],
+    social: ["social", "perception"],
+    craft: ["craft", "learning"]
+  };
+
+  const related = statMap[skill] || [skill];
+  const statValues = related.map(key =>
+    (c.stats[key] || 5) + (c.skills[key] || 0)
+  );
+  const stat = statValues.reduce((a, b) => a + b, 0)
+    / statValues.length;
+
+  let condition = 0;
+
+  // สภาพร่างกาย
+  if (c.energy < 15) condition -= 20;
+  else if (c.energy < 30) condition -= 10;
+
+  if (c.hp < 20) condition -= 25;
+  else if (c.hp < 40) condition -= 15;
+
+  if (c.hunger >= 80) condition -= 10;
+  if (c.thirst >= 80) condition -= 15;
+
+  // สภาพจิตใจส่งผลตามประเภทกิจกรรม
+  if (c.mood < 15) {
+    condition -= ["social", "learning", "magic"].includes(skill) ? 15 : 5;
+  } else if (c.mood < 30) {
+    condition -= ["social", "learning", "magic"].includes(skill) ? 8 : 3;
+  }
+
+  let p = clamp(
+    choice.base + (stat - 5) * 3 + condition,
+    5,
+    97
+  );
+
+  if (c.traits.some(t => t.name === "โชคดีเล็กน้อย")) p += 3;
+  if (c.rare && c.rare.name === "ผู้มองเห็นเส้นชะตา") p += 2;
+
+  return clamp(p, 5, 98);
+}
 }
 
 function renderEvent(){
@@ -1167,8 +1215,8 @@ newGame();
   let cosmosBusy = false;
 
   function game() {
-    return window.G || null;
-  }
+  return typeof G !== "undefined" ? G : null;
+}
 
   function player() {
     return game()?.character || null;
@@ -1190,8 +1238,8 @@ newGame();
     g.deadReason = reason;
     p.hp = 0;
 
-    window.currentEvent = null;
-    window.eventLock = false;
+    currentEvent = null;
+    eventLock = false;
 
     if (cosmosClock) {
       clearInterval(cosmosClock);
@@ -1242,6 +1290,38 @@ newGame();
     }
   }
 
+function applyStatInteractions() {
+  const p = player();
+  if (!p || game()?.dead) return;
+
+  // หิวหรือกระหายจนหนัก จะทำให้ร่างกายทรุด
+  if (p.hunger >= 80) {
+    p.energy = Math.max(0, p.energy - 3);
+    p.mood = Math.max(0, p.mood - 2);
+  }
+
+  if (p.thirst >= 80) {
+    p.energy = Math.max(0, p.energy - 4);
+    p.mood = Math.max(0, p.mood - 2);
+  }
+
+  // พลังงานต่ำทำให้จิตใจแย่ลง
+  if (p.energy < 15) {
+    p.mood = Math.max(0, p.mood - 3);
+  }
+
+  // สุขภาพวิกฤตทำให้ฟื้นตัวและใช้ชีวิตลำบาก
+  if (p.hp > 0 && p.hp < 20) {
+    p.energy = Math.max(0, p.energy - 3);
+    p.mood = Math.max(0, p.mood - 2);
+  }
+
+  // ตรวจการเสียชีวิตทุกครั้งหลังคำนวณผลกระทบ
+  if (p.hp <= 0) {
+    checkDeath();
+  }
+}
+
   function checkDeath() {
     const p = player();
     if (p && p.hp <= 0) {
@@ -1265,11 +1345,11 @@ newGame();
       if (!g || !p || g.dead) return;
 
       // ใช้กลไกเวลาเดิมของเกม แต่ไม่ให้มันสุ่มทับเหตุการณ์
-      const oldEvent = window.currentEvent;
-      const oldLock = window.eventLock;
+      const oldEvent = currentEvent;
+      const oldLock = eventLock;
 
-      window.currentEvent = null;
-      window.eventLock = false;
+      currentEvent = null;
+      eventLock = false;
 
       if (typeof window.advanceDay === "function") {
         window.advanceDay(true);
@@ -1280,14 +1360,14 @@ newGame();
 
       // ถ้ามีเหตุการณ์เดิมอยู่ ให้รักษาเหตุการณ์นั้นไว้
       if (oldEvent) {
-        window.currentEvent = oldEvent;
-        window.eventLock = oldLock;
+        currentEvent = oldEvent;
+        eventLock = oldLock;
         if (typeof window.renderEvent === "function") {
           window.renderEvent();
         }
       } else if (
-        !window.currentEvent &&
-        !window.eventLock &&
+        !currentEvent &&
+        !eventLock &&
         Math.random() < 0.25 &&
         typeof window.triggerEvent === "function"
       ) {
@@ -1309,15 +1389,15 @@ newGame();
   if (typeof oldResolveChoice === "function") {
     window.resolveChoice = function (index) {
       if (cosmosBusy || checkDeath()) return;
-      if (!window.currentEvent || !window.eventLock) return;
+      if (!currentEvent || !eventLock) return;
 
       cosmosBusy = true;
 
       try {
         oldResolveChoice(index);
       } finally {
-        window.currentEvent = null;
-        window.eventLock = false;
+        currentEvent = null;
+        eventLock = false;
 
         const box = document.getElementById("eventBox");
         const choices = document.getElementById("eventChoices");
@@ -1411,6 +1491,21 @@ newGame();
       checkDeath();
     };
   }
+
+const oldAdvanceDayForStats = window.advanceDay;
+
+if (typeof oldAdvanceDayForStats === "function") {
+  window.advanceDay = function () {
+    if (game()?.dead || checkDeath()) return;
+
+    const result = oldAdvanceDayForStats.apply(this, arguments);
+
+    applyStatInteractions();
+    checkDeath();
+
+    return result;
+  };
+}
 
   startClock();
 
