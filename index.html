@@ -434,16 +434,7 @@ main {
 }
 
 /* แผงสถานะติดด้านบนขณะเลื่อนหน้า */
-main > aside {
-  min-width: 0;
-}
-
-main > aside > .panel:first-child {
-  position: sticky;
-  top: 12px;
-  z-index: 3;
-}
-
+  
 /* พื้นที่เกม */
 main > section,
 #game {
@@ -577,11 +568,6 @@ main > section,
     padding: 8px;
     gap: 10px;
   }
-
-  main > aside > .panel:first-child {
-    position: static;
-  }
-
   #pixelPanel {
     padding: 9px;
   }
@@ -614,41 +600,30 @@ main > section,
 
 /* FIX: ให้แผงสถานะอยู่กับที่ขณะเลื่อนหน้า */
 @media (min-width: 781px) {
-  main {
-    align-items: stretch;
-  }
-
-  main > aside {
-    align-self: stretch;
-    min-height: 100%;
-  }
-
-  main > aside > .panel:first-child {
-    position: sticky;
-    top: 12px;
-    max-height: calc(100vh - 24px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-  }
-}
-
-/* FIX: ล็อกแถบด้านซ้ายทั้งแถบ ไม่ใช่ล็อกเฉพาะแผงข้างใน */
+  
+/* FIX: ล็อกแถบซ้ายกับหน้าจอ */
 @media (min-width: 781px) {
   main {
+    display: grid;
+    grid-template-columns: 285px minmax(0, 1fr);
     align-items: start;
   }
 
   main > aside {
-    position: sticky;
+    position: fixed;
     top: 12px;
-    align-self: start;
+    left: max(18px, calc((100vw - 1600px) / 2 + 18px));
+    width: 285px;
     height: calc(100vh - 24px);
-    max-height: calc(100vh - 24px);
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior: contain;
+    z-index: 20;
     scrollbar-width: thin;
+  }
+
+  main > section {
+    grid-column: 2;
+    min-width: 0;
   }
 
   main > aside > .panel:first-child {
@@ -658,15 +633,20 @@ main > section,
   }
 }
 
-/* มือถือให้แถบกลับมาอยู่ตามปกติ */
 @media (max-width: 780px) {
   main > aside {
     position: static;
+    width: auto;
     height: auto;
     max-height: none;
     overflow: visible;
   }
+
+  main > section {
+    grid-column: auto;
+  }
 }
+
 
 </style>
 </head>
