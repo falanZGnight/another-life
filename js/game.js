@@ -1696,13 +1696,13 @@ if (typeof oldAdvanceDayForStats === "function") {
       G.world.day++;
       G.counters.days++;
 
-      if (G.world.day > 15) {
+      if (G.world.day > 30) {
         G.world.day = 1;
         G.world.year++;
         log("ชีวิต", `เริ่มต้นปีที่ ${G.world.year}`);
       }
 
-      // ในระบบนี้หนึ่งปีในปฏิทินเกมมี 15 วัน
+      // ในระบบนี้หนึ่งปีในปฏิทินเกมมี 30 วัน
       character().age++;
 
       updateAgeStatus();
@@ -1801,7 +1801,7 @@ if (typeof oldAdvanceDayForStats === "function") {
   ensureTime();
 
   if (character() && character().age < 8 && !G.timeSystem.initialized) {
-    character().age = rand(8, 12);
+    character().age = rand(1, 15);
     updateAgeStatus();
     G.timeSystem.initialized = true;
   }
