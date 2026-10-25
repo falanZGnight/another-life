@@ -1982,6 +1982,10 @@ if (typeof oldAdvanceDayForStats === "function") {
       if (currentEvent === thisEvent) {
         eventWaitTimer = setInterval(tick, 250);
       }
+  // เริ่มจับเวลาสำหรับเหตุการณ์ที่แสดงอยู่ก่อนติดตั้งระบบ
+  if (currentEvent && typeof window.renderEvent === "function") {
+    window.renderEvent();
+  }
     };
   }
   // สร้าง UI และอัปเดตเวลา
