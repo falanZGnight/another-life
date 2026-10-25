@@ -1,4 +1,4 @@
-<script>
+
 "use strict";
 
 /* =====================================================
@@ -1995,5 +1995,4 @@ if (typeof oldAdvanceDayForStats === "function") {
     advanceSegment(true);
   }, 12000);
 
-})();
-</script>
+
